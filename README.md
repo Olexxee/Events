@@ -50,6 +50,7 @@ The product is more than ticket checkout. It is a modular platform for:
 | Accommodation inventory | Customers reserve a defined room category/quantity pool; the provider may assign the physical room later. Price is attached to category specifications, not used as the sole category definition. |
 | Connect after cancellation | Ticket cancellation/refund immediately revokes event Connect eligibility |
 | Organizer settlements | Milestone releases with a final post-event balance; exact milestone configuration remains open |
+| Event cancellation and hospitality | Event cancellation triggers an item-by-item assessment of linked hospitality reservations, not automatic blanket cancellation. Event-dependent bookings normally follow the applicable event cancellation policy; independently valid bookings may remain active if the customer chooses and supplier terms allow. Partner-supplied bookings are coordinated under disclosed supplier terms. |
 
 ### 2.1 Fee model — confirmed scope and open details
 
@@ -280,6 +281,16 @@ Proposed scenarios to define in the detailed policy:
 The checkout must display the applicable terms before payment and retain the exact policy version accepted by the customer.
 
 Ticket, add-on, accommodation, partial, and chargeback cases must be represented separately. The platform must not assume they share identical refund rules.
+
+### Event cancellation and linked hospitality
+
+Cancelling an event must trigger an assessment of each linked hospitality order item or reservation; it must not blindly cancel every booking. Determine whether the booking was event-dependent or independently valid, then apply the disclosed customer terms and supplier agreement:
+
+- Hospitality booked specifically to attend the cancelled event will normally follow the applicable event-cancellation policy.
+- An independently useful accommodation or hospitality reservation may remain valid when the customer chooses to keep it and the supplier terms permit continuation.
+- For partner-supplied inventory, the platform coordinates the outcome with the supplier under the terms disclosed before purchase; supplier involvement does not remove the platform's responsibility to administer the customer-facing process.
+- Track cancellation, continuation, replacement, and refund outcomes per order item/reservation. Do not infer that cancelling one item cancels the entire order.
+- Notify affected customers of the available outcomes and any action or deadline required from them.
 
 The financial policy must also define who bears costs when a refund is required after an organizer or supplier has already been paid. This is still an open business decision.
 
