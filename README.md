@@ -250,6 +250,10 @@ Only the existence of a customer fee plus an organizer commission on ticket sale
 
 The settlement engine must support eligibility checks, reconciliation, holds for documented disputes/refunds/risk controls, payout execution, failed-payout recovery, and a final post-event reconciliation. A payout must never exceed the organizer's reconciled, eligible payable balance. Any risk-based variation by organizer trust level requires an approved policy and must be disclosed contractually.
 
+**Hospitality purchasing and organizer control are separate from organizer settlement.** Hospitality may be purchased through attendee-led checkout (including as a ticket add-on) or arranged/booked by the organizer for the event. The purchaser is responsible for the applicable payment: attendees pay for their selected items; organizers pay for hospitality they arrange for the event. Full payment before provider commitment is the default. Deposits or staged payments are permitted only where the provider explicitly agrees to those commercial terms; instalments are not a default platform entitlement.
+
+Organizers may configure and offer approved hospitality features they own, control, or are contractually authorized to sell. An organizer must not advertise or sell inventory that has not been secured or contractually allocated. Partial or delayed organizer earnings settlements must not, by themselves, prevent the organizer from managing otherwise-authorized event features. Purchasing/booking, offering/configuration, fulfilment, and organizer/provider settlement are separate workflows. Settlement milestones do not delay a customer's paid reservation or a provider's commitment once the applicable purchase conditions have been satisfied.
+
 ### 7.5 Financial invariants
 
 - Every verified collection must be recorded once.
