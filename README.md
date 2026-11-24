@@ -46,7 +46,8 @@ The product is more than ticket checkout. It is a modular platform for:
 | Connect eligibility | Verified ticket holders and organizer-approved guests, with explicit event-scoped opt-in |
 | Post-event Connect | Existing connections may continue for a defined period; exact duration remains open |
 | Private-event access | Organizer approval with platform admin oversight |
-| Accommodation confirmation | Instant confirmation where inventory is reliable; provider confirmation otherwise |
+| Hospitality reservation model | Every hospitality provider publishes reservable inventory; controlled/synchronized inventory is held during checkout and confirmed after verified payment, without per-booking provider approval. Provider confirmation is an explicitly disclosed exception when inventory cannot be guaranteed. |
+| Accommodation inventory | Customers reserve a defined room category/quantity pool; the provider may assign the physical room later. Price is attached to category specifications, not used as the sole category definition. |
 | Connect after cancellation | Ticket cancellation/refund immediately revokes event Connect eligibility |
 | Organizer settlements | Milestone releases with a final post-event balance; exact milestone configuration remains open |
 
@@ -69,7 +70,7 @@ Fee rules must be configurable and versioned. Each purchase must retain a snapsh
 
 1. **One platform, shared engines:** public events, private parties, and premium experiences use the same core event, ticketing, commerce, and financial infrastructure.
 2. **Configuration over hardcoding:** event access, ticket benefits, fees, venue disclosure, and refund terms should be configurable within platform policy.
-3. **Inventory-backed promises:** a ticket description is not proof that a room, seat, drink, or other scarce benefit has been reserved.
+3. **Inventory-backed promises:** a ticket description is not proof that a room, seat, drink, or other scarce benefit has been reserved. Hospitality providers publish defined reservable inventory; controlled inventory is held during checkout and confirmed only after verified payment.
 4. **Central financial truth:** all collections, allocations, refunds, reversals, fees, liabilities, and payouts must be represented in an auditable ledger.
 5. **Least-privilege access:** organizers, staff, and partners only see the data required for their responsibilities.
 6. **Consent and personal autonomy:** Connect participation is voluntary. A ticket never entitles its holder to another attendee, a date, intimacy, sexual activity, or private contact details.
