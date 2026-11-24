@@ -166,12 +166,15 @@ The diagrams are conceptual. The physical schema must use explicit foreign keys,
 
 ### 4.5 Hospitality
 
+- Every hospitality supplier follows the platform's reservation model; providers publish reservable offerings rather than accepting informal, off-platform booking requests as the platform fulfilment record.
 - A HospitalityProvider is an approved provider profile associated with an Organization. Organizer-provided hospitality still needs an accountable owner and applicable approval status.
-- A provider can publish offerings for multiple events.
-- An offering may be event-specific or provider-wide only if policy explicitly permits it.
-- Inventory resources represent the scarce thing sold: quantity, capacity, time slot, room, or room-night.
-- A booking references one offering and one order item; it may have multiple fulfilment steps.
-- Provider-confirmed bookings remain pending until provider acceptance. Customer payment alone does not prove supplier acceptance.
+- A provider can publish offerings for multiple events. An offering may be event-specific or provider-wide only if policy explicitly permits it.
+- Each offering defines the reservable item/category, customer-facing specifications and capacity/occupancy, price and pricing rules, quantity or time-bound availability, and applicable reservation/cancellation conditions.
+- Price attaches to a defined category/specification; price alone must never be treated as the category identifier. For example, an accommodation provider may publish 20 equivalent Standard rooms at the same nightly rate as one inventory pool. The customer reserves the category; the provider may assign a specific physical room later unless a specific-room selection is explicitly offered.
+- Inventory resources represent the scarce thing sold: quantity pool, capacity, time slot, room, or room-night. The inventory model must match the resource's real constraint.
+- **Default confirmation:** when inventory is controlled by the platform or synchronized with sufficiently reliable availability, the platform creates a short-lived, concurrency-safe inventory hold during checkout. On successful payment verification, the reservation is confirmed and the held quantity/allocation is consumed atomically. Providers do not manually approve each reservation in this path.
+- If inventory cannot be guaranteed or synchronized reliably, the booking follows an explicit provider-confirmation exception. The platform must clearly disclose that the request is pending and must not represent it as confirmed. The payment treatment for this exception remains an open decision.
+- A booking references one offering and one order item; it may have multiple fulfilment steps. Reservation confirmation and subsequent service fulfilment are distinct states.
 
 ### 4.6 Connect
 
@@ -320,7 +323,9 @@ This is the conceptual minimum, not a final scalar-field specification.
 | Access grant | No duplicate active grant for the same event/user/source scope |
 | Provider offering | Provider must be approved and active before new sales |
 | Inventory allocation | No overlapping allocation for exclusive room/table resources; aggregate quantity cannot exceed capacity |
-| Booking | Provider acceptance and customer payment are separate states |
+| Reservation confirmation | Controlled/synchronized inventory is held concurrency-safely during checkout and confirmed only after verified payment; provider approval is an explicit exception |
+| Quantity inventory | A reservation consumes the correct category pool exactly once; category specifications and price are snapshotted |
+| Booking | Reservation confirmation and service fulfilment are separate states |
 | Order item | Purchase snapshot is immutable except through explicit adjustment records |
 | Payment | Provider transaction/reference unique in provider/account scope |
 | Payment allocation | Cannot exceed verified captured amount |
@@ -376,8 +381,8 @@ Exact enum names require naming review, but every transition must be explicit an
 - **Event access:** requested → approved/rejected; approved access may later be revoked or expired. Invitations have their own pending/accepted/declined/expired/revoked lifecycle.
 - **Ticket hold:** active → consumed/released/expired. Terminal transitions are idempotent.
 - **Ticket:** issued → transferred (with history), checked_in, cancelled, refunded, or voided under policy. Transfer must never create two valid holders.
-- **Instant hospitality:** held → payment_pending → confirmed → fulfilled, with expired/cancelled/refunded/disputed paths.
-- **Provider-confirmed hospitality:** pending_provider → accepted → confirmed → fulfilled, or rejected/expired/cancelled. Payment authorization/capture while pending remains unresolved.
+- **Inventory-backed hospitality (default):** available → held → payment_pending → confirmed → fulfilled, with expired/cancelled/refunded/disputed paths. Hold consumption and confirmation are idempotent and concurrency-safe.
+- **Provider-confirmed hospitality (exception):** pending_provider → accepted → confirmed → fulfilled, or rejected/expired/cancelled. This path is only used when availability cannot be reliably guaranteed; payment authorization/capture while pending remains unresolved.
 - **Order:** pending → paid/partially_paid → partially_fulfilled/fulfilled. Item-level outcomes must not be collapsed into one order status.
 - **Payment:** provider-attempt states and internally verified collection states are distinct. A client redirect is not proof of payment.
 - **Settlement:** draft → calculated → under_review → approved → processing → partially_paid/paid. Failure and hold states preserve payable liability.
@@ -412,11 +417,12 @@ This section guides a future schema review; it is not a generated Prisma schema.
 
 ### 9.3 Inventory and booking
 
+- Every hospitality provider publishes reservable inventory through the shared reservation model.
+- Each reservable category snapshots its customer-facing specifications, price/rate rules, and cancellation terms; price alone is not a category definition.
 - An availability read followed by an unguarded booking insert is race-prone.
-- Implement atomic holds with expiry and unique/overlap protections.
-- Room-night allocation must detect conflicts for every night in a stay.
-- Time-slot resources need overlap prevention.
-- Provider-confirmed and instant-confirmed offerings need explicit confirmation modes and distinct transitions.
+- Implement atomic holds with expiry and unique/overlap protections. Checkout creates a short-lived hold; successful server-side payment verification consumes the hold and confirms the reservation atomically.
+- Room-night allocation must detect conflicts for every night in a stay. Time-slot resources need overlap prevention. Quantity pools must never be oversold.
+- Provider approval is not required for each reservation when inventory is controlled/reliably synchronized. Provider confirmation is an explicitly disclosed exception when availability cannot be guaranteed; its payment handling remains unresolved.
 - Do not call provider inventory reliable unless controlled by the platform or synchronized under sufficiently fresh, contractually reliable guarantees.
 
 ### 9.4 Connect authorization
