@@ -6,6 +6,20 @@
 
 This document expands the confirmed product decisions in the root README. It is a conceptual model, not a description of an implemented database. Recommendations and unresolved policies are identified explicitly.
 
+## Product identity and domain implications
+
+Events is an integrated event ecosystem connecting organizers, attendees, hospitality providers, and communities. Its long-term purpose is to provide infrastructure coordinating the relationships, services, and transactions involved in the event lifecycle.
+
+The product has three connected pillars:
+
+- **Events:** event definition, publishing, discovery, ticketing, admission, attendee management, and organizer operations.
+- **Hospitality:** reservable accommodation, drinks, VIP experiences, tables, lounges, and related services.
+- **Connect:** event-scoped, consent-based participant discovery, connections, and communication.
+
+These pillars share platform-level identity, organization relationships, commerce coordination, and governance where appropriate. They do not share unrestricted ownership of one another's records or state transitions. Each domain remains authoritative for its own data and business rules.
+
+The ecosystem ambition does not establish an MVP, release sequence, or implementation authorization. Those require separate product decisions.
+
 ## 1. Design principles
 
 1. **Explicit domain ownership:** Each module owns its records and state transitions. Other modules use its service contract or consume published domain events.
