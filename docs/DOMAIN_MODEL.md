@@ -502,7 +502,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 | DM-OPEN-007 | Ticket transfer rules after Connect opt-in | Participant eligibility and ownership transitions |
 | DM-OPEN-008 | Fee treatment for accommodation, drinks, and other hospitality items | Fee snapshots and payable allocation |
 | DM-OPEN-009 | Refund cost/liability after organizer or provider has been settled | Ledger, reserves, recovery, negative balances |
-| DM-OPEN-010 | Launch cities and venue/geography reference source | Geography seed and discovery constraints |
+| DM-OPEN-010 | Initial Osun State town-level rollout priorities and venue/geography reference source | Local supply recruitment, location discovery, and geography data constraints; the initial state is confirmed |
 | DM-OPEN-011 | Final runtime, payment provider, email, media, hosting, and worker choices | Integration and operational design |
 
 The organizer settlement model is confirmed as milestone releases with a final post-event balance. The exact milestone configuration remains open; settlement timing is not wholly undecided.
