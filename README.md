@@ -7,22 +7,29 @@
 
 This document records decisions made during product discovery. It distinguishes confirmed decisions from recommendations and unresolved questions so implementation does not accidentally turn assumptions into business rules.
 
-## 1. Product vision
+## 1. Product identity and vision
 
-Build a multi-organizer event commerce and hospitality platform for Nigeria. The platform combines a general event marketplace with curated private events and premium experiences.
+**Product identity:** Events is an integrated event ecosystem connecting organizers, attendees, hospitality providers, and communities through one coordinated platform.
 
-Customers discover events, purchase tickets, select eligible add-ons, receive event-specific benefits, and manage attendance. Independent organizers create and operate events through their own workspace. The platform centrally processes payments, governs refunds, reconciles earnings, and provides operational oversight.
+**Product purpose:** Build infrastructure that connects the event industry by coordinating the relationships, services, and transactions involved in discovering, organizing, attending, and participating in events.
 
-The product is more than ticket checkout. It is a modular platform for:
+The ecosystem has three interconnected pillars:
 
-- Event discovery and publishing
-- Ticketing, pricing, and admission inventory
-- Hospitality and drink entitlements
-- Accommodation inventory and reservations
-- Guest management and check-in
-- Centralized payments, refunds, and financial reconciliation
-- Event-specific, opt-in social discovery through **Connect**
-- Trust, safety, moderation, and compliance
+- **Events:** Event creation, publishing, discovery, ticketing, admission, attendee management, and organizer operations.
+- **Hospitality:** Accommodation, drinks, VIP experiences, tables, lounges, and other reservable event-related services.
+- **Connect:** Event-scoped, opt-in participant discovery, mutual connections, and communication around shared event participation.
+
+These are connected product capabilities, not three unrelated applications. They should share appropriate identity, organization relationships, commerce infrastructure, and platform governance while retaining clear domain ownership.
+
+The product is intended to support the event lifecycle:
+
+- **Before:** discovery, registration, ticketing, hospitality reservations, and participant connections.
+- **During:** admission, check-in, hospitality fulfilment, attendee services, and event coordination.
+- **After:** settlement, reviews, continued connections within the applicable policy, community engagement, and future event discovery.
+
+The long-term ambition is industry-wide event infrastructure. This is a strategic direction, not a commitment to launch every capability simultaneously. Initial market focus, release boundaries, and MVP scope remain to be defined.
+
+The platform's initial market remains Nigeria. Product scope must be validated against the needs of organizers, attendees, and providers rather than assuming every event category or stakeholder can be served equally well at launch.
 
 ## 2. Confirmed business decisions
 
