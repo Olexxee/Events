@@ -41,6 +41,14 @@ The product is more than ticket checkout. It is a modular platform for:
 | Accommodation supply | Both organizer-supplied rooms and rooms supplied by approved accommodation partners |
 | Connect scope | Connect is limited to attendees of the same event |
 | Connect model | Optional, consent-based social discovery and mutual introductions; it does not sell or guarantee access to another person |
+| Hospitality providers | Organizers and platform-approved hospitality partners |
+| Hospitality checkout | Standalone hospitality bookings and combined ticket + hospitality checkout |
+| Connect eligibility | Verified ticket holders and organizer-approved guests, with explicit event-scoped opt-in |
+| Post-event Connect | Existing connections may continue for a defined period; exact duration remains open |
+| Private-event access | Organizer approval with platform admin oversight |
+| Accommodation confirmation | Instant confirmation where inventory is reliable; provider confirmation otherwise |
+| Connect after cancellation | Ticket cancellation/refund immediately revokes event Connect eligibility |
+| Organizer settlements | Milestone releases with a final post-event balance; exact milestone configuration remains open |
 
 ### 2.1 Fee model — confirmed scope and open details
 
@@ -236,9 +244,9 @@ Only the existence of a customer fee plus an organizer commission on ticket sale
 
 ### 7.4 Organizer payouts
 
-Payout timing and reserve policy remain undecided. The product should support configurable settlement schedules, payout eligibility checks, payout requests or automated settlement, reconciliation, and holds where contractually and legally permitted.
+**Confirmed model:** organizer earnings are released through milestones, followed by a final post-event balance. The exact milestone percentages, dates, reserve amounts, eligibility conditions, and release approvals remain open and must be configurable/versioned rather than hardcoded.
 
-A proposed risk-based approach is to apply more conservative settlement terms to new or higher-risk organizers and consider more flexible schedules for established organizers. This is a recommendation, not an approved policy.
+The settlement engine must support eligibility checks, reconciliation, holds for documented disputes/refunds/risk controls, payout execution, failed-payout recovery, and a final post-event reconciliation. A payout must never exceed the organizer's reconciled, eligible payable balance. Any risk-based variation by organizer trust level requires an approved policy and must be disclosed contractually.
 
 ### 7.5 Financial invariants
 
@@ -301,7 +309,7 @@ Every room or room category should have:
 - Cancellation terms
 - Reservation status
 
-The reservation flow is: temporary inventory hold → payment verification → confirmed reservation. Failed or expired holds release inventory.
+The accommodation confirmation flow depends on inventory reliability. Where inventory is controlled by the platform or synchronized with sufficiently reliable availability, reserve inventory atomically, verify payment, and confirm instantly. Where availability cannot be guaranteed, create a provider-confirmation request and do not represent the booking as confirmed until the provider accepts. The payment authorization/capture policy while awaiting provider confirmation remains open. Failed, rejected, or expired requests must release inventory and follow the applicable refund policy.
 
 If rooms are sold through external channels as well, the supplier must synchronize inventory or allocate a defined room block to the platform. Unsynchronized duplicate inventory is not acceptable.
 
@@ -349,6 +357,10 @@ Connect is limited to attendees of the same event and is optional.
 
 Initial product requirements:
 
+- Connect eligibility is limited to verified ticket holders and organizer-approved guests.
+- Eligibility and consent are separate: every eligible participant must explicitly opt in for that event.
+- Ticket cancellation or refund immediately revokes event Connect eligibility; asynchronous cleanup cannot be the only authorization control.
+- Existing connections may continue for a defined post-event period; the exact duration remains open and configurable.
 - Only eligible, verified adults may participate.
 - Each participant creates and controls their own profile.
 - No administrator-created or uploaded profiles without the individual's direct application and consent.
@@ -527,7 +539,7 @@ The following items are not yet approved and must be resolved during product dis
 - Whether add-ons, drinks, and accommodation attract platform fees
 - Processor-fee allocation
 - Tax/accounting treatment
-- Organizer payout timing and reserves
+- Exact organizer settlement milestone percentages, dates, reserve amounts, release conditions, and approval rules within the confirmed milestone-release model
 - Partner settlement timing
 - Who bears refund costs after a supplier/organizer has been paid
 - Chargeback and negative-balance recovery policy
@@ -570,7 +582,13 @@ The following items are not yet approved and must be resolved during product dis
 - Analytics and reporting requirements
 - Backup, disaster recovery, and operational support expectations
 
-## 19. Product acceptance principles
+## 19. Domain model and technical design
+
+The conceptual entity relationship model, domain ownership map, principal data dictionary, integrity constraints, cross-domain event contracts, Prisma design constraints, and schema review gates are maintained in [docs/DOMAIN_MODEL.md](docs/DOMAIN_MODEL.md).
+
+That document is design-only. It does not authorize a Prisma schema, migrations, or application implementation. The root README remains the product decision source of truth; the domain model expands the approved requirements and identifies unresolved design dependencies.
+
+## 20. Product acceptance principles
 
 A release should not be considered production-ready unless:
 
