@@ -167,7 +167,8 @@ The diagrams are conceptual. The physical schema must use explicit foreign keys,
 ### 4.5 Hospitality
 
 - Every hospitality supplier follows the platform's reservation model; providers publish reservable offerings rather than accepting informal, off-platform booking requests as the platform fulfilment record.
-- A HospitalityProvider is an approved provider profile associated with an Organization. Organizer-provided hospitality still needs an accountable owner and applicable approval status.
+- A HospitalityProvider is an approved provider profile associated with an Organization. Hospitality approval is a separate, explicit approval scope from organizer/event-publishing verification. An already-verified organizer may use the same Organization account and workspace, but must pass hospitality-provider approval before publishing accommodation or other hospitality inventory. Do not require a duplicate organization/account solely because the organizer is also a hospitality supplier.
+- Hospitality approval records its own status, evidence, reviewer, decision reason, timestamps, and revocation/suspension history. Organizer verification alone must never imply hospitality approval; revoking hospitality approval blocks new reservations/listings according to policy without automatically erasing the organizer's separate event-publishing status.
 - A provider can publish offerings for multiple events. An offering may be event-specific or provider-wide only if policy explicitly permits it.
 - Each offering defines the reservable item/category, customer-facing specifications and capacity/occupancy, price and pricing rules, quantity or time-bound availability, and applicable reservation/cancellation conditions.
 - Price attaches to a defined category/specification; price alone must never be treated as the category identifier. For example, an accommodation provider may publish 20 equivalent Standard rooms at the same nightly rate as one inventory pool. The customer reserves the category; the provider may assign a specific physical room later unless a specific-room selection is explicitly offered.
@@ -242,7 +243,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 
 | Entity | Owner | Purpose |
 |---|---|---|
-| HospitalityProvider | Hospitality | Approved provider profile linked to an organization |
+| HospitalityProvider | Hospitality | Provider profile linked to an organization, with a hospitality-specific approval lifecycle independent of organizer verification |
 | HospitalityOffering | Hospitality | Accommodation, table, dining, transport, voucher, experience |
 | OfferingEvent | Hospitality | Explicit join when an offering serves multiple events |
 | InventoryResource | Hospitality | Resource being reserved: room, table, capacity pool, voucher pool |
@@ -321,7 +322,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 | Ticket hold | Held quantity cannot exceed available inventory; expiry/release/consume occurs once |
 | Check-in | One successful admission per ticket unless explicit re-entry policy exists |
 | Access grant | No duplicate active grant for the same event/user/source scope |
-| Provider offering | Provider must be approved and active before new sales |
+| Provider offering | Provider must have active hospitality approval and be active before new listings or reservations; organizer verification alone is insufficient |
 | Inventory allocation | No overlapping allocation for exclusive room/table resources; aggregate quantity cannot exceed capacity |
 | Reservation confirmation | Controlled/synchronized inventory is held concurrency-safely during checkout and confirmed only after verified payment; provider approval is an explicit exception |
 | Quantity inventory | A reservation consumes the correct category pool exactly once; category specifications and price are snapshotted |
