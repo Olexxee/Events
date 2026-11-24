@@ -35,8 +35,9 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 
 | Area | Confirmed decision |
 |---|---|
-| Initial market | Nigeria only |
-| Geographical coverage | Multiple Nigerian cities |
+| Initial launch market | Osun State, Nigeria |
+| Initial geographic coverage | Statewide product coverage across Osun State; initial organizer/provider recruitment concentration remains to be selected |
+| Expansion direction | Broader Nigerian market after validating the Osun State launch |
 | Platform direction | Both a general event marketplace and an exclusive private-experiences offering |
 | Event categories at launch | Both public and private events |
 | Organizer model | Independent organizers can register and create events |
