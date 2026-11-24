@@ -250,6 +250,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 | InventorySlot | Hospitality | Date/time or room-night availability slice |
 | InventoryHold | Hospitality | Temporary resource reservation with expiry and concurrency-safe allocation |
 | HospitalityBooking | Hospitality | Customer booking, provider, offering, order item, status, price and policy snapshots |
+| HospitalityPurchaseArrangement | Commerce / Hospitality | Purchaser (attendee or organizer), booking channel, event linkage, payment terms and provider commitment conditions |
 | HospitalityFulfilment | Hospitality | Provider acceptance, service delivery, rejection, failure, completion |
 | HospitalityRedemption | Hospitality / Operations | Voucher/benefit redemption, staff, timestamp |
 
@@ -282,6 +283,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 | SettlementMilestone | Finance | Configurable eligibility/release condition and amount/percentage rule |
 | SettlementBatch | Finance | Approved settlement grouping and status |
 | SettlementLine | Finance | Traceable payable allocation, reserve, hold, release, adjustment |
+| SettlementScope | Finance | Commercial category/source scope to which a settlement policy applies, keeping ticket, organizer-funded hospitality, and fulfilled partner hospitality proceeds distinct |
 | Payout | Finance | Payout execution and reconciliation reference |
 | ReconciliationRun | Finance | Comparison of internal records with provider/bank statements |
 | ReconciliationItem | Finance | Matched, unmatched, or exception record |
@@ -325,6 +327,9 @@ This is the conceptual minimum, not a final scalar-field specification.
 | Provider offering | Provider must have active hospitality approval and be active before new listings or reservations; organizer verification alone is insufficient |
 | Inventory allocation | No overlapping allocation for exclusive room/table resources; aggregate quantity cannot exceed capacity; platform bookings cannot consume beyond the platform's allocated pool |
 | Reservation confirmation | Controlled/synchronized inventory is held concurrency-safely during checkout and confirmed only after verified payment; provider approval is an explicit exception |
+| Hospitality payment | Attendee-led and organizer-led purchases identify the actual purchaser and retain item-level payment terms; full payment is the default before provider commitment, while deposits/staged payments require explicit provider agreement |
+| Organizer offering authority | An organizer may offer only hospitality inventory they own, control, or are contractually authorized to sell; inventory must be secured or contractually allocated before it is advertised as available for sale |
+| Settlement independence | Organizer settlement timing does not gate a customer's paid reservation, provider commitment, or an organizer's otherwise-authorized event-feature configuration; purchase, offering, fulfilment, and settlement are distinct workflows |
 | Quantity inventory | A reservation consumes the correct category pool exactly once; category specifications and price are snapshotted |
 | Booking | Reservation confirmation and service fulfilment are separate states |
 | Order item | Purchase snapshot is immutable except through explicit adjustment records |
@@ -419,6 +424,8 @@ This section guides a future schema review; it is not a generated Prisma schema.
 - Enforce balanced posting in a single transaction and verify it in service logic; add database safeguards where feasible.
 - Corrections post reversals, never edit posted lines.
 - Do not derive financial truth from mutable cached balances.
+
+**Hospitality purchase and settlement separation:** identify whether the attendee or organizer is the purchaser for each hospitality order item. Full payment before provider commitment is the default. A deposit or staged-payment arrangement is valid only when the provider explicitly agrees to the terms; the platform must persist the agreed schedule, due amounts/dates, fulfilment/commitment conditions, and default consequences. Do not expose instalments as a universal customer or organizer entitlement. Organizer settlement policies must be scoped by commercial category/source rather than assumed to apply identically to ticket proceeds, organizer-funded hospitality purchases, and independently fulfilled hospitality sales. Exact percentages, reserves, and category-specific release triggers remain unresolved.
 
 ### 9.3 Inventory and booking
 
