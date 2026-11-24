@@ -40,7 +40,9 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 | Expansion direction | Broader Nigerian market after validating the Osun State launch |
 | Platform direction | Both a general event marketplace and an exclusive private-experiences offering |
 | Event categories at launch | Both public and private events |
-| Organizer model | Independent organizers can register and create events |
+| Primary organizer customers | Independent organizers and professional event organizers |
+| Additional supported organizer segments | Corporate and institutional organizers; curated-experience operators |
+| Organizer access | The customer priority does not exclude other eligible organizer segments; verification and publishing controls still apply |
 | Organizer publishing | Verified organizers can publish without manual approval of every event; platform moderation and takedown powers remain |
 | Payment handling | Platform collects customer payments centrally and reconciles organizer/partner obligations |
 | Platform revenue | Dual-sided ticket transaction fees: customer service fee plus organizer commission deducted from ticket sales |
