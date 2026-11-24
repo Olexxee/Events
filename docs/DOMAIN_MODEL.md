@@ -366,13 +366,17 @@ This is the conceptual minimum, not a final scalar-field specification.
 | HospitalityBookingConfirmed | Hospitality | Commerce marks item fulfilled; Notifications confirms |
 | HospitalityBookingRejected | Hospitality | Commerce/Payments apply cancellation/refund policy; Finance records liabilities |
 | RefundCompleted | Payments | Ticketing invalidates admission; Connect revokes eligibility; Finance posts reversal |
-| EventCancelled | Events | Each affected domain executes its own cancellation policy |
+| EventCancelled | Events | Each affected domain assesses linked items independently; Hospitality determines event dependency, continuation/cancellation under customer and supplier terms, and emits item-level outcomes |
 | EventCompleted | Events | Finance calculates final settlement eligibility; Connect starts retention window |
 | SettlementApproved | Finance | Payout execution begins |
 | PayoutSucceeded | Finance | Payable is settled and reconciliation updated |
 | PayoutFailed | Finance | Payable remains outstanding; retry/review is scheduled |
 
 Events are integration contracts, not permission to mutate another domain's tables. Consumers invoke the owning service or update their own projections.
+
+### Event cancellation and hospitality orchestration
+
+An EventCancelled event initiates an item-level assessment; it does not command blanket cancellation of every linked hospitality reservation. Hospitality evaluates whether each reservation was purchased specifically for the event or remains independently useful, then applies the customer-facing cancellation policy and the supplier agreement. An independently valid reservation may continue when the customer elects to keep it and the supplier terms permit. Partner-supplied inventory is coordinated through the platform under the terms disclosed at purchase. Each affected order item/reservation receives its own continuation, cancellation, replacement, or refund outcome; one item's outcome must not implicitly cancel the rest of the order. Customers must be notified of available outcomes and required actions.
 
 ## 8. State machine requirements
 
@@ -473,7 +477,6 @@ This section guides a future schema review; it is not a generated Prisma schema.
 | DM-OPEN-002 | Settlement milestones, percentages, reserves, release conditions | Versioned settlement rules and payable lifecycle |
 | DM-OPEN-003 | Payment authorization/capture while provider-confirmed accommodation is pending | Payment/refund state transitions |
 | DM-OPEN-004 | Whether organizer-supplied accommodation follows the same provider approval workflow | Provider ownership and authorization |
-| DM-OPEN-005 | Whether event cancellation automatically cancels hospitality bookings or permits provider exceptions | Cross-domain cancellation orchestration |
 | DM-OPEN-006 | External hotel inventory integration and synchronization guarantees | Inventory source of truth |
 | DM-OPEN-007 | Ticket transfer rules after Connect opt-in | Participant eligibility and ownership transitions |
 | DM-OPEN-008 | Fee treatment for accommodation, drinks, and other hospitality items | Fee snapshots and payable allocation |
