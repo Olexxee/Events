@@ -38,10 +38,10 @@ The product is more than ticket checkout. It is a modular platform for:
 | Platform revenue | Dual-sided ticket transaction fees: customer service fee plus organizer commission deducted from ticket sales |
 | Organizer charging | No separate organizer invoice or mandatory organizer subscription is part of the agreed initial model; organizer commission is deducted from eligible ticket sales |
 | Refund governance | Platform establishes and administers the refund framework |
-| Accommodation supply | Both organizer-supplied rooms and rooms supplied by approved accommodation partners |
+| Accommodation supply | Organizers and approved accommodation partners may supply rooms; every supplier must pass hospitality-specific approval before listing, separate from organizer/event-publishing verification. Existing organizer accounts can be reused without creating duplicate organizations. |
 | Connect scope | Connect is limited to attendees of the same event |
 | Connect model | Optional, consent-based social discovery and mutual introductions; it does not sell or guarantee access to another person |
-| Hospitality providers | Organizers and platform-approved hospitality partners |
+| Hospitality providers | Organizers and platform-approved hospitality partners; organizer verification does not grant hospitality approval. Organizers must pass the separate hospitality-provider approval before listing hospitality inventory, using their existing organization account. |
 | Hospitality checkout | Standalone hospitality bookings and combined ticket + hospitality checkout |
 | Connect eligibility | Verified ticket holders and organizer-approved guests, with explicit event-scoped opt-in |
 | Post-event Connect | Existing connections may continue for a defined period; exact duration remains open |
