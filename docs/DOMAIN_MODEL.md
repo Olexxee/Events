@@ -20,6 +20,16 @@ These pillars share platform-level identity, organization relationships, commerc
 
 The ecosystem ambition does not establish an MVP, release sequence, or implementation authorization. Those require separate product decisions.
 
+### Initial customer priority
+
+The initial Osun State launch prioritizes two organizer customer groups:
+
+- **Independent organizers:** individuals and small teams organizing events.
+- **Professional event organizers:** established operators and businesses managing events, including recurring or larger-scale productions.
+
+Corporate and institutional organizers, and curated-experience operators, remain supported customer segments but are not the primary drivers of initial product prioritization. This priority does not prohibit other eligible organizers from registering or publishing. Verification, permissions, operational limits, and moderation requirements remain applicable according to risk and role.
+
+
 ## 1. Design principles
 
 1. **Explicit domain ownership:** Each module owns its records and state transitions. Other modules use its service contract or consume published domain events.
