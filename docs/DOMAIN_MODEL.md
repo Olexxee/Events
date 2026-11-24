@@ -309,7 +309,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 | OutboxEvent | Infrastructure | Domain event committed with source transaction |
 | JobExecution | Infrastructure | Durable worker attempt, retry, result, failure metadata |
 | Notification | Notifications | Recipient, channel, template/version, delivery state |
-| ExternalIntegration | Infrastructure | Provider configuration/reference and integration health |
+| ExternalIntegration | Infrastructure | Provider configuration/reference, credentials reference, capability profile, integration health and synchronization state |\n| InventorySource | Hospitality | Platform allocation, certified external system, or provider-confirmed/manual source; reliability classification and source-of-truth rules |\n| InventoryAllocation | Hospitality | Room-category/quantity allocation to the platform, effective window, allocated/consumed/released quantities and supplier agreement reference |\n| InventorySyncRun | Hospitality / Infrastructure | External inventory synchronization attempt, source cursor/version, freshness, result and reconciliation status |
 
 ## 6. Integrity, uniqueness, and concurrency constraints
 
@@ -323,7 +323,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 | Check-in | One successful admission per ticket unless explicit re-entry policy exists |
 | Access grant | No duplicate active grant for the same event/user/source scope |
 | Provider offering | Provider must have active hospitality approval and be active before new listings or reservations; organizer verification alone is insufficient |
-| Inventory allocation | No overlapping allocation for exclusive room/table resources; aggregate quantity cannot exceed capacity |
+| Inventory allocation | No overlapping allocation for exclusive room/table resources; aggregate quantity cannot exceed capacity; platform bookings cannot consume beyond the platform's allocated pool |
 | Reservation confirmation | Controlled/synchronized inventory is held concurrency-safely during checkout and confirmed only after verified payment; provider approval is an explicit exception |
 | Quantity inventory | A reservation consumes the correct category pool exactly once; category specifications and price are snapshotted |
 | Booking | Reservation confirmation and service fulfilment are separate states |
@@ -428,7 +428,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 - Implement atomic holds with expiry and unique/overlap protections. Checkout creates a short-lived hold; successful server-side payment verification consumes the hold and confirms the reservation atomically.
 - Room-night allocation must detect conflicts for every night in a stay. Time-slot resources need overlap prevention. Quantity pools must never be oversold.
 - Provider approval is not required for each reservation when inventory is controlled/reliably synchronized. Provider confirmation is an explicitly disclosed exception when availability cannot be guaranteed; its payment handling remains unresolved.
-- Do not call provider inventory reliable unless controlled by the platform or synchronized under sufficiently fresh, contractually reliable guarantees.
+- Classify each inventory source as platform-allocated, certified external integration, or provider-confirmed/manual; the source classification determines the permitted booking state machine.\n- Launch default: the hotel allocates selected room categories and quantities to the platform. The hotel may continue selling unallocated inventory independently; platform holds and bookings consume only the platform allocation. Allocation validity windows, release cut-offs, and reconciliation responsibilities must be explicit. Unused-allocation release policy is not yet standardized.\n- External integrations are enabled only after technical and operational certification. Instant confirmation requires sufficiently fresh availability and an actual atomic reservation/hold operation, idempotent requests, confirmation/cancellation outcomes, and reconciliation for missed or delayed callbacks. A read-only availability response is not sufficient.\n- If an external source cannot guarantee a reservation, use the provider-confirmation exception and do not expose a confirmed state. The payment authorization/capture policy for that path remains unresolved.\n- Never treat stale or unsynchronized inventory as reliable; fail safely or route to provider confirmation rather than overselling.
 
 ### 9.4 Connect authorization
 
@@ -477,7 +477,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 | DM-OPEN-002 | Settlement milestones, percentages, reserves, release conditions | Versioned settlement rules and payable lifecycle |
 | DM-OPEN-003 | Payment authorization/capture while provider-confirmed accommodation is pending | Payment/refund state transitions |
 | DM-OPEN-004 | Whether organizer-supplied accommodation follows the same provider approval workflow | Provider ownership and authorization |
-| DM-OPEN-006 | External hotel inventory integration and synchronization guarantees | Inventory source of truth |
+
 | DM-OPEN-007 | Ticket transfer rules after Connect opt-in | Participant eligibility and ownership transitions |
 | DM-OPEN-008 | Fee treatment for accommodation, drinks, and other hospitality items | Fee snapshots and payable allocation |
 | DM-OPEN-009 | Refund cost/liability after organizer or provider has been settled | Ledger, reserves, recovery, negative balances |
