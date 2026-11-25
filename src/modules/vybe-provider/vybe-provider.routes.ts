@@ -5,6 +5,7 @@ import { requirePermission } from "../../shared/middleware/authorization.js";
 import { validateRequest } from "../../shared/middleware/validate-request.js";
 import {
   addVybeProviderEvidenceController,
+  changeVybeProviderApprovalStatusController,
   myVybeProviderApplicationsController,
   reviewVybeProviderApplicationController,
   submitVybeProviderApplicationController,
@@ -12,6 +13,7 @@ import {
 } from "./vybe-provider.controller.js";
 import {
   addVybeProviderEvidenceSchema,
+  changeVybeProviderApprovalStatusSchema,
   reviewVybeProviderApplicationSchema,
   submitVybeProviderApplicationSchema
 } from "./vybe-provider.validators.js";
@@ -56,4 +58,13 @@ vybeProviderRouter.post(
   requireAuthenticated,
   validateRequest(addVybeProviderEvidenceSchema),
   addVybeProviderEvidenceController
+);
+
+vybeProviderRouter.patch(
+  "/vybe/provider-approvals/:id/status",
+  authenticateRequest,
+  requireAuthenticated,
+  requirePermission("platform:vybe:providers:review"),
+  validateRequest(changeVybeProviderApprovalStatusSchema),
+  changeVybeProviderApprovalStatusController
 );
