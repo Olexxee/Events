@@ -15,8 +15,10 @@ async function activeEvent(tx: Prisma.TransactionClient, eventId: string) {
     include: { schedules: true, organization: { select: { status: true } }, accessHold: true }
   });
   if (!event || event.status === "DRAFT") fail("EVENT_NOT_FOUND", "Event was not found", 404);
-  if (event.status === "CANCELLED" || event.status === "COMPLETED" || event.organization.status !== "ACTIVE")
+  if (!["PUBLISHED", "SALES_PAUSED", "ONGOING"].includes(event.status) || event.organization.status !== "ACTIVE")
     fail("EVENT_ACCESS_CLOSED", "Event access is not available");
+  const organizerApproval = await tx.organizerApplication.findFirst({ where: { organizationId: event.organizationId, status: "APPROVED" }, select: { id: true } });
+  if (!organizerApproval) fail("ORGANIZER_APPROVAL_REQUIRED", "Organizer approval is no longer active", 403);
   if (event.moderationStatus !== "CLEAR") fail("EVENT_ACCESS_RESTRICTED", "Event access is restricted", 403);
   if (event.accessHold && !event.accessHold.releasedAt) fail("EVENT_ACCESS_ON_HOLD", "Event access is temporarily restricted", 403);
   const endsAt = event.schedules.reduce<Date | null>((latest, item) => !latest || item.endsAt > latest ? item.endsAt : latest, null);
@@ -84,7 +86,7 @@ export async function myAccess(eventId: string, userId: string) {
   return prisma.$transaction(async (tx) => {
     const { event } = await activeEvent(tx, eventId);
     const grant = await tx.eventAccessGrant.findFirst({
-      where: { eventId, userId, status: "ACTIVE", expiresAt: { gt: new Date() } },
+      where: { eventId, userId, status: "ACTIVE", expiresAt: { gt: new Date() }, ...((event.visibility === "INVITATION_ONLY" || event.accessPolicy === "INVITATION_ONLY") ? { source: { in: ["INVITATION", "PLATFORM"] } } : {}) },
       select: { id: true, canViewDetails: true, canCheckout: true, expiresAt: true, source: true }
     });
     const request = await tx.eventAccessRequest.findFirst({
@@ -237,4 +239,32 @@ export async function expireAccessRecords() {
     prisma.eventAccessGrant.updateMany({ where: { status: "ACTIVE", expiresAt: { lte: now } }, data: { status: "EXPIRED" } })
   ]);
   return { invitationsExpired: invitations.count, grantsExpired: grants.count };
+}
+
+export async function revokeInvitation(input: { invitationId: string; eventId: string; organizationId: string; actorId: string; reason: string }) {
+  return prisma.$transaction(async (tx) => {
+    await assertManager(tx, input.organizationId, input.eventId, input.actorId);
+    const changed = await tx.eventInvitation.updateMany({
+      where: { id: input.invitationId, eventId: input.eventId, organizationId: input.organizationId, status: "PENDING" },
+      data: { status: "REVOKED", revokedAt: new Date() }
+    });
+    if (changed.count !== 1) fail("INVITATION_NOT_REVOCABLE", "Pending invitation was not found", 404);
+    await tx.auditLog.create({ data: { actorId: input.actorId, actorType: "user", action: "event.access.invitation.revoked", resourceType: "event_invitation", resourceId: input.invitationId, metadata: { reason: input.reason } } });
+    return { id: input.invitationId, status: "REVOKED" as const };
+  });
+}
+
+export async function revokeGrantByPlatform(input: { grantId: string; eventId: string; actorId: string; reason: string }) {
+  return prisma.$transaction(async (tx) => {
+    const changed = await tx.eventAccessGrant.updateMany({
+      where: { id: input.grantId, eventId: input.eventId, status: "ACTIVE" },
+      data: { status: "REVOKED", revokedAt: new Date(), revokedByUserId: input.actorId, revokeReason: input.reason }
+    });
+    if (changed.count !== 1) fail("ACCESS_GRANT_NOT_REVOCABLE", "Active access grant was not found", 404);
+    await tx.auditLog.create({ data: { actorId: input.actorId, actorType: "user", action: "event.access.grant.platform_revoked", resourceType: "event_access_grant", resourceId: input.grantId, metadata: { reason: input.reason } } });
+    await tx.outboxMessage.create({
+      data: { aggregateType: "event_access_grant", aggregateId: input.grantId, eventType: "EventAccessRevoked", deduplicationKey: `event.access.platform-revoked:${input.grantId}`, payload: { eventId: input.eventId, grantId: input.grantId, platformIntervention: true } }
+    });
+    return { id: input.grantId, status: "REVOKED" as const };
+  });
 }
