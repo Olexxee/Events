@@ -224,7 +224,9 @@ export async function createHold(input: {
         },
         select: { source: true }
       });
-      if (!grant) fail("EVENT_CHECKOUT_ACCESS_REQUIRED", "Approved event access is required", 403);
+      if (grant === null) {
+        throw new AppError("EVENT_CHECKOUT_ACCESS_REQUIRED", "Approved event access is required", 403);
+      }
       if (event.accessPolicy === "APPROVAL_REQUIRED" && grant.source === "INVITATION") {
         const request = await tx.eventAccessRequest.findFirst({
           where: { eventId: input.eventId, requesterUserId: input.userId, status: "APPROVED" },
