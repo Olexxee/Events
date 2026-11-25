@@ -132,13 +132,14 @@ export async function listPublicOfferings(input: { category?: VybeCategory; city
   if (activeCategories.length === 0) return [];
   const offerings = await prisma.vybeOffering.findMany({
     where: { status: "PUBLISHED", category: { in: activeCategories } },
-    include: { versions: true, providerProfile: { select: { organization: { select: { name: true } } } } },
+    include: { versions: true, providerProfile: { select: { organization: { select: { name: true } }, approvals: { where: { status: "ACTIVE", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }, select: { category: true } } } } },
     orderBy: { updatedAt: "desc" },
     take: 100
   });
   return offerings.flatMap((offering) => {
     const version = offering.versions.find((item) => item.version === offering.currentPublishedVersion && item.status === "PUBLISHED");
     if (!version) return [];
+    if (!offering.providerProfile.approvals.some((approval) => approval.category === offering.category)) return [];
     const content = version.content as Record<string, unknown>;
     const loc = content.location as Record<string, unknown> | undefined;
     if (input.city && String(loc?.city ?? "").toLowerCase() !== input.city.toLowerCase()) return [];
