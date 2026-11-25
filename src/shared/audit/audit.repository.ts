@@ -19,7 +19,7 @@ export async function createAuditLog(input: CreateAuditLogInput): Promise<void> 
       ...(input.requestId !== undefined ? { requestId: input.requestId } : {}),
       ...(input.ipAddress !== undefined ? { ipAddress: input.ipAddress } : {}),
       ...(input.userAgent !== undefined ? { userAgent: input.userAgent } : {}),
-      metadata: input.metadata ?? {}
+      metadata: input.metadata ?? {},
     }
   });
 }
