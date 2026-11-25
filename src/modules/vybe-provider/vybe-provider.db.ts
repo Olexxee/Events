@@ -87,14 +87,18 @@ export async function submitProviderApplication(input: {
         where: {
           providerProfile: { organizationId: input.organizationId },
           category: input.category,
-          status: "ACTIVE"
+          status: { in: ["ACTIVE", "SUSPENDED", "REVOKED"] }
         },
-        select: { id: true }
+        select: { status: true }
       });
       if (existingApproval) {
         throw new AppError(
-          "VYBE_PROVIDER_CATEGORY_ALREADY_APPROVED",
-          "This organization is already approved for the selected Vybe category",
+          existingApproval.status === "ACTIVE"
+            ? "VYBE_PROVIDER_CATEGORY_ALREADY_APPROVED"
+            : "VYBE_PROVIDER_CATEGORY_RESTRICTED",
+          existingApproval.status === "ACTIVE"
+            ? "This organization is already approved for the selected Vybe category"
+            : "This category is suspended or revoked and cannot be reapplied for without an administrative resolution",
           409
         );
       }
@@ -336,18 +340,18 @@ export async function reviewProviderApplication(input: {
         },
         data: { status: "EXPIRED" }
       });
-      const activeApproval = await tx.vybeProviderApproval.findFirst({
+      const existingRestrictedApproval = await tx.vybeProviderApproval.findFirst({
         where: {
           providerProfileId: profile.id,
           category: application.category,
-          status: "ACTIVE"
+          status: { in: ["ACTIVE", "SUSPENDED", "REVOKED"] }
         },
-        select: { id: true }
+        select: { status: true }
       });
-      if (activeApproval) {
+      if (existingRestrictedApproval) {
         throw new AppError(
-          "VYBE_PROVIDER_CATEGORY_ALREADY_APPROVED",
-          "This organization already has an active approval for this category",
+          "VYBE_PROVIDER_CATEGORY_RESTRICTED",
+          "An existing active, suspended, or revoked approval prevents this application from being approved",
           409
         );
       }
@@ -497,5 +501,82 @@ export async function addProviderApplicationEvidence(input: {
       select: { id: true, evidenceType: true, requirementReason: true, status: true, createdAt: true },
       orderBy: { createdAt: "desc" }
     });
+  });
+}
+
+export async function changeProviderApprovalStatus(input: {
+  approvalId: string;
+  reviewerUserId: string;
+  action: "SUSPENDED" | "REVOKED";
+  reason: string;
+}) {
+  const prisma = getPrismaClient();
+  return prisma.$transaction(async (tx) => {
+    const approval = await tx.vybeProviderApproval.findUnique({
+      where: { id: input.approvalId },
+      include: {
+        application: {
+          select: {
+            id: true,
+            applicantUserId: true,
+            organizationId: true,
+            category: true
+          }
+        }
+      }
+    });
+    if (!approval) {
+      throw new AppError("VYBE_PROVIDER_APPROVAL_NOT_FOUND", "Vybe provider approval was not found", 404);
+    }
+    if (approval.application.applicantUserId === input.reviewerUserId) {
+      throw new AppError("VYBE_PROVIDER_SELF_REVIEW_FORBIDDEN", "Applicants cannot change their own provider approval", 403);
+    }
+    if (input.action === "SUSPENDED" && approval.status !== "ACTIVE") {
+      throw new AppError("VYBE_PROVIDER_APPROVAL_NOT_SUSPENDABLE", "Only an active approval can be suspended", 409);
+    }
+    if (input.action === "REVOKED" && !["ACTIVE", "SUSPENDED"].includes(approval.status)) {
+      throw new AppError("VYBE_PROVIDER_APPROVAL_NOT_REVOCABLE", "Only an active or suspended approval can be revoked", 409);
+    }
+
+    const updated = await tx.vybeProviderApproval.update({
+      where: { id: approval.id },
+      data: input.action === "SUSPENDED"
+        ? {
+            status: "SUSPENDED",
+            suspendedAt: new Date(),
+            suspendedByUserId: input.reviewerUserId,
+            suspensionReason: input.reason
+          }
+        : {
+            status: "REVOKED",
+            revokedAt: new Date(),
+            revokedByUserId: input.reviewerUserId,
+            revocationReason: input.reason
+          }
+    });
+    await tx.vybeProviderReview.create({
+      data: {
+        applicationId: approval.applicationId,
+        reviewerUserId: input.reviewerUserId,
+        action: input.action,
+        reason: input.reason
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: input.reviewerUserId,
+        actorType: "user",
+        action: `vybe.provider_approval.${input.action.toLowerCase()}`,
+        resourceType: "vybe_provider_approval",
+        resourceId: approval.id,
+        metadata: {
+          applicationId: approval.applicationId,
+          organizationId: approval.application.organizationId,
+          category: approval.category,
+          reason: input.reason
+        }
+      }
+    });
+    return updated;
   });
 }
