@@ -1,4 +1,5 @@
 import {
+  addProviderApplicationEvidence,
   listMyProviderApplications,
   listProviderApplications,
   reviewProviderApplication,
@@ -19,4 +20,8 @@ export async function getVybeProviderApplicationQueue() {
 
 export async function decideVybeProviderApplication(input: Parameters<typeof reviewProviderApplication>[0]) {
   return reviewProviderApplication(input);
+}
+
+export async function submitAdditionalVybeProviderEvidence(input: Parameters<typeof addProviderApplicationEvidence>[0]) {
+  return addProviderApplicationEvidence(input);
 }
