@@ -57,3 +57,12 @@ export const releaseHoldController = run(async (req, res) => {
   const { params, body } = getValidatedRequest<{ params: { eventId: string }; body: { reason: string } }>(res);
   return { hold: await service.setPlatformHold({ eventId: params.eventId, actorId: actor(req), reason: body.reason, release: true }) };
 });
+
+export const revokeInvitationController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { organizationId: string; eventId: string; invitationId: string }; body: { reason: string } }>(res);
+  return { invitation: await service.revokeInvitation({ invitationId: params.invitationId, eventId: params.eventId, organizationId: params.organizationId, actorId: actor(req), reason: body.reason }) };
+});
+export const platformRevokeGrantController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { eventId: string; grantId: string }; body: { reason: string } }>(res);
+  return { grant: await service.revokeGrantByPlatform({ grantId: params.grantId, eventId: params.eventId, actorId: actor(req), reason: body.reason }) };
+});
