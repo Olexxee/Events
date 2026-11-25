@@ -89,5 +89,6 @@ CREATE TABLE "event_access_holds" (
   CONSTRAINT "event_access_holds_created_by_user_id_fkey" FOREIGN KEY ("created_by_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT "event_access_holds_released_by_user_id_fkey" FOREIGN KEY ("released_by_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
-CREATE UNIQUE INDEX "event_access_holds_event_id_key" ON "event_access_holds"("event_id");
+CREATE UNIQUE INDEX "event_access_holds_one_active_per_event" ON "event_access_holds"("event_id") WHERE "released_at" IS NULL;
+CREATE INDEX "event_access_holds_event_id_released_at_idx" ON "event_access_holds"("event_id", "released_at");
 CREATE INDEX "event_access_holds_released_at_created_at_idx" ON "event_access_holds"("released_at", "created_at");
