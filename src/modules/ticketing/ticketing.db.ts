@@ -118,7 +118,7 @@ export async function listTicketTypes(eventId: string, userId: string) {
         accessHolds: { where: { releasedAt: null }, take: 1 }
       }
     });
-    if (!event || event.status === "DRAFT" || event.visibility === "INVITATION_ONLY")
+    if (!event || event.status === "DRAFT")
       throw new AppError("EVENT_NOT_FOUND", "Event was not found", 404);
     if (
       event.status !== "PUBLISHED" ||
@@ -128,7 +128,7 @@ export async function listTicketTypes(eventId: string, userId: string) {
     ) fail("EVENT_NOT_SELLABLE", "Ticket sales are not available");
     const user = await tx.user.findUnique({ where: { id: userId }, select: { status: true } });
     if (!user || user.status !== "ACTIVE") fail("ACCOUNT_INACTIVE", "An active account is required", 403);
-    if (event.accessPolicy !== "OPEN") {
+    if (event.accessPolicy !== "OPEN" || event.visibility === "INVITATION_ONLY") {
       const grant = await tx.eventAccessGrant.findFirst({
         where: {
           eventId, userId, status: "ACTIVE", canCheckout: true, expiresAt: { gt: new Date() },
@@ -212,7 +212,7 @@ export async function createHold(input: {
     const eventEndsAt = event.schedules.reduce<Date | null>((latest, schedule) =>
       !latest || schedule.endsAt > latest ? schedule.endsAt : latest, null);
     if (!eventEndsAt || eventEndsAt <= now) fail("EVENT_ADMISSION_CLOSED", "The event admission window has ended");
-    if (event.accessPolicy !== "OPEN" || event.visibility !== "PUBLIC") {
+    if (event.accessPolicy !== "OPEN" || event.visibility === "INVITATION_ONLY") {
       const grant = await tx.eventAccessGrant.findFirst({
         where: {
           eventId: input.eventId, userId: input.userId, status: "ACTIVE", canCheckout: true,
