@@ -1,25 +1,23 @@
 # Organizer Verification — Design Gate
 
-**Status:** Proposed design; not approved for schema implementation  
+**Status:** Policy direction updated; implementation design requires revision  
 **Owner:** Organizations / Trust  
 **Depends on:** Identity & Access foundation (merged in PR #2)  
 **Scope:** Organizer publishing verification. Hospitality-provider approval remains a separate scope and lifecycle.
 
-This document turns the current product requirements into a reviewable workflow. It does not authorize a Prisma migration or organizer-publishing implementation until the open decisions at the end are resolved.
+This document turns the current product requirements into a reviewable workflow. The product policy direction is that organizer access is open by application with lightweight onboarding; this document still requires detailed workflow and technical review before schema implementation.
 
 ## 1. Product requirements already established
 
 - An organization may have multiple users through scoped memberships.
 - A user may participate in more than one organization and may hold different roles in each.
 - Organizer verification is an auditable case/history, not a boolean field that overwrites prior decisions.
-- Before publishing or receiving settlements, organizers complete applicable checks:
-  - Email and phone verification.
-  - Identity verification or business/CAC verification, as applicable.
-  - Bank-account verification.
-  - Acceptance of organizer terms.
-  - Platform risk/compliance review.
-  - Administrative approval.
-- Once verified, an organizer may publish eligible events without manual approval of every event. Platform moderation, limits, suspension, and takedown authority remain.
+- Any registered user may apply for organizer access.
+- Ordinary organizers do not need CAC or business-registration documents.
+- Initial approval is lightweight: a basic application, reachable email and phone verification, acceptance of organizer terms, and platform approval of the organizer role.
+- Approved organizers may publish eligible events without manual approval of every event. Platform moderation, proportionate limits, risk-based event review, suspension, and takedown authority remain.
+- Payout beneficiary verification is separate from organizer onboarding and is required before the first settlement, not before applying or publishing.
+- Additional identity/business evidence may be requested only where a specific risk, legal obligation, event category, or transaction threshold justifies it.
 - Hospitality-provider approval is separate from organizer/event-publishing verification. An organization may use the same account and workspace, but must pass the additional hospitality approval before listing hospitality inventory.
 
 ## 2. Recommended separation of concerns
@@ -135,14 +133,15 @@ Recommended capability checks:
 
 **Organizer publishing**
 - Organization is active.
-- Current `ORGANIZER_PUBLISHING` case is approved and not expired, suspended, or revoked.
-- Required representative email/phone checks are complete.
+- The user has an approved organizer-role application/current organizer authorization.
+- Required account email and phone verification are complete.
 - Current organizer terms version has been accepted.
 - No active platform restriction blocks publishing.
+- No blanket CAC/business-registration or identity-document requirement applies to ordinary organizers; additional checks must be tied to a documented risk, legal obligation, event category, or transaction threshold.
 
 **Settlements**
-- All publishing checks above remain valid.
-- A payout account is verified and linked to the organization through the later Finance-owned payout-account workflow.
+- All publishing eligibility checks above remain valid.
+- A payout beneficiary is verified and linked to the organization through the Finance-owned payout-account workflow before the first settlement.
 - No settlement hold, risk restriction, or compliance block applies.
 
 The event-publishing service must ask the Organizations/Trust service for current eligibility. It must not trust a client-side badge, cached organization flag, or old approval event as the sole authorization source. If an organization is suspended or its approval is revoked, new publishing must be blocked synchronously.
@@ -176,21 +175,21 @@ Before implementation, the design must guarantee:
 
 Required tests include cross-organization access denial, reviewer scope denial, evidence privacy, illegal state transitions, duplicate concurrent decisions, suspension/revocation propagation, expired evidence, and audit completeness.
 
-## 10. Open decisions — must resolve before schema implementation
+## 10. Remaining decisions — resolve before schema implementation
 
 | Decision | Recommended default | Why it is still open |
 |---|---|---|
-| Who may submit and respond? | OWNER; optionally a specifically delegated verification manager | Determines delegation and membership permission model |
-| Required evidence by organization type | Risk-based checklist for individual, registered business, and institution | Must avoid collecting unnecessary documents |
-| Representative identity | Verify at least one accountable natural-person representative | Exact KYC requirements and provider are not selected |
+| Who may apply for organizer access? | Any registered user; organization owner or authorized creator completes the application | Open access is a product requirement; delegation applies only after an organization exists |
+| Required evidence by organizer type | Basic application, verified email/phone, and accepted terms; request additional evidence only for documented risk/legal triggers | Avoid unnecessary KYC and barriers to ordinary event organizers |
+| Representative identity | No blanket identity-document check for ordinary organizers; apply additional checks only when justified by risk or law | Avoid imposing full KYC on every applicant |
 | Email/phone verification | Verify the accountable representative before publishing | Channel/provider, expiry, resend, and recovery rules are not selected |
-| Bank-account verification | Verify payout account before first settlement | Finance ownership, provider, and data minimization |
+| Payout beneficiary | Verify the beneficiary before first settlement, not before organizer approval or publishing | Finance owns payout controls and data minimization |
 | Reviewer/approver separation | Two-person approval for high-risk or payout-enabled cases | Staffing and operational burden |
 | Rejection and appeal | Reasoned rejection plus one documented appeal/re-application path | Appeal deadlines and reviewer independence |
 | Evidence expiry/re-verification | Expiring documents trigger re-review before continued publishing/settlement | Exact validity periods vary by document and law |
 | Evidence retention/deletion | Minimum necessary retention, with legal hold support | Nigerian legal and provider requirements require specialist review |
 | Trust levels and limits | Keep trust labels informational until policy is approved | Thresholds and impact are not defined |
-| Organizer publishing during review | Block publishing until approved | Product currently requires administrative approval, but exception handling is not specified |
+| Organizer publishing during review | Block publishing until the lightweight organizer application is approved | Role approval remains a clear gate; individual event approval is not the default |
 
 ## 11. Explicitly out of scope
 
