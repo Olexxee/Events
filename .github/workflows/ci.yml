@@ -44,14 +44,6 @@ jobs:
         run: npm run prisma:migrate:deploy
       - run: npm run typecheck
       - run: npm run lint
-      - name: Temporary Prettier formatting diagnostic
-        run: |
-          npx prettier --write "src/modules/event-access/*.ts" "tests/events.integration.test.ts"
-          for file in src/modules/event-access/*.ts tests/events.integration.test.ts; do
-            echo "FILE_START:$file"
-            cat "$file"
-            echo "FILE_END:$file"
-          done
       - run: npm run format:check
       - run: npm test
       - run: npm run build
