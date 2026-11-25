@@ -137,6 +137,7 @@ export async function listMyOrganizerApplications(userId: string) {
 
 export async function listOrganizerApplications() {
   return getPrismaClient().organizerApplication.findMany({
+    where: { status: { in: ACTIVE_APPLICATION_STATUSES } },
     select: {
       id: true,
       organizationId: true,
