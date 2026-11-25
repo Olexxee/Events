@@ -28,6 +28,10 @@ jobs:
       - run: npm run prisma:generate
       - run: npm run typecheck
       - run: npm run lint
+      - name: Format diagnostics
+        run: |
+          npx prettier --write src/shared/audit/audit.repository.ts tests/security-foundation.test.ts
+          git diff -- src/shared/audit/audit.repository.ts tests/security-foundation.test.ts
       - run: npm run format:check
       - run: npm test
       - run: npm run build
