@@ -8,15 +8,17 @@ import type { CreateAuditLogInput } from "./audit.types.js";
 export async function createAuditLog(input: CreateAuditLogInput): Promise<void> {
   await getPrismaClient().auditLog.create({
     data: {
-      actorId: input.actorId,
+      ...(input.actorId !== undefined ? { actorId: input.actorId } : {}),
       actorType: input.actorType,
       action: input.action,
       resourceType: input.resourceType,
-      resourceId: input.resourceId,
+      ...(input.resourceId !== undefined
+        ? { resourceId: input.resourceId }
+        : {}),
       outcome: input.outcome ?? "success",
-      requestId: input.requestId,
-      ipAddress: input.ipAddress,
-      userAgent: input.userAgent,
+      ...(input.requestId !== undefined ? { requestId: input.requestId } : {}),
+      ...(input.ipAddress !== undefined ? { ipAddress: input.ipAddress } : {}),
+      ...(input.userAgent !== undefined ? { userAgent: input.userAgent } : {}),
       metadata: input.metadata ?? {}
     }
   });
