@@ -6,14 +6,16 @@ export const authenticateRequest: RequestHandler = async (req, _res, next) => {
   const authorization = req.get("authorization");
   const match = authorization?.match(/^Bearer ([A-Za-z0-9_-]{32,512})$/);
 
-  if (!match) {
+  const accessToken = match?.[1];
+
+  if (!accessToken) {
     return next(
       new AppError("UNAUTHENTICATED", "Authentication is required", 401)
     );
   }
 
   try {
-    const result = await authenticateAccessToken(match[1]);
+    const result = await authenticateAccessToken(accessToken);
     req.auth = result.auth;
     return next();
   } catch (error) {
@@ -32,7 +34,7 @@ export function requireOrganizationPermission(
     }
 
     const organizationId = req.params.organizationId;
-    if (!organizationId) {
+    if (typeof organizationId !== "string" || !organizationId) {
       return next(
         new AppError(
           "ORGANIZATION_CONTEXT_REQUIRED",
