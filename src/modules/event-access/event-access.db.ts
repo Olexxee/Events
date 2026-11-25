@@ -14,7 +14,8 @@ async function activeEvent(tx: Prisma.TransactionClient, eventId: string) {
     where: { id: eventId },
     include: { schedules: true, organization: { select: { status: true } }, accessHolds: { where: { releasedAt: null }, take: 1 } }
   });
-  if (!event || event.status === "DRAFT") fail("EVENT_NOT_FOUND", "Event was not found", 404);
+  if (!event) throw new AppError("EVENT_NOT_FOUND", "Event was not found", 404);
+  if (event.status === "DRAFT") throw new AppError("EVENT_NOT_FOUND", "Event was not found", 404);
   if (!["PUBLISHED", "SALES_PAUSED", "ONGOING"].includes(event.status) || event.organization.status !== "ACTIVE")
     fail("EVENT_ACCESS_CLOSED", "Event access is not available");
   const organizerApproval = await tx.organizerApplication.findFirst({ where: { organizationId: event.organizationId, status: "APPROVED" }, select: { id: true } });
@@ -22,7 +23,7 @@ async function activeEvent(tx: Prisma.TransactionClient, eventId: string) {
   if (event.moderationStatus !== "CLEAR") fail("EVENT_ACCESS_RESTRICTED", "Event access is restricted", 403);
   if (event.accessHolds.length > 0) fail("EVENT_ACCESS_ON_HOLD", "Event access is temporarily restricted", 403);
   const endsAt = event.schedules.reduce<Date | null>((latest, item) => !latest || item.endsAt > latest ? item.endsAt : latest, null);
-  if (!endsAt || endsAt <= new Date()) fail("EVENT_ACCESS_CLOSED", "The event access window has ended");
+  if (!endsAt || endsAt <= new Date()) throw new AppError("EVENT_ACCESS_CLOSED", "The event access window has ended", 409);
   return { event, grantExpiry: endsAt };
 }
 
@@ -85,7 +86,7 @@ export async function submitRequest(eventId: string, userId: string, message?: s
       if (!invitationGrant) fail("INVITATION_REQUIRED", "This event requires an organizer invitation before requesting checkout approval", 403);
     }
     const existingGrant = await tx.eventAccessGrant.findFirst({
-      where: { eventId, userId, status: "ACTIVE", expiresAt: { gt: new Date() } }, select: { id: true }
+      where: { eventId, userId, status: "ACTIVE", expiresAt: { gt: new Date() } }, select: { id: true, canCheckout: true }
     });
     if (existingGrant?.canCheckout) fail("ACCESS_ALREADY_GRANTED", "You already have checkout access to this event");
     const request = await tx.eventAccessRequest.create({
@@ -159,7 +160,7 @@ export async function decideRequest(input: { requestId: string; organizationId: 
     const request = await tx.eventAccessRequest.findFirst({
       where: { id: input.requestId, eventId: input.eventId, organizationId: input.organizationId, status: "SUBMITTED" }
     });
-    if (!request) fail("ACCESS_REQUEST_NOT_REVIEWABLE", "The request is missing or no longer pending", 404);
+    if (!request) throw new AppError("ACCESS_REQUEST_NOT_REVIEWABLE", "The request is missing or no longer pending", 404);
     const changed = await tx.eventAccessRequest.updateMany({
       where: { id: request.id, status: "SUBMITTED" },
       data: { status: input.decision, decisionReason: input.reason, decidedByUserId: input.actorId, decidedAt: new Date() }
@@ -184,7 +185,7 @@ export async function issueInvitation(input: { eventId: string; organizationId: 
       select: { id: true, emailVerifiedAt: true, status: true }
     });
     if (!recipient || !recipient.emailVerifiedAt || recipient.status !== "ACTIVE")
-      fail("INVITATION_RECIPIENT_UNAVAILABLE", "A verified, active Events account is required", 400);
+      throw new AppError("INVITATION_RECIPIENT_UNAVAILABLE", "A verified, active Events account is required", 400);
     const expiresAt = new Date(Math.min(Date.now() + Math.min(input.expiresInDays ?? 7, 7) * 86400000, Math.max(...event.schedules.map((s) => s.endsAt.getTime()))));
     if (expiresAt <= new Date()) fail("EVENT_ACCESS_CLOSED", "The event access window has ended");
     const invitation = await tx.eventInvitation.create({
@@ -200,10 +201,10 @@ export async function issueInvitation(input: { eventId: string; organizationId: 
 export async function respondToInvitation(token: string, userId: string, decision: "ACCEPTED" | "DECLINED") {
   return prisma.$transaction(async (tx) => {
     const invitation = await tx.eventInvitation.findUnique({ where: { tokenDigest: digest(token) } });
-    if (!invitation || invitation.recipientUserId !== userId) fail("INVITATION_INVALID", "Invitation is invalid or unavailable", 404);
-    if (invitation.status !== "PENDING" || invitation.expiresAt <= new Date()) fail("INVITATION_INVALID", "Invitation is invalid or unavailable", 404);
+    if (!invitation || invitation.recipientUserId !== userId) throw new AppError("INVITATION_INVALID", "Invitation is invalid or unavailable", 404);
+    if (invitation.status !== "PENDING" || invitation.expiresAt <= new Date()) throw new AppError("INVITATION_INVALID", "Invitation is invalid or unavailable", 404);
     const recipient = await tx.user.findUnique({ where: { id: userId }, select: { status: true, emailVerifiedAt: true } });
-    if (!recipient || recipient.status !== "ACTIVE" || !recipient.emailVerifiedAt) fail("ACCOUNT_VERIFICATION_REQUIRED", "A verified active account is required", 403);
+    if (!recipient || recipient.status !== "ACTIVE" || !recipient.emailVerifiedAt) throw new AppError("ACCOUNT_VERIFICATION_REQUIRED", "A verified active account is required", 403);
     const { event, grantExpiry } = await activeEvent(tx, invitation.eventId);
     const changed = await tx.eventInvitation.updateMany({
       where: { id: invitation.id, recipientUserId: userId, status: "PENDING", expiresAt: { gt: new Date() } },
