@@ -1,6 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { getPrismaClient, connectDatabase, disconnectDatabase } from "../src/infrastructure/database/prisma.js";
-import { createDraft, getManagedEvent, getPublicEvent, listPublicEvents, publishDraft } from "../src/modules/events/events.db.js";
+import {
+  getPrismaClient,
+  connectDatabase,
+  disconnectDatabase
+} from "../src/infrastructure/database/prisma.js";
+import {
+  createDraft,
+  getManagedEvent,
+  getPublicEvent,
+  listPublicEvents,
+  publishDraft
+} from "../src/modules/events/events.db.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -69,7 +79,8 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
       title: "Integration Test Live Show",
       slug,
       summary: "A live music event used to verify marketplace persistence.",
-      description: "This event exists only to exercise PostgreSQL-backed event workflows.",
+      description:
+        "This event exists only to exercise PostgreSQL-backed event workflows.",
       format: "IN_PERSON",
       visibility: "PUBLIC",
       accessPolicy: "OPEN",
@@ -101,7 +112,9 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     const managed = await getManagedEvent(draft.id, ownerId);
     expect(managed.venue?.exactAddress).toBe("12 Private Test Lane");
     expect(managed.venue?.accessInstructions).toBe("Use the rear entrance");
-    expect(managed.venue?.privateUrl).toBe("https://private.example.test/entry");
+    expect(managed.venue?.privateUrl).toBe(
+      "https://private.example.test/entry"
+    );
 
     await prisma.organizerApplication.create({
       data: {
@@ -148,7 +161,8 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
         title: "Unauthorized Event",
         slug: "unauthorized-event",
         summary: "A member must not be able to create an event.",
-        description: "This event creation attempt must be denied by the database service.",
+        description:
+          "This event creation attempt must be denied by the database service.",
         format: "ONLINE",
         visibility: "PUBLIC",
         accessPolicy: "OPEN",
@@ -172,7 +186,8 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
       title: "Unlisted Test Event",
       slug: "unlisted-hidden",
       summary: "This event must not appear in public discovery.",
-      description: "Unlisted events are intentionally excluded from public discovery results.",
+      description:
+        "Unlisted events are intentionally excluded from public discovery results.",
       format: "ONLINE",
       visibility: "UNLISTED",
       accessPolicy: "OPEN",
