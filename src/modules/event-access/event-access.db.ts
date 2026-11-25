@@ -48,7 +48,13 @@ async function createGrant(tx: Prisma.TransactionClient, input: {
   const existing = await tx.eventAccessGrant.findFirst({
     where: { eventId: input.eventId, userId: input.userId, status: "ACTIVE", expiresAt: { gt: new Date() } }
   });
-  if (existing) return existing;
+  if (existing) {
+    const currentEvent = await tx.event.findUniqueOrThrow({ where: { id: input.eventId }, select: { visibility: true, accessPolicy: true } });
+    const invitationRequired = currentEvent.visibility === "INVITATION_ONLY" || currentEvent.accessPolicy === "INVITATION_ONLY";
+    if (!invitationRequired || existing.source !== "ACCESS_REQUEST") return existing;
+    await tx.eventAccessGrant.update({ where: { id: existing.id }, data: { status: "REVOKED", revokedAt: new Date(), revokeReason: "Access policy changed to invitation-only" } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event_access_grant", aggregateId: existing.id, eventType: "EventAccessRevoked", deduplicationKey: `event.access.policy-revoked:${existing.id}`, payload: { eventId: input.eventId, grantId: existing.id, reason: "POLICY_CHANGED" } } });
+  }
   const grant = await tx.eventAccessGrant.create({
     data: { ...input, canViewDetails: true, canCheckout: true }
   });
@@ -98,11 +104,12 @@ export async function myAccess(eventId: string, userId: string) {
       where: { eventId, recipientUserId: userId, status: "PENDING", expiresAt: { gt: new Date() } },
       select: { id: true, expiresAt: true }
     });
+    if (event.visibility === "INVITATION_ONLY" && !grant && !invitation) fail("EVENT_NOT_FOUND", "Event was not found", 404);
     const allowedWithoutGrant = event.visibility !== "INVITATION_ONLY" && event.accessPolicy === "OPEN";
     return {
       eventId, visibility: event.visibility, accessPolicy: event.accessPolicy,
       canViewDetails: allowedWithoutGrant || Boolean(grant?.canViewDetails),
-      canCheckout: event.accessPolicy === "OPEN" && event.visibility !== "INVITATION_ONLY" || Boolean(grant?.canCheckout),
+      canCheckout: event.status !== "SALES_PAUSED" && ((event.accessPolicy === "OPEN" && event.visibility !== "INVITATION_ONLY") || Boolean(grant?.canCheckout)),
       grant, request, pendingInvitation: Boolean(invitation)
     };
   });
