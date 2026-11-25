@@ -8,7 +8,8 @@ const environmentSchema = z.object({
     .regex(/^\/[a-zA-Z0-9/_-]*$/)
     .default("/api/v1"),
   DATABASE_URL: z.string().url().refine(
-    (value) => value.startsWith("postgresql://") || value.startsWith("postgres://"),
+    (value) =>
+      value.startsWith("postgresql://") || value.startsWith("postgres://"),
     "DATABASE_URL must be a valid PostgreSQL connection URL"
   ),
   LOG_LEVEL: z
