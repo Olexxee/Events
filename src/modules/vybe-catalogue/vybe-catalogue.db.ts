@@ -70,6 +70,7 @@ export async function updateOfferingDraft(input: { offeringId: string; actorUser
     if (offering.status === "ARCHIVED") fail("VYBE_OFFERING_ARCHIVED", "Archived offerings cannot be edited");
     const membership = await tx.organizationMembership.findUnique({ where: { organizationId_userId: { organizationId: offering.providerProfile.organizationId, userId: input.actorUserId } }, select: { role: true, status: true, organization: { select: { status: true } } } });
     if (!membership || membership.status !== "ACTIVE" || membership.organization.status !== "ACTIVE" || !["OWNER", "ADMIN"].includes(membership.role)) fail("ORGANIZATION_AUTHORITY_REQUIRED", "An active organization owner or admin is required", 403);
+    if (input.content.attributes.category !== offering.category) fail("VYBE_OFFERING_CATEGORY_MISMATCH", "Offering content must match its original category", 400);
     await assertProviderScope(tx, offering.providerProfileId, offering.category, input.content.location);
     let draft = offering.versions.find((version) => version.status === "DRAFT");
     if (draft) {
@@ -132,13 +133,13 @@ export async function listPublicOfferings(input: { category?: VybeCategory; city
   if (activeCategories.length === 0) return [];
   const offerings = await prisma.vybeOffering.findMany({
     where: { status: "PUBLISHED", category: { in: activeCategories } },
-    include: { versions: true, providerProfile: { select: { organization: { select: { name: true } }, approvals: { where: { status: "ACTIVE", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }, select: { category: true } } } } },
+    include: { versions: true, providerProfile: { select: { organization: { select: { name: true, status: true } }, approvals: { where: { status: "ACTIVE", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }, select: { category: true } } } } },
     orderBy: { updatedAt: "desc" },
     take: 100
   });
   return offerings.flatMap((offering) => {
     const version = offering.versions.find((item) => item.version === offering.currentPublishedVersion && item.status === "PUBLISHED");
-    if (!version) return [];
+    if (!version || offering.providerProfile.organization.status !== "ACTIVE") return [];
     if (!offering.providerProfile.approvals.some((approval) => approval.category === offering.category)) return [];
     const content = version.content as Record<string, unknown>;
     const loc = content.location as Record<string, unknown> | undefined;
