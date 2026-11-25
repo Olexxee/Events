@@ -44,8 +44,8 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 | Event categories at launch | Both public and private events |
 | Primary organizer customers | Independent organizers and professional event organizers |
 | Additional supported organizer segments | Corporate and institutional organizers; curated-experience operators |
-| Organizer access | The customer priority does not exclude other eligible organizer segments; verification and publishing controls still apply |
-| Organizer publishing | Verified organizers can publish without manual approval of every event; platform moderation and takedown powers remain |
+| Organizer access | Any registered user may apply for organizer access; approval is lightweight and does not require business/CAC registration for ordinary event organizing |
+| Organizer publishing | Approved organizers can publish without manual approval of every event; platform moderation, risk-based event review, limits, suspension, and takedown powers remain |
 | Payment handling | Platform collects customer payments centrally and reconciles organizer/partner obligations |
 | Monetization architecture | Deferred until the billing phase; do not encode a final charging model in the shared foundation |
 | Module charging | Each module may carry its own commercial rules; the eventual model may use module-level charges, organizer subscriptions/entitlements, or a combination |
@@ -122,7 +122,7 @@ Each event should be able to select:
 - **Approval required:** customer requests access and must be approved before purchase is finalized.
 - **Invitation-only:** only invited/approved accounts can purchase.
 
-Open organizer publishing does not mean every event is automatically unrestricted. Organizers must be verified, and the platform retains moderation, suspension, and emergency takedown powers. Higher-risk event configurations may trigger additional review.
+Open organizer publishing does not mean every event is automatically unrestricted. Users must first apply for and receive organizer access. The application uses lightweight account/contact checks and acceptance of organizer terms; ordinary organizers are not required to provide CAC or business-registration documents. The platform retains moderation, risk-based event review, suspension, and emergency takedown powers.
 
 ### 4.4 Event lifecycle
 
