@@ -1,6 +1,9 @@
 import type { RequestHandler } from "express";
 import { AppError } from "../../shared/errors/app-error.js";
-import { authenticateAccessToken, canAccessOrganization } from "./identity.service.js";
+import {
+  authenticateAccessToken,
+  canAccessOrganization
+} from "./identity.service.js";
 
 export const authenticateRequest: RequestHandler = async (req, _res, next) => {
   const authorization = req.get("authorization");
