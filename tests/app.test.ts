@@ -26,13 +26,19 @@ describe("API foundation", () => {
 
   it("returns a controlled error when the database is unavailable", async () => {
     const app = createApp({
-      databasePing: vi.fn().mockRejectedValue(new Error("database details must not leak"))
+      databasePing: vi
+        .fn()
+        .mockRejectedValue(new Error("database details must not leak"))
     });
     const response = await request(app).get("/api/v1/health/ready");
 
     expect(response.status).toBe(500);
-    expect(response.body.error.message).toBe("An unexpected error occurred");
-    expect(JSON.stringify(response.body)).not.toContain("database details");
+    expect(response.body.error.message).toBe(
+      "An unexpected error occurred"
+    );
+    expect(JSON.stringify(response.body)).not.toContain(
+      "database details"
+    );
   });
 
   it("returns a consistent not-found response", async () => {
