@@ -50,7 +50,10 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 | Organizer charging | No paid organizer subscription plans; core organizer access is free, with ticket transaction commission retained |
 | Provider charging | Commission on fulfilled hospitality reservations; calculation basis, rates, and cancellation/refund treatment remain open |
 | Paid event promotion | Deferred; no paid placement or sponsored ranking at initial launch |
-| Refund governance | Platform establishes and administers the refund framework |
+| Refund governance | Events retains final authority over refunds governed by platform policy; organizers and providers may supply evidence but cannot independently override platform decisions |
+| Service delivery responsibility | Organizers and hospitality providers are responsible for delivering the events and services they offer; Events owns marketplace governance and dispute coordination |
+| Customer support | One centralized support system with domain-specific routing and escalation |
+| Financial source of truth | Events maintains the authoritative ledger, financial records, and settlement records |
 | Accommodation supply | Organizers and approved accommodation partners may supply rooms; every supplier must pass hospitality-specific approval before listing, separate from organizer/event-publishing verification. Existing organizer accounts can be reused without creating duplicate organizations. |
 | Connect scope | Connect is limited to attendees of the same event |
 | Connect model | Optional, consent-based social discovery and mutual introductions; it does not sell or guarantee access to another person |
