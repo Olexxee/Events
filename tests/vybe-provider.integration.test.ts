@@ -83,7 +83,7 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
     const { user, organization } = await createApplicant(false);
 
     await expect(submit(user.id, organization.id)).rejects.toMatchObject({
-      code: "VYBE_PROVIDER_VERIFIED_ACCOUNT_REQUIRED"
+      code: "VERIFIED_ACTIVE_ACCOUNT_REQUIRED"
     });
   });
 
@@ -144,7 +144,7 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
         reason: "An affiliated reviewer must not approve this application."
       })
     ).rejects.toMatchObject({
-      code: "VYBE_PROVIDER_CONFLICTED_REVIEWER"
+      code: "ORGANIZATION_CONFLICTED_REVIEWER"
     });
   });
 
