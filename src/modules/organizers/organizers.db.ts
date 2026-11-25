@@ -65,7 +65,7 @@ export async function submitOrganizerApplication(input: {
           "ORGANIZER_APPLICATION_ALREADY_PENDING",
           existing.status === "APPROVED"
             ? "This organization already has organizer approval"
-            : "An active or restricted application already exists for this organization",
+            : "An active or restricted application already exists.",
           409
         );
       }
