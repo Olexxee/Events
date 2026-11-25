@@ -3,6 +3,7 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { getValidatedRequest } from "../../shared/middleware/validate-request.js";
 import { successResponse } from "../../shared/responses/success-response.js";
 import {
+  addVybeProviderEvidenceController as addEvidence,
   applyToBecomeVybeProvider,
   decideVybeProviderApplication,
   getMyVybeProviderApplications,
@@ -11,19 +12,35 @@ import {
   updateVybeProviderApprovalStatus
 } from "./vybe-provider.service.js";
 
-export const submitVybeProviderApplicationController: RequestHandler = async (req, res, next) => {
+export const submitVybeProviderApplicationController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
-    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    if (!req.auth) {
+      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    }
     const input = getValidatedRequest<{
       body: {
         organizationId: string;
-        category: "ACCOMMODATION" | "DINING" | "DRINKS" | "TABLES_LOUNGES" | "VIP_EXPERIENCES" | "OTHER_SERVICES";
+        category:
+          | "ACCOMMODATION"
+          | "DINING"
+          | "DRINKS"
+          | "TABLES_LOUNGES"
+          | "VIP_EXPERIENCES"
+          | "OTHER_SERVICES";
         serviceDescription: string;
         supplyAuthorityStatement: string;
         supplyAuthorityAttested: true;
         termsVersion: string;
         locations: { city: string; state: string; country: string }[];
-        evidence?: { evidenceType: string; requirementReason: string; storageReference: string }[];
+        evidence?: {
+          evidenceType: string;
+          requirementReason: string;
+          storageReference: string;
+        }[];
       };
     }>(res).body;
     const application = await applyToBecomeVybeProvider({
@@ -36,9 +53,15 @@ export const submitVybeProviderApplicationController: RequestHandler = async (re
   }
 };
 
-export const myVybeProviderApplicationsController: RequestHandler = async (req, res, next) => {
+export const myVybeProviderApplicationsController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
-    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    if (!req.auth) {
+      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    }
     const applications = await getMyVybeProviderApplications(req.auth.subjectId);
     return successResponse(res, { applications });
   } catch (error) {
@@ -46,7 +69,11 @@ export const myVybeProviderApplicationsController: RequestHandler = async (req, 
   }
 };
 
-export const vybeProviderApplicationQueueController: RequestHandler = async (_req, res, next) => {
+export const vybeProviderApplicationQueueController: RequestHandler = async (
+  _req,
+  res,
+  next
+) => {
   try {
     const applications = await getVybeProviderApplicationQueue();
     return successResponse(res, { applications });
@@ -55,17 +82,31 @@ export const vybeProviderApplicationQueueController: RequestHandler = async (_re
   }
 };
 
-export const reviewVybeProviderApplicationController: RequestHandler = async (req, res, next) => {
+export const reviewVybeProviderApplicationController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
-    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    if (!req.auth) {
+      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    }
     const { id } = getValidatedRequest<{ params: { id: string } }>(res).params;
     const input = getValidatedRequest<{
       body: {
-        decision: "UNDER_REVIEW" | "NEEDS_INFORMATION" | "APPROVED" | "REJECTED";
+        decision:
+          | "UNDER_REVIEW"
+          | "NEEDS_INFORMATION"
+          | "APPROVED"
+          | "REJECTED";
         reason: string;
         conditions?: string[];
         expiresAt?: string;
-        evidenceDecisions?: { evidenceId: string; status: "ACCEPTED" | "REJECTED"; reason: string }[];
+        evidenceDecisions?: {
+          evidenceId: string;
+          status: "ACCEPTED" | "REJECTED";
+          reason: string;
+        }[];
       };
     }>(res).body;
     const application = await decideVybeProviderApplication({
@@ -79,12 +120,24 @@ export const reviewVybeProviderApplicationController: RequestHandler = async (re
   }
 };
 
-export const addVybeProviderEvidenceController: RequestHandler = async (req, res, next) => {
+export const addVybeProviderEvidenceController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
-    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    if (!req.auth) {
+      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    }
     const { id } = getValidatedRequest<{ params: { id: string } }>(res).params;
     const { evidence } = getValidatedRequest<{
-      body: { evidence: { evidenceType: string; requirementReason: string; storageReference: string }[] };
+      body: {
+        evidence: {
+          evidenceType: string;
+          requirementReason: string;
+          storageReference: string;
+        }[];
+      };
     }>(res).body;
     const records = await submitAdditionalVybeProviderEvidence({
       applicationId: id,
@@ -97,20 +150,29 @@ export const addVybeProviderEvidenceController: RequestHandler = async (req, res
   }
 };
 
-export const changeVybeProviderApprovalStatusController: RequestHandler = async (req, res, next) => {
-  try {
-    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
-    const { id } = getValidatedRequest<{ params: { id: string } }>(res).params;
-    const input = getValidatedRequest<{
-      body: { action: "SUSPENDED" | "REVOKED"; reason: string };
-    }>(res).body;
-    const approval = await updateVybeProviderApprovalStatus({
-      approvalId: id,
-      reviewerUserId: req.auth.subjectId,
-      ...input
-    });
-    return successResponse(res, { approval });
-  } catch (error) {
-    return next(error);
-  }
-};
+export const changeVybeProviderApprovalStatusController: RequestHandler =
+  async (req, res, next) => {
+    try {
+      if (!req.auth) {
+        throw new AppError(
+          "UNAUTHENTICATED",
+          "Authentication is required",
+          401
+        );
+      }
+      const { id } = getValidatedRequest<{ params: { id: string } }>(
+        res
+      ).params;
+      const input = getValidatedRequest<{
+        body: { action: "SUSPENDED" | "REVOKED"; reason: string };
+      }>(res).body;
+      const approval = await updateVybeProviderApprovalStatus({
+        approvalId: id,
+        reviewerUserId: req.auth.subjectId,
+        ...input
+      });
+      return successResponse(res, { approval });
+    } catch (error) {
+      return next(error);
+    }
+  };
