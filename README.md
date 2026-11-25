@@ -1,9 +1,11 @@
 # Event Platform — Product Blueprint
 
-> **Status:** Discovery and product-definition phase  
+> **Status:** Foundation implementation  
 > **Market:** Nigeria  
-> **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation planning.  
-> **Implementation status:** No application implementation is authorized by this document alone.
+> **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
+> **Implementation status:** Shared backend foundation is authorized and underway. Product-domain modules remain gated by their design and review phases.
+
+The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Hospitality, Connect, and other domain modules.
 
 This document records decisions made during product discovery. It distinguishes confirmed decisions from recommendations and unresolved questions so implementation does not accidentally turn assumptions into business rules.
 
@@ -45,10 +47,9 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 | Organizer access | The customer priority does not exclude other eligible organizer segments; verification and publishing controls still apply |
 | Organizer publishing | Verified organizers can publish without manual approval of every event; platform moderation and takedown powers remain |
 | Payment handling | Platform collects customer payments centrally and reconciles organizer/partner obligations |
-| Platform revenue — tickets | Dual-sided ticket transaction fees: customer service fee plus organizer commission deducted from eligible ticket sales |
-| Platform revenue — hospitality | Dual-sided hospitality monetization: disclosed customer booking fee plus provider commission |
-| Organizer charging | No paid organizer subscription plans; core organizer access is free, with ticket transaction commission retained |
-| Provider charging | Commission on fulfilled hospitality reservations; calculation basis, rates, and cancellation/refund treatment remain open |
+| Monetization architecture | Deferred until the billing phase; do not encode a final charging model in the shared foundation |
+| Module charging | Each module may carry its own commercial rules; the eventual model may use module-level charges, organizer subscriptions/entitlements, or a combination |
+| Provider charging | Commercial charging rules and commission treatment remain open pending the billing phase |
 | Paid event promotion | Deferred; no paid placement or sponsored ranking at initial launch |
 | Refund governance | Events retains final authority over refunds governed by platform policy; organizers and providers may supply evidence but cannot independently override platform decisions |
 | Service delivery responsibility | Organizers and hospitality providers are responsible for delivering the events and services they offer; Events owns marketplace governance and dispute coordination |
@@ -68,27 +69,17 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 | Organizer settlements | Milestone releases with a final post-event balance; exact milestone configuration remains open |
 | Event cancellation and hospitality | Event cancellation triggers an item-by-item assessment of linked hospitality reservations, not automatic blanket cancellation. Event-dependent bookings normally follow the applicable event cancellation policy; independently valid bookings may remain active if the customer chooses and supplier terms allow. Partner-supplied bookings are coordinated under disclosed supplier terms. |
 
-### 2.1 Fee model — confirmed scope and open details
+### 2.1 Monetization — deferred
 
-The agreed ticket revenue model has two fee components:
+The commercial model is intentionally deferred. The product may charge independently for the modules an organizer chooses to use, use subscriptions that grant access to selected modules, or combine these approaches. No option has been selected.
 
-1. **Customer service fee:** displayed to the buyer and added to the ticket checkout total.
-2. **Organizer commission:** deducted from eligible ticket face-value sales before the organizer's proceeds are calculated.
+Keep these concerns separate:
 
-There is no separate organizer invoice for this commission. It is withheld through transaction allocation and settlement.
+- **Module capability/access:** whether an organizer or account is entitled to use a module.
+- **Commercial agreement:** what is charged, to whom, and under which pricing terms.
+- **Transaction accounting:** what was collected, earned, owed, refunded, or settled.
 
-For hospitality, the agreed model is also dual-sided:
-
-1. **Customer booking fee:** a separately disclosed platform fee charged to the customer.
-2. **Provider commission:** a commission charged to the hospitality provider and deducted from the provider's eligible settlement.
-
-The customer fee and provider commission are separate commercial charges. Provider commission is not an additional customer charge and must not be hidden in the customer's displayed price. Commission is intended to be earned on fulfilled reservations, not merely on booking attempts or pending-provider requests. The exact commissionable amount and treatment of partial fulfilment, cancellations, refunds, and no-shows remain open.
-
-Core organizer access and plans are free: no paid organizer subscription is part of the initial business model. Ticket transaction commission remains applicable. Paid event promotion, sponsored ranking, and paid placement are deferred and are not part of the initial launch model.
-
-Ticket and hospitality fee rates, calculation bases, fixed-fee options, minimums, caps, tax treatment, processor-fee allocation, provider-category variations, and effective dates remain **undecided**. Previously discussed numerical examples were illustrative only and are not approved rates.
-
-Fee rules must be configurable and versioned. Each purchase must retain a snapshot of the pricing rules that applied at the time of purchase.
+The shared foundation must not hardcode subscription plans, module prices, commission rates, customer fees, or billing eligibility. When billing is designed, pricing rules must be configurable and versioned, and each transaction must retain the applicable pricing snapshot. Existing product policies about refunds, centralized financial records, and settlement governance remain product requirements; they do not authorize choosing fee rates or a charging model now.
 
 ## 3. Product principles
 
