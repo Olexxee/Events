@@ -7,7 +7,7 @@ import { errorHandler } from "../src/shared/middleware/error-handler.js";
 import { requirePermission } from "../src/shared/middleware/authorization.js";
 import {
   getValidatedRequest,
-  validateRequest,
+  validateRequest
 } from "../src/shared/middleware/validate-request.js";
 import { successResponse } from "../src/shared/responses/success-response.js";
 
@@ -16,7 +16,7 @@ function createSecurityTestApp() {
   app.use(express.json());
 
   app.get("/protected", requireAuthenticated, (_req, res) =>
-    successResponse(res, { allowed: true }),
+    successResponse(res, { allowed: true })
   );
 
   app.get(
@@ -25,13 +25,13 @@ function createSecurityTestApp() {
       req.auth = {
         subjectId: "test-user",
         subjectType: "user",
-        permissions: ["admin:read"],
+        permissions: ["admin:read"]
       };
       next();
     },
     requireAuthenticated,
     requirePermission("admin:read"),
-    (_req, res) => successResponse(res, { allowed: true }),
+    (_req, res) => successResponse(res, { allowed: true })
   );
 
   app.get(
@@ -40,13 +40,13 @@ function createSecurityTestApp() {
       req.auth = {
         subjectId: "test-user",
         subjectType: "user",
-        permissions: ["events:read"],
+        permissions: ["events:read"]
       };
       next();
     },
     requireAuthenticated,
     requirePermission("admin:read"),
-    (_req, res) => successResponse(res, { allowed: true }),
+    (_req, res) => successResponse(res, { allowed: true })
   );
 
   app.post(
@@ -55,8 +55,8 @@ function createSecurityTestApp() {
       z.object({
         body: z.object({ title: z.string().min(3) }),
         params: z.object({}),
-        query: z.object({}),
-      }),
+        query: z.object({})
+      })
     ),
     (req, res) => {
       const data = getValidatedRequest<{
@@ -65,7 +65,7 @@ function createSecurityTestApp() {
         query: Record<string, never>;
       }>(res);
       return successResponse(res, { title: data.body.title });
-    },
+    }
   );
 
   app.use(errorHandler);
@@ -99,9 +99,7 @@ describe("shared security foundation", () => {
     const valid = await request(app)
       .post("/validated")
       .send({ title: "Launch" });
-    const invalid = await request(app)
-      .post("/validated")
-      .send({ title: "x" });
+    const invalid = await request(app).post("/validated").send({ title: "x" });
 
     expect(valid.status).toBe(200);
     expect(valid.body.data.title).toBe("Launch");
