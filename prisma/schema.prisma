@@ -721,7 +721,7 @@ model VybeProviderApplication {
   locations                VybeProviderApplicationLocation[]
   evidence                 VybeProviderEvidence[]
   reviews                  VybeProviderReview[]
-  approvals                VybeProviderApproval[]
+  approval                 VybeProviderApproval?
 
   @@index([organizationId, category, status, submittedAt], map: "vybe_provider_applications_org_category_status_idx")
   @@index([applicantUserId, submittedAt], map: "vybe_provider_applications_applicant_submitted_idx")
