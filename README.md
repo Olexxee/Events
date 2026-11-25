@@ -3,7 +3,7 @@
 > **Status:** Shared foundation, Identity & Access, and lightweight organizer application workflow implemented; event marketplace is next  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
-> **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is implemented in the current feature PR. Routine KYC is not required for ordinary organizers. Event publishing, hospitality approval, and payout verification remain separate follow-up domains.
+> **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is merged in [PR #5](https://github.com/Olexxee/Events/pull/5). Routine KYC is not required for ordinary organizers. Event publishing, hospitality approval, and payout verification remain separate follow-up domains.
 
 The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Hospitality, Connect, and other domain modules.
 
@@ -122,7 +122,7 @@ Each event should be able to select:
 - **Approval required:** customer requests access and must be approved before purchase is finalized.
 - **Invitation-only:** only invited/approved accounts can purchase.
 
-Open organizer publishing does not mean every event is automatically unrestricted. Users must first apply for and receive organizer access. The application uses lightweight account/contact checks and acceptance of organizer terms; ordinary organizers are not required to provide CAC or business-registration documents. The platform retains moderation, risk-based event review, suspension, and emergency takedown powers.
+Open organizer publishing does not mean every event is automatically unrestricted. Users must first apply for and receive organizer access. The application is a short role request; ordinary organizers are not required to provide CAC, business-registration, or identity documents. The platform retains moderation, risk-based event review, suspension, and emergency takedown powers.
 
 ### 4.4 Event lifecycle
 
@@ -131,12 +131,11 @@ Proposed lifecycle:
 - Draft
 - Published
 - Sales paused
-- Sold out
 - Ongoing
 - Completed
 - Cancelled
 
-An event may also have a separate review/moderation state. Organizers must not silently change material details such as date, venue, price, or included benefits after sales begin. Material changes require customer notification and the applicable refund/transfer options.
+Sold-out status is derived from ticket inventory rather than stored as the event lifecycle. An event may also have a separate review/moderation state. Organizers must not silently change material details such as date, venue, price, or included benefits after sales begin. Material changes require customer notification and the applicable refund/transfer options.
 
 ## 5. User roles and workspaces
 
@@ -537,8 +536,8 @@ Potential domains:
 
 1. **Product and policy foundation:** foundational product boundaries and key business rules have been recorded. Commercial pricing remains deferred to the billing phase.
 2. **Platform foundation and Identity & Access:** the shared Node 22/strict TypeScript/Express 5 scaffold, centralized error/response handling, Prisma/PostgreSQL baseline, transactional outbox, request IDs, Zod validation, append-only audit persistence, and security foundation are merged. Identity & Access is merged in [PR #2](https://github.com/Olexxee/Events/pull/2): user accounts, scrypt password credentials, opaque revocable sessions, refresh-token rotation/reuse detection, organization memberships, and trusted platform/organization permission resolution. Its exact PR head passed Prisma validation, typecheck, lint, formatting, all 17 tests, and build before merge.
-3. **Organizer access:** lightweight application schema, migration, submission/status endpoints, admin review, audit events, and permission boundaries implemented in the organizer application feature PR. Publishing enforcement, applicant notifications, organizer terms, payout verification, and hospitality approval remain separate follow-up work.
-4. **Event marketplace:** event lifecycle, discovery, publishing, visibility, access policies.
+3. **Organizer access:** lightweight application schema, migration, submission/status endpoints, admin review, audit events, and permission boundaries implemented and merged in [PR #5](https://github.com/Olexxee/Events/pull/5). Publishing enforcement, applicant notifications, organizer terms, payout verification, and hospitality approval remain separate follow-up work.
+4. **Event marketplace:** [design gate](docs/EVENT_MARKETPLACE_DESIGN.md) drafted. Confirm category taxonomy, publishing permissions, lifecycle, venue disclosure, and material-change rules before schema/API implementation.
 5. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, and ledger integration.
 6. **Operational controls:** guest management, check-in, event changes, refunds, reconciliation, settlements.
 7. **Hospitality:** drink catalogue, entitlements, redemption, accommodation inventory and reservations, partner workspace.
