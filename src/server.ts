@@ -1,6 +1,9 @@
 import { createApp } from "./app.js";
 import { loadEnvironment } from "./config/env.js";
-import { connectDatabase, disconnectDatabase } from "./infrastructure/database/prisma.js";
+import {
+  connectDatabase,
+  disconnectDatabase
+} from "./infrastructure/database/prisma.js";
 import { createLogger } from "./infrastructure/logging/logger.js";
 
 const environment = loadEnvironment();
@@ -10,7 +13,10 @@ const app = createApp({ apiPrefix: environment.API_PREFIX });
 await connectDatabase();
 
 const server = app.listen(environment.PORT, () => {
-  logger.info({ port: environment.PORT, environment: environment.NODE_ENV }, "API server started");
+  logger.info(
+    { port: environment.PORT, environment: environment.NODE_ENV },
+    "API server started"
+  );
 });
 
 let shuttingDown = false;
