@@ -1,6 +1,7 @@
 export interface AuthContext {
   subjectId: string;
   subjectType: "user";
+  sessionId: string;
   permissions: string[];
 }
 
