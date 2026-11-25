@@ -20,17 +20,13 @@ These pillars share platform-level identity, organization relationships, commerc
 
 The ecosystem ambition does not establish an MVP, release sequence, or implementation authorization. Those require separate product decisions.
 
-### Initial commercial model
+### Commercial model — deferred
 
-- **Ticketing:** customer service fee plus organizer commission deducted from eligible ticket sales.
-- **Hospitality:** separately disclosed customer booking fee plus provider commission deducted from eligible provider settlement.
-- **Provider commission trigger:** intended to apply to fulfilled reservations; the commissionable value and handling of partial fulfilment, cancellations, refunds, and no-shows remain unresolved.
-- **Organizer access:** core organizer access and plans are free; no paid organizer subscription is included in the initial model. Transaction commissions remain applicable.
-- **Paid promotion:** paid placement and sponsored ranking are deferred and excluded from the initial launch model.
-- **Fee transparency:** customer-facing fees must be disclosed before purchase; provider commission must be contractually disclosed to the provider and must not be concealed as an extra customer charge.
-- **Accounting separation:** customer collections, organizer/provider liabilities, platform-earned fees, refunds, reserves, and payouts are distinct financial facts.
+The organizer charging model is not yet selected. The platform may charge organizers independently for each enabled module, grant access to selected modules through subscriptions/entitlements, or combine these approaches. The decision belongs to the future billing phase.
 
-Rates, calculation bases, tax treatment, processor-fee allocation, and category-specific rules remain undecided. This commercial model does not authorize payment integration or implementation.
+Keep module access/entitlement, commercial pricing, and transaction accounting as separate concerns. Do not assume that organizer access is permanently free, that a subscription is required, or that ticketing/hospitality fees or commissions will apply. No prices, rates, commission bases, or billing rules are approved.
+
+When billing is designed, charges must be disclosed to the relevant payer, commercial rules must be configurable/versioned, and applied pricing must be snapshotted on the transaction. Accounting must distinguish customer collections, organizer/provider liabilities, platform-earned amounts, refunds, reserves, and payouts.
 
 ### Product responsibility boundaries
 
@@ -326,8 +322,9 @@ This is the conceptual minimum, not a final scalar-field specification.
 | LedgerAccount | Finance | Chart-of-accounts account, owner/scope, currency, account type |
 | JournalEntry | Finance | Immutable accounting event, source, posting time, reversal relationship |
 | JournalLine | Finance | Debit/credit amount, currency, ledger account |
-| FeeRule | Finance / Commerce | Versioned customer fee/commission rule and effective dates |
-| FeeSnapshot | Commerce / Finance | Exact fee calculation applied to a purchase item |
+| CommercialRule | Commerce / Finance | Future versioned pricing/charge rule, if required by the selected billing model |
+| ChargeSnapshot | Commerce / Finance | Immutable commercial charge calculation applied to a transaction, where applicable |
+| ModuleEntitlement | Platform Access | Future module capability grant, independent of how that access is commercially obtained |
 | SettlementPolicy | Finance | Versioned milestone/reserve policy for organizer/provider class |
 | SettlementMilestone | Finance | Configurable eligibility/release condition and amount/percentage rule |
 | SettlementBatch | Finance | Approved settlement grouping and status |
@@ -468,7 +465,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 ### 9.2 Money and ledger
 
 - Monetary fields identify currency and minor-unit semantics.
-- Snapshot applied prices and fee rules on each order item.
+- Snapshot applied prices and commercial charges on each order item when the billing model is approved and implemented; never infer a charge from a module entitlement alone.
 - Use immutable journal entry and line models.
 - Enforce balanced posting in a single transaction and verify it in service logic; add database safeguards where feasible.
 - Corrections post reversals, never edit posted lines.
@@ -535,7 +532,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 | DM-OPEN-004 | Whether organizer-supplied accommodation follows the same provider approval workflow | Provider ownership and authorization |
 
 | DM-OPEN-007 | Ticket transfer rules after Connect opt-in | Participant eligibility and ownership transitions |
-| DM-OPEN-008 | Hospitality fee rates and calculation basis: customer booking fee and provider commission structure are confirmed, but amounts, commissionable value, category variations, and cancellation/refund/no-show treatment remain open | Fee snapshots, provider payables, and customer price disclosure |
+| DM-OPEN-008 | Organizer/module charging model: per-module charges, organizer subscriptions/entitlements, or a combination; customer/provider transaction charges and their calculation rules | Commercial configuration, access entitlements, pricing snapshots, and financial allocations |
 | DM-OPEN-009 | Refund cost/liability after organizer or provider has been settled | Ledger, reserves, recovery, negative balances |
 | DM-OPEN-010 | Initial Osun State town-level rollout priorities and venue/geography reference source | Local supply recruitment, location discovery, and geography data constraints; the initial state is confirmed |
 | DM-OPEN-011 | Final runtime, payment provider, email, media, hosting, and worker choices | Integration and operational design |
