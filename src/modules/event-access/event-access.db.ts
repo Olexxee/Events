@@ -118,7 +118,7 @@ export async function myAccess(eventId: string, userId: string) {
     return {
       eventId, visibility: event.visibility, accessPolicy: event.accessPolicy,
       canViewDetails: allowedWithoutGrant || Boolean(grant?.canViewDetails),
-      canCheckout: event.status !== "SALES_PAUSED" && ((event.accessPolicy === "OPEN" && event.visibility !== "INVITATION_ONLY") || Boolean(grant?.canCheckout)),
+      canCheckout: event.status !== "SALES_PAUSED" && ((event.accessPolicy === "OPEN" && event.visibility !== "INVITATION_ONLY") || (Boolean(grant?.canCheckout) && (event.accessPolicy !== "APPROVAL_REQUIRED" || grant?.source === "PLATFORM" || request?.status === "APPROVED"))),
       grant, request, pendingInvitation: Boolean(invitation)
     };
   });
@@ -220,7 +220,7 @@ export async function revokeGrant(input: { grantId: string; eventId: string; org
   return prisma.$transaction(async (tx) => {
     await assertManager(tx, input.organizationId, input.eventId, input.actorId);
     const changed = await tx.eventAccessGrant.updateMany({
-      where: { id: input.grantId, eventId: input.eventId, organizationId: input.organizationId, status: "ACTIVE" },
+      where: { id: input.grantId, eventId: input.eventId, organizationId: input.organizationId, status: "ACTIVE", source: { in: ["INVITATION", "ACCESS_REQUEST"] } },
       data: { status: "REVOKED", revokedAt: new Date(), revokedByUserId: input.actorId, revokeReason: input.reason }
     });
     if (changed.count !== 1) fail("ACCESS_GRANT_NOT_REVOCABLE", "Active access grant was not found", 404);
@@ -244,6 +244,7 @@ export async function setPlatformHold(input: { eventId: string; actorId: string;
       await tx.eventAccessHold.create({ data: { eventId: input.eventId, reason: input.reason, createdByUserId: input.actorId } });
     }
     await tx.auditLog.create({ data: { actorId: input.actorId, actorType: "user", action: input.release ? "event.access.hold.released" : "event.access.hold.placed", resourceType: "event", resourceId: input.eventId, metadata: { reason: input.reason } } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event", aggregateId: input.eventId, eventType: input.release ? "EventAccessHoldReleased" : "EventAccessHoldPlaced", deduplicationKey: `event.access.hold:${input.eventId}:${input.release ? "released" : "placed"}:${Date.now()}`, payload: { eventId: input.eventId, reason: input.reason } } });
     return { eventId: input.eventId, holdActive: !input.release };
   });
 }
