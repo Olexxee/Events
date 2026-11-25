@@ -575,9 +575,9 @@ The following items are not yet approved and must be resolved during product dis
 
 ### Vybe — experiences marketplace
 
-The proposed marketplace model, provider governance, inventory archetypes, booking lifecycles, fulfilment boundaries, Payments/Commerce contracts, and unresolved decisions are consolidated in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md). The design remains unapproved; no Vybe schema or implementation is authorized.
+The proposed marketplace model, provider governance, inventory archetypes, booking lifecycles, fulfilment boundaries, Payments/Commerce contracts, and unresolved decisions are consolidated in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md). **Staged catalogue rollout (VYBE-001) is approved:** all catalogue families are supported architecturally, with activation phased by operational and provider readiness. Remaining design decisions require approval before implementation; no Vybe schema or implementation is authorized.
 
-Open decisions include room-category versus specific-room selection, external inventory certification, unused hotel allocation release, category-specific cancellation windows, provider-confirmation payment treatment, provider approval evidence, event-cancellation response deadlines, refund liability after settlement, and initial catalogue rollout scope.
+Open decisions include room-category versus specific-room selection, external inventory certification, unused hotel allocation release, category-specific cancellation windows, provider-confirmation payment treatment, provider approval evidence, event-cancellation response deadlines, refund liability after settlement, and catalogue activation sequencing beyond the approved staged rollout.
 
 ### Connect and safety
 
