@@ -1,10 +1,10 @@
 # Events + Connect — Domain Model and Data Design
 
-> **Status:** Conceptual domain specification; shared foundation implementation underway  
+> **Status:** Conceptual domain specification; shared foundation, Identity & Access, organizer applications, and Event core implemented  
 > **Scope:** Domain ownership, entity relationships, data dictionary, lifecycle boundaries, and Prisma design constraints  
 > **Implementation status:** The shared backend foundation is authorized. Domain models, domain modules, migrations, and provider integrations remain subject to their design and implementation gates.
 
-This document expands the confirmed product decisions in the root README. It is a conceptual model, not a description of an implemented database. Recommendations and unresolved policies are identified explicitly.
+This document expands the confirmed product decisions in the root README. Identity & Access, organizer applications, and the Event marketplace core are implemented; the remaining domain entities are conceptual until their individual design gates and implementation phases are approved. Recommendations and unresolved policies are identified explicitly. Event Access policy is tracked in [EVENT_ACCESS_DESIGN.md](EVENT_ACCESS_DESIGN.md).
 
 ## Product identity and domain implications
 
