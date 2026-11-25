@@ -11,6 +11,7 @@ import {
   listPublicEvents,
   publishDraft
 } from "../src/modules/events/events.db.js";
+import { submitRequest, listRequests, decideRequest, issueInvitation, respondToInvitation, myAccess, setPlatformHold } from "../src/modules/event-access/event-access.db.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -26,6 +27,10 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
   });
 
   beforeEach(async () => {
+    await prisma.eventAccessHold.deleteMany();
+    await prisma.eventAccessGrant.deleteMany();
+    await prisma.eventAccessRequest.deleteMany();
+    await prisma.eventInvitation.deleteMany();
     await prisma.eventRevision.deleteMany();
     await prisma.eventVenue.deleteMany();
     await prisma.eventSchedule.deleteMany();
@@ -71,7 +76,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     await disconnectDatabase();
   });
 
-  async function createDraftEvent(slug = "integration-event") {
+  async function createDraftEvent(slug = "integration-event", accessPolicy: "OPEN" | "APPROVAL_REQUIRED" = "OPEN") {
     return createDraft({
       organizationId,
       actorUserId: ownerId,
@@ -235,3 +240,74 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     ).not.toBeNull();
   });
 });
+
+
+  it("creates an event-scoped grant only after organizer approval of an access request", async () => {
+    const draft = await createDraftEvent("approval-required-event", "APPROVAL_REQUIRED");
+    await prisma.organizerApplication.create({
+      data: {
+        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        applicationMessage: "Approved integration fixture",
+        decisionReason: "Integration fixture approval",
+        reviewedAt: new Date(), reviewedByUserId: ownerId
+      }
+    });
+    await publishDraft(draft.id, ownerId);
+    const request = await submitRequest(draft.id, memberId, "I would like to attend.");
+    expect(request.status).toBe("SUBMITTED");
+    const queue = await listRequests(draft.id, organizationId, ownerId);
+    expect(queue).toHaveLength(1);
+    await decideRequest({
+      requestId: request.id, eventId: draft.id, organizationId,
+      actorId: ownerId, decision: "APPROVED", reason: "Request approved"
+    });
+    const access = await myAccess(draft.id, memberId);
+    expect(access.canViewDetails).toBe(true);
+    expect(access.canCheckout).toBe(true);
+    expect(access.grant?.source).toBe("ACCESS_REQUEST");
+    expect(await prisma.eventAccessGrant.count({ where: { eventId: draft.id, userId: memberId, status: "ACTIVE" } })).toBe(1);
+    expect(await prisma.outboxMessage.count({ where: { eventType: "EventAccessGranted", aggregateId: access.grant!.id } })).toBe(1);
+  });
+
+  it("binds invitations to verified recipient accounts and prevents reuse", async () => {
+    const recipient = await prisma.user.create({
+      data: { email: `verified-${crypto.randomUUID()}@events.test`, emailVerifiedAt: new Date() }
+    });
+    const draft = await createDraftEvent("invitation-only-event");
+    await prisma.organizerApplication.create({
+      data: {
+        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        applicationMessage: "Approved integration fixture",
+        decisionReason: "Integration fixture approval",
+        reviewedAt: new Date(), reviewedByUserId: ownerId
+      }
+    });
+    await publishDraft(draft.id, ownerId);
+    const issued = await issueInvitation({
+      eventId: draft.id, organizationId, actorId: ownerId,
+      recipientEmail: recipient.email
+    });
+    expect(issued.token).toBeTruthy();
+    await expect(respondToInvitation(issued.token, memberId, "ACCEPTED")).rejects.toMatchObject({ code: "INVITATION_INVALID", statusCode: 404 });
+    await respondToInvitation(issued.token, recipient.id, "ACCEPTED");
+    await expect(respondToInvitation(issued.token, recipient.id, "ACCEPTED")).rejects.toMatchObject({ code: "INVITATION_INVALID", statusCode: 404 });
+    const access = await myAccess(draft.id, recipient.id);
+    expect(access.canViewDetails).toBe(true);
+    expect(access.canCheckout).toBe(true);
+    expect(access.grant?.source).toBe("INVITATION");
+  });
+
+  it("blocks access checks while a platform access hold is active", async () => {
+    const draft = await createDraftEvent("held-event");
+    await prisma.organizerApplication.create({
+      data: {
+        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        applicationMessage: "Approved integration fixture",
+        decisionReason: "Integration fixture approval",
+        reviewedAt: new Date(), reviewedByUserId: ownerId
+      }
+    });
+    await publishDraft(draft.id, ownerId);
+    await setPlatformHold({ eventId: draft.id, actorId: ownerId, reason: "Safety review", release: false });
+    await expect(myAccess(draft.id, memberId)).rejects.toMatchObject({ code: "EVENT_ACCESS_ON_HOLD", statusCode: 403 });
+  });
