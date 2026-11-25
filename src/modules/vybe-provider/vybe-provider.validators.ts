@@ -62,3 +62,12 @@ export const addVybeProviderEvidenceSchema = z.object({
   params: z.object({ id: uuidSchema }),
   query: z.object({})
 });
+
+export const changeVybeProviderApprovalStatusSchema = z.object({
+  body: z.object({
+    action: z.enum(["SUSPENDED", "REVOKED"]),
+    reason: z.string().trim().min(10).max(1000)
+  }),
+  params: z.object({ id: uuidSchema }),
+  query: z.object({})
+});
