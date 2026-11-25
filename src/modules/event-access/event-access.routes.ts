@@ -10,7 +10,7 @@ import {
   placeHoldController, releaseHoldController
 } from "./event-access.controller.js";
 import {
-  eventIdParams, requestCreate, requestIdParams, decisionSchema, invitationSchema,
+  eventIdParams, organizationEventParams, requestCreate, requestIdParams, decisionSchema, invitationSchema,
   invitationTokenSchema, revokeGrantSchema, holdSchema
 } from "./event-access.validators.js";
 
@@ -25,7 +25,7 @@ const requirePlatformIntervention = (req: import("express").Request, _res: impor
 eventAccessRouter.post("/events/:eventId/access-requests", authenticateRequest, requireAuthenticated, validateRequest(requestCreate), submitRequestController);
 eventAccessRouter.get("/me/events/:eventId/access", authenticateRequest, requireAuthenticated, validateRequest(eventIdParams), myAccessController);
 eventAccessRouter.delete("/events/access-requests/:requestId", authenticateRequest, requireAuthenticated, validateRequest(requestIdParams), withdrawRequestController);
-eventAccessRouter.get("/organizations/:organizationId/events/:eventId/access-requests", authenticateRequest, requireAuthenticated, listRequestsController);
+eventAccessRouter.get("/organizations/:organizationId/events/:eventId/access-requests", authenticateRequest, requireAuthenticated, validateRequest(organizationEventParams), listRequestsController);
 eventAccessRouter.post("/organizations/:organizationId/events/:eventId/access-requests/:requestId/decision", authenticateRequest, requireAuthenticated, validateRequest(decisionSchema), decideRequestController);
 eventAccessRouter.post("/organizations/:organizationId/events/:eventId/invitations", authenticateRequest, requireAuthenticated, validateRequest(invitationSchema), issueInvitationController);
 eventAccessRouter.post("/event-invitations/:token/accept", authenticateRequest, requireAuthenticated, validateRequest(invitationTokenSchema), invitationAcceptController);
