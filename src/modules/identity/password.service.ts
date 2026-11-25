@@ -14,10 +14,10 @@ function deriveKey(
   });
 }
 const KEY_LENGTH = 64;
-const COST = 16384;
+const COST = 131072;
 const BLOCK_SIZE = 8;
 const PARALLELIZATION = 1;
-const MAX_MEMORY = 64 * 1024 * 1024;
+const MAX_MEMORY = 256 * 1024 * 1024;
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);
@@ -67,7 +67,7 @@ export async function verifyPassword(
     !Number.isSafeInteger(r) ||
     !Number.isSafeInteger(p) ||
     n < 2 ||
-    n > 65536 ||
+    n > 131072 ||
     r < 1 ||
     r > 16 ||
     p < 1 ||
