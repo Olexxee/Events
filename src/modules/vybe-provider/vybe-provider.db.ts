@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type {
   Prisma,
   VybeCategory,
@@ -10,6 +11,7 @@ import {
   assertOrganizationAuthority
 } from "../organizations/organizations.contracts.js";
 import { AppError } from "../../shared/errors/app-error.js";
+import { enqueueOutboxMessage } from "../../shared/outbox/outbox.repository.js";
 
 const CURRENT_PROVIDER_TERMS_VERSION = "vybe-provider-v1";
 
@@ -145,6 +147,18 @@ export async function submitProviderApplication(input: {
             locationCount: input.locations.length,
             evidenceCount: input.evidence?.length ?? 0
           }
+        }
+      });
+
+      await enqueueOutboxMessage(tx, {
+        aggregateType: "vybe_provider_application",
+        aggregateId: application.id,
+        eventType: "vybe.provider_application.submitted.v1",
+        deduplicationKey: `vybe.provider_application:${application.id}:submitted`,
+        payload: {
+          applicationId: application.id,
+          organizationId: application.organizationId,
+          category: application.category
         }
       });
 
@@ -296,6 +310,8 @@ export async function reviewProviderApplication(input: {
       }
     }
 
+    let approvedId: string | undefined;
+
     if (input.decision === "APPROVED") {
       if (
         input.expiresAt &&
@@ -366,7 +382,7 @@ export async function reviewProviderApplication(input: {
         })
       );
 
-      await tx.vybeProviderApproval.create({
+      const approval = await tx.vybeProviderApproval.create({
         data: {
           applicationId: application.id,
           providerProfileId: profile.id,
@@ -379,6 +395,7 @@ export async function reviewProviderApplication(input: {
             : {})
         }
       });
+      approvedId = approval.id;
     }
 
     const status: VybeProviderApplicationStatus = input.decision;
@@ -406,7 +423,7 @@ export async function reviewProviderApplication(input: {
           ? "INFORMATION_REQUESTED"
           : input.decision;
 
-    await tx.vybeProviderReview.create({
+    const review = await tx.vybeProviderReview.create({
       data: {
         applicationId: application.id,
         reviewerUserId: input.reviewerUserId,
@@ -414,6 +431,35 @@ export async function reviewProviderApplication(input: {
         reason: input.reason
       }
     });
+
+    await enqueueOutboxMessage(tx, {
+      aggregateType: "vybe_provider_application",
+      aggregateId: application.id,
+      eventType: "vybe.provider_application.reviewed.v1",
+      deduplicationKey: `vybe.provider_application:${application.id}:review:${review.id}`,
+      payload: {
+        applicationId: application.id,
+        organizationId: application.organizationId,
+        category: application.category,
+        decision: input.decision,
+        reviewId: review.id
+      }
+    });
+
+    if (approvedId) {
+      await enqueueOutboxMessage(tx, {
+        aggregateType: "vybe_provider_approval",
+        aggregateId: approvedId,
+        eventType: "vybe.provider_approval.granted.v1",
+        deduplicationKey: `vybe.provider_approval:${approvedId}:granted`,
+        payload: {
+          approvalId: approvedId,
+          applicationId: application.id,
+          organizationId: application.organizationId,
+          category: application.category
+        }
+      });
+    }
 
     await tx.auditLog.create({
       data: {
@@ -528,6 +574,18 @@ export async function addProviderApplicationEvidence(input: {
       }
     });
 
+    await enqueueOutboxMessage(tx, {
+      aggregateType: "vybe_provider_application",
+      aggregateId: application.id,
+      eventType: "vybe.provider_application.evidence_submitted.v1",
+      deduplicationKey: `vybe.provider_application:${application.id}:evidence:${randomUUID()}`,
+      payload: {
+        applicationId: application.id,
+        organizationId: application.organizationId,
+        evidenceCount: created.count
+      }
+    });
+
     return tx.vybeProviderEvidence.findMany({
       where: { applicationId: application.id, status: "PENDING" },
       select: {
@@ -623,12 +681,27 @@ export async function changeProviderApprovalStatus(input: {
             }
     });
 
-    await tx.vybeProviderReview.create({
+    const review = await tx.vybeProviderReview.create({
       data: {
         applicationId: approval.applicationId,
         reviewerUserId: input.reviewerUserId,
         action: input.action,
         reason: input.reason
+      }
+    });
+
+    await enqueueOutboxMessage(tx, {
+      aggregateType: "vybe_provider_approval",
+      aggregateId: approval.id,
+      eventType: `vybe.provider_approval.${input.action.toLowerCase()}.v1`,
+      deduplicationKey: `vybe.provider_approval:${approval.id}:review:${review.id}`,
+      payload: {
+        approvalId: approval.id,
+        applicationId: approval.applicationId,
+        organizationId: approval.application.organizationId,
+        category: approval.category,
+        action: input.action,
+        reviewId: review.id
       }
     });
 
