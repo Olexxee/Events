@@ -18,7 +18,7 @@ describe("platform permission resolution", () => {
     expect(permissions).not.toContain("platform:organizers:review");
   });
 
-  it("grants super-admin permissions explicitly without wildcard matching", () => {
+  it("grants explicit super-admin permissions without wildcards", () => {
     const permissions = resolvePlatformPermissions(["SUPER_ADMIN"]);
 
     expect(permissions).toContain("platform:roles:manage");
@@ -27,7 +27,7 @@ describe("platform permission resolution", () => {
     expect(hasPermission(permissions, "anything:*")).toBe(false);
   });
 
-  it("deduplicates permissions assigned through multiple platform roles", () => {
+  it("deduplicates permissions across platform roles", () => {
     const permissions = resolvePlatformPermissions([
       "SUPPORT",
       "SUPER_ADMIN"
@@ -40,7 +40,7 @@ describe("platform permission resolution", () => {
 });
 
 describe("organizer application review permission", () => {
-  it("is granted to platform admins and super admins, not support or finance roles", () => {
+  it("is limited to platform admins and super admins", () => {
     expect(
       resolvePlatformPermissions(["PLATFORM_ADMIN"]).includes(
         "platform:organizers:review"
