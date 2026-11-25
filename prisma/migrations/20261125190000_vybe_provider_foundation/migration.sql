@@ -104,6 +104,7 @@ CREATE TABLE "vybe_provider_reviews" (
 
 CREATE TABLE "vybe_provider_approvals" (
   "id" UUID NOT NULL,
+  "application_id" UUID NOT NULL,
   "provider_profile_id" UUID NOT NULL,
   "category" "vybe_category" NOT NULL,
   "status" "vybe_provider_approval_status" NOT NULL DEFAULT 'ACTIVE',
@@ -124,6 +125,7 @@ CREATE TABLE "vybe_provider_approvals" (
 );
 
 CREATE UNIQUE INDEX "vybe_provider_profiles_organization_id_key" ON "vybe_provider_profiles"("organization_id");
+CREATE UNIQUE INDEX "vybe_provider_approvals_application_id_key" ON "vybe_provider_approvals"("application_id");
 CREATE INDEX "vybe_provider_approvals_profile_category_status_idx" ON "vybe_provider_approvals"("provider_profile_id", "category", "status");
 CREATE UNIQUE INDEX "vybe_provider_approvals_one_active_per_category_key" ON "vybe_provider_approvals"("provider_profile_id", "category") WHERE "status" = 'ACTIVE';
 CREATE UNIQUE INDEX "vybe_provider_application_locations_scope_key" ON "vybe_provider_application_locations"("application_id", "city", "state", "country");
@@ -161,6 +163,9 @@ ALTER TABLE "vybe_provider_reviews"
 ALTER TABLE "vybe_provider_reviews"
   ADD CONSTRAINT "vybe_provider_reviews_reviewer_user_id_fkey"
   FOREIGN KEY ("reviewer_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "vybe_provider_approvals"
+  ADD CONSTRAINT "vybe_provider_approvals_application_id_fkey"
+  FOREIGN KEY ("application_id") REFERENCES "vybe_provider_applications"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "vybe_provider_approvals"
   ADD CONSTRAINT "vybe_provider_approvals_provider_profile_id_fkey"
   FOREIGN KEY ("provider_profile_id") REFERENCES "vybe_provider_profiles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
