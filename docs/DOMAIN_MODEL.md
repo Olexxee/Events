@@ -1,8 +1,8 @@
 # Events + Connect — Domain Model and Data Design
 
-> **Status:** Conceptual domain specification  
+> **Status:** Conceptual domain specification; shared foundation implementation underway  
 > **Scope:** Domain ownership, entity relationships, data dictionary, lifecycle boundaries, and Prisma design constraints  
-> **Implementation status:** Design only. This document does not authorize application code, a Prisma schema, migrations, or provider integrations.
+> **Implementation status:** The shared backend foundation is authorized. Domain models, domain modules, migrations, and provider integrations remain subject to their design and implementation gates.
 
 This document expands the confirmed product decisions in the root README. It is a conceptual model, not a description of an implemented database. Recommendations and unresolved policies are identified explicitly.
 
@@ -560,16 +560,18 @@ The organizer settlement model is confirmed as milestone releases with a final p
 
 ## 13. Implementation boundary
 
-This document authorizes design discussion and review only. It does not authorize:
+The shared backend foundation is authorized independently of domain-module implementation. The initial infrastructure schema is limited to shared infrastructure concerns (currently the transactional outbox); it is not a substitute for domain design approval.
 
-- Creating a Prisma schema or migration.
-- Building backend or frontend modules.
+This document does not authorize:
+
+- Implementing Events, Ticketing, Hospitality, Accommodation, Connect, Support, or Finance domain modules before their design gates.
+- Creating domain tables or migrations before the relevant domain model and transaction invariants are reviewed.
 - Selecting or provisioning payment, email, media, or hosting providers.
-- Setting fee percentages, settlement percentages, reserve amounts, or retention durations.
+- Setting module prices, subscription plans, fee percentages, settlement percentages, reserve amounts, or retention durations.
 - Reusing Jami source code or schemas.
 
 The Events platform should learn from Jami's failure modes without inheriting its implementation. Domain boundaries, explicit contracts, transactional correctness, authorization, and failure-path testing must be designed independently.
 
 ---
 
-**Document status:** Conceptual domain model for review. Confirmed product decisions remain in the root README. Unresolved decisions are listed explicitly above.
+**Document status:** Conceptual domain model; implementation constraints remain active. Confirmed product decisions remain in the root README. Unresolved decisions are listed explicitly above.
