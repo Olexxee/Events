@@ -1,0 +1,237 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  getPrismaClient,
+  connectDatabase,
+  disconnectDatabase
+} from "../src/infrastructure/database/prisma.js";
+import {
+  createDraft,
+  getManagedEvent,
+  getPublicEvent,
+  listPublicEvents,
+  publishDraft
+} from "../src/modules/events/events.db.js";
+
+const enabled = Boolean(process.env.DATABASE_URL);
+const prisma = getPrismaClient();
+
+describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
+  let ownerId: string;
+  let memberId: string;
+  let organizationId: string;
+  let categoryId: string;
+
+  beforeAll(async () => {
+    await connectDatabase();
+  });
+
+  beforeEach(async () => {
+    await prisma.eventRevision.deleteMany();
+    await prisma.eventVenue.deleteMany();
+    await prisma.eventSchedule.deleteMany();
+    await prisma.event.deleteMany();
+    await prisma.organizerApplication.deleteMany();
+    await prisma.organizationMembership.deleteMany();
+    await prisma.organization.deleteMany();
+    await prisma.session.deleteMany();
+    await prisma.passwordCredential.deleteMany();
+    await prisma.userProfile.deleteMany();
+    await prisma.user.deleteMany();
+
+    const owner = await prisma.user.create({
+      data: { email: `owner-${crypto.randomUUID()}@events.test` }
+    });
+    const member = await prisma.user.create({
+      data: { email: `member-${crypto.randomUUID()}@events.test` }
+    });
+    ownerId = owner.id;
+    memberId = member.id;
+    const organization = await prisma.organization.create({
+      data: {
+        name: "Integration Test Organizer",
+        slug: `integration-${crypto.randomUUID()}`,
+        createdById: ownerId,
+        memberships: {
+          create: [
+            { userId: ownerId, role: "OWNER", status: "ACTIVE" },
+            { userId: memberId, role: "MEMBER", status: "ACTIVE" }
+          ]
+        }
+      }
+    });
+    organizationId = organization.id;
+    const category = await prisma.eventCategory.findUniqueOrThrow({
+      where: { slug: "music" },
+      select: { id: true }
+    });
+    categoryId = category.id;
+  });
+
+  afterAll(async () => {
+    await disconnectDatabase();
+  });
+
+  async function createDraftEvent(slug = "integration-event") {
+    return createDraft({
+      organizationId,
+      actorUserId: ownerId,
+      categoryId,
+      title: "Integration Test Live Show",
+      slug,
+      summary: "A live music event used to verify marketplace persistence.",
+      description:
+        "This event exists only to exercise PostgreSQL-backed event workflows.",
+      format: "IN_PERSON",
+      visibility: "PUBLIC",
+      accessPolicy: "OPEN",
+      timezone: "Africa/Lagos",
+      schedules: [
+        {
+          startsAt: "2027-04-10T09:00:00+01:00",
+          endsAt: "2027-04-10T17:00:00+01:00",
+          label: "Main programme"
+        }
+      ],
+      venue: {
+        displayName: "Test Arena",
+        city: "Osogbo",
+        state: "Osun",
+        country: "Nigeria",
+        exactAddress: "12 Private Test Lane",
+        accessInstructions: "Use the rear entrance",
+        privateUrl: "https://private.example.test/entry"
+      }
+    });
+  }
+
+  it("persists drafts, revisions and private venue data while keeping public serialization restricted", async () => {
+    const draft = await createDraftEvent();
+    expect(draft.status).toBe("DRAFT");
+    expect(draft.schedules).toHaveLength(1);
+
+    const managed = await getManagedEvent(draft.id, ownerId);
+    expect(managed.venue?.exactAddress).toBe("12 Private Test Lane");
+    expect(managed.venue?.accessInstructions).toBe("Use the rear entrance");
+    expect(managed.venue?.privateUrl).toBe(
+      "https://private.example.test/entry"
+    );
+
+    await prisma.organizerApplication.create({
+      data: {
+        organizationId,
+        applicantUserId: ownerId,
+        status: "APPROVED",
+        applicationMessage: "Approved integration fixture",
+        decisionReason: "Integration fixture approval",
+        reviewedAt: new Date(),
+        reviewedByUserId: ownerId
+      }
+    });
+    await publishDraft(draft.id, ownerId);
+    const publicEvent = await getPublicEvent(draft.id);
+    const serialized = JSON.stringify(publicEvent);
+    expect(serialized).not.toContain("12 Private Test Lane");
+    expect(serialized).not.toContain("Use the rear entrance");
+    expect(serialized).not.toContain("private.example.test");
+    expect(publicEvent.venue).toEqual({
+      displayName: "Test Arena",
+      city: "Osogbo",
+      state: "Osun",
+      country: "Nigeria"
+    });
+  });
+
+  it("blocks publishing until the organization has an approved organizer application", async () => {
+    const draft = await createDraftEvent();
+    await expect(publishDraft(draft.id, ownerId)).rejects.toMatchObject({
+      code: "ORGANIZER_APPROVAL_REQUIRED",
+      statusCode: 403
+    });
+    expect(
+      await prisma.event.findUniqueOrThrow({ where: { id: draft.id } })
+    ).toMatchObject({ status: "DRAFT", publishedAt: null });
+  });
+
+  it("rejects event management by an ordinary organization member", async () => {
+    await expect(
+      createDraft({
+        organizationId,
+        actorUserId: memberId,
+        categoryId,
+        title: "Unauthorized Event",
+        slug: "unauthorized-event",
+        summary: "A member must not be able to create an event.",
+        description:
+          "This event creation attempt must be denied by the database service.",
+        format: "ONLINE",
+        visibility: "PUBLIC",
+        accessPolicy: "OPEN",
+        timezone: "Africa/Lagos",
+        schedules: [
+          {
+            startsAt: "2027-04-10T09:00:00Z",
+            endsAt: "2027-04-10T10:00:00Z"
+          }
+        ]
+      })
+    ).rejects.toMatchObject({ code: "EVENT_FORBIDDEN", statusCode: 403 });
+  });
+
+  it("excludes drafts and unlisted events from public discovery", async () => {
+    const draft = await createDraftEvent("draft-hidden");
+    const unlisted = await createDraft({
+      organizationId,
+      actorUserId: ownerId,
+      categoryId,
+      title: "Unlisted Test Event",
+      slug: "unlisted-hidden",
+      summary: "This event must not appear in public discovery.",
+      description:
+        "Unlisted events are intentionally excluded from public discovery results.",
+      format: "ONLINE",
+      visibility: "UNLISTED",
+      accessPolicy: "OPEN",
+      timezone: "Africa/Lagos",
+      schedules: [
+        {
+          startsAt: "2027-04-11T09:00:00Z",
+          endsAt: "2027-04-11T10:00:00Z"
+        }
+      ]
+    });
+    const result = await listPublicEvents({ limit: 50 });
+    const ids = result.items.map((item) => item.id);
+    expect(ids).not.toContain(draft.id);
+    expect(ids).not.toContain(unlisted.id);
+    await expect(getPublicEvent(draft.id)).rejects.toMatchObject({
+      code: "EVENT_NOT_FOUND",
+      statusCode: 404
+    });
+  });
+
+  it("writes an audit record and outbox message atomically when publishing", async () => {
+    const draft = await createDraftEvent("publish-outbox-event");
+    await prisma.organizerApplication.create({
+      data: {
+        organizationId,
+        applicantUserId: ownerId,
+        status: "APPROVED",
+        applicationMessage: "Approved integration fixture",
+        decisionReason: "Integration fixture approval",
+        reviewedAt: new Date(),
+        reviewedByUserId: ownerId
+      }
+    });
+    await publishDraft(draft.id, ownerId);
+    expect(
+      await prisma.auditLog.findFirst({
+        where: { action: "event.published", resourceId: draft.id }
+      })
+    ).not.toBeNull();
+    expect(
+      await prisma.outboxMessage.findUnique({
+        where: { deduplicationKey: `event.published:${draft.id}` }
+      })
+    ).not.toBeNull();
+  });
+});
