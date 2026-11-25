@@ -44,12 +44,6 @@ jobs:
         run: npm run prisma:migrate:deploy
       - run: npm run typecheck
       - run: npm run lint
-      - name: Preview Prettier output
-        run: |
-          npx prettier --write src/modules/vybe-provider/vybe-provider.controller.ts src/modules/vybe-provider/vybe-provider.db.ts tests/vybe-provider.integration.test.ts
-          git diff --no-color -- src/modules/vybe-provider/vybe-provider.controller.ts
-          git diff --no-color -- src/modules/vybe-provider/vybe-provider.db.ts
-          git diff --no-color -- tests/vybe-provider.integration.test.ts
       - run: npm run format:check
       - run: npm test
       - run: npm run build
