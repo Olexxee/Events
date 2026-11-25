@@ -2,7 +2,11 @@ import type { PlatformRole } from "@prisma/client";
 
 const ROLE_PERMISSIONS: Record<PlatformRole, readonly string[]> = {
   SUPPORT: ["platform:support:read"],
-  PLATFORM_ADMIN: ["platform:admin:read", "platform:moderation:manage", "platform:organizers:review"],
+  PLATFORM_ADMIN: [
+    "platform:admin:read",
+    "platform:moderation:manage",
+    "platform:organizers:review"
+  ],
   FINANCE_ADMIN: ["finance:read", "finance:reconcile"],
   SUPER_ADMIN: [
     "platform:support:read",
