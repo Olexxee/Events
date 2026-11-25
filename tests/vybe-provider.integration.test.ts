@@ -121,6 +121,33 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
     });
   });
 
+  it("prevents organization-affiliated platform reviewers from reviewing", async () => {
+    const { user, organization } = await createApplicant();
+    const reviewer = await prisma.user.create({
+      data: { email: `vybe-conflicted-reviewer-${crypto.randomUUID()}@events.test` }
+    });
+    await prisma.organizationMembership.create({
+      data: {
+        organizationId: organization.id,
+        userId: reviewer.id,
+        role: "ADMIN",
+        status: "ACTIVE"
+      }
+    });
+    const application = await submit(user.id, organization.id);
+
+    await expect(
+      reviewProviderApplication({
+        applicationId: application.id,
+        reviewerUserId: reviewer.id,
+        decision: "APPROVED",
+        reason: "An affiliated reviewer must not approve this application."
+      })
+    ).rejects.toMatchObject({
+      code: "VYBE_PROVIDER_CONFLICTED_REVIEWER"
+    });
+  });
+
   it("approves only after submitted evidence has been accepted and creates a scoped approval", async () => {
     const { user, organization } = await createApplicant();
     const reviewer = await prisma.user.create({
