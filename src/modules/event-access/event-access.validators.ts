@@ -10,3 +10,6 @@ export const invitationSchema = z.object({ body: z.object({ recipientEmail: z.st
 export const invitationTokenSchema = z.object({ body: z.object({}), params: z.object({ token: z.string().min(40).max(128) }), query: z.object({}) });
 export const revokeGrantSchema = z.object({ body: z.object({ reason }), params: z.object({ organizationId: uuid, eventId: uuid, grantId: uuid }), query: z.object({}) });
 export const holdSchema = z.object({ body: z.object({ reason }), params: z.object({ eventId: uuid }), query: z.object({}) });
+
+export const invitationRevokeSchema = z.object({ body: z.object({ reason }), params: z.object({ organizationId: uuid, eventId: uuid, invitationId: uuid }), query: z.object({}) });
+export const platformGrantRevokeSchema = z.object({ body: z.object({ reason }), params: z.object({ eventId: uuid, grantId: uuid }), query: z.object({}) });
