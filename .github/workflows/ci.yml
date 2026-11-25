@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install --global npm@11
-      - run: npm install --no-audit --no-fund --legacy-peer-deps
+      - run: npm install --no-audit --no-fund --legacy-peer-deps --dangerously-allow-all-scripts
       - run: npm run prisma:generate
       - run: npm run typecheck
       - run: npm run lint
