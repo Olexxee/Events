@@ -288,7 +288,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 
 | Entity | Owner | Purpose |
 |---|---|---|
-| HospitalityProvider | Hospitality | Provider profile linked to an organization, with a hospitality-specific approval lifecycle independent of organizer verification |
+| HospitalityProvider | Hospitality | Provider profile linked to an organization, with a hospitality-specific approval lifecycle independent of organizer-role approval |
 | HospitalityOffering | Hospitality | Accommodation, table, dining, transport, voucher, experience |
 | OfferingEvent | Hospitality | Explicit join when an offering serves multiple events |
 | InventoryResource | Hospitality | Resource being reserved: room, table, capacity pool, voucher pool |
@@ -370,7 +370,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 | Ticket hold | Held quantity cannot exceed available inventory; expiry/release/consume occurs once |
 | Check-in | One successful admission per ticket unless explicit re-entry policy exists |
 | Access grant | No duplicate active grant for the same event/user/source scope |
-| Provider offering | Provider must have active hospitality approval and be active before new listings or reservations; organizer verification alone is insufficient |
+| Provider offering | Provider must have active hospitality approval and be active before new listings or reservations; organizer-role approval alone is insufficient |
 | Inventory allocation | No overlapping allocation for exclusive room/table resources; aggregate quantity cannot exceed capacity; platform bookings cannot consume beyond the platform's allocated pool |
 | Reservation confirmation | Controlled/synchronized inventory is held concurrency-safely during checkout and confirmed only after verified payment; provider approval is an explicit exception |
 | Hospitality payment | Attendee-led and organizer-led purchases identify the actual purchaser and retain item-level payment terms; full payment is the default before provider commitment, while deposits/staged payments require explicit provider agreement |
