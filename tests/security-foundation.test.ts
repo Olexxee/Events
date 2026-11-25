@@ -25,7 +25,7 @@ function createSecurityTestApp() {
       req.auth = {
         subjectId: "test-user",
         subjectType: "user",
-        permissions: ["admin:read"],
+        permissions: ["admin:read"]
       };
       next();
     },
@@ -40,7 +40,7 @@ function createSecurityTestApp() {
       req.auth = {
         subjectId: "test-user",
         subjectType: "user",
-        permissions: ["events:read"],
+        permissions: ["events:read"]
       };
       next();
     },
@@ -55,7 +55,7 @@ function createSecurityTestApp() {
       z.object({
         body: z.object({ title: z.string().min(3) }),
         params: z.object({}),
-        query: z.object({}),
+        query: z.object({})
       })
     ),
     (req, res) => {
@@ -99,9 +99,7 @@ describe("shared security foundation", () => {
     const valid = await request(app)
       .post("/validated")
       .send({ title: "Launch" });
-    const invalid = await request(app)
-      .post("/validated")
-      .send({ title: "x" });
+    const invalid = await request(app).post("/validated").send({ title: "x" });
 
     expect(valid.status).toBe(200);
     expect(valid.body.data.title).toBe("Launch");
