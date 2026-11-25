@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error.js";
 import { getValidatedRequest } from "../../shared/middleware/validate-request.js";
 import { successResponse } from "../../shared/responses/success-response.js";
