@@ -1,4 +1,4 @@
-import { OrganizerApplicationStatus } from "@prisma/client";
+import type { OrganizerApplicationStatus } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error.js";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 
@@ -16,80 +16,96 @@ export async function submitOrganizerApplication(input: {
 }) {
   const prisma = getPrismaClient();
 
-  return prisma.$transaction(async (tx) => {
-    const membership = await tx.organizationMembership.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: input.organizationId,
-          userId: input.applicantUserId
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const membership = await tx.organizationMembership.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: input.organizationId,
+            userId: input.applicantUserId
+          }
+        },
+        select: {
+          role: true,
+          status: true,
+          organization: { select: { status: true } }
         }
-      },
-      select: {
-        role: true,
-        status: true,
-        organization: { select: { status: true } }
+      });
+
+      if (
+        !membership ||
+        membership.status !== "ACTIVE" ||
+        membership.role !== "OWNER" ||
+        membership.organization.status !== "ACTIVE"
+      ) {
+        throw new AppError(
+          "ORGANIZER_APPLICATION_FORBIDDEN",
+          "Only an active organization owner can apply for organizer access",
+          403
+        );
       }
-    });
 
+      const existing = await tx.organizerApplication.findFirst({
+        where: {
+          organizationId: input.organizationId,
+          status: { in: ACTIVE_APPLICATION_STATUSES }
+        },
+        select: { id: true }
+      });
+
+      if (existing) {
+        throw new AppError(
+          "ORGANIZER_APPLICATION_ALREADY_PENDING",
+          "This organization already has an application awaiting a decision",
+          409
+        );
+      }
+
+      const application = await tx.organizerApplication.create({
+        data: {
+          organizationId: input.organizationId,
+          applicantUserId: input.applicantUserId,
+          applicationMessage: input.applicationMessage,
+          ...(input.websiteUrl ? { websiteUrl: input.websiteUrl } : {})
+        },
+        select: {
+          id: true,
+          organizationId: true,
+          status: true,
+          applicationMessage: true,
+          websiteUrl: true,
+          submittedAt: true
+        }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorId: input.applicantUserId,
+          actorType: "user",
+          action: "organizer.application.submitted",
+          resourceType: "organizer_application",
+          resourceId: application.id,
+          metadata: { organizationId: input.organizationId }
+        }
+      });
+
+      return application;
+    });
+  } catch (error) {
     if (
-      !membership ||
-      membership.status !== "ACTIVE" ||
-      membership.role !== "OWNER" ||
-      membership.organization.status !== "ACTIVE"
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error.code === "P2002" || error.code === "23505")
     ) {
-      throw new AppError(
-        "ORGANIZER_APPLICATION_FORBIDDEN",
-        "Only an active organization owner can apply for organizer access",
-        403
-      );
-    }
-
-    const existing = await tx.organizerApplication.findFirst({
-      where: {
-        organizationId: input.organizationId,
-        status: { in: ACTIVE_APPLICATION_STATUSES }
-      },
-      select: { id: true }
-    });
-
-    if (existing) {
       throw new AppError(
         "ORGANIZER_APPLICATION_ALREADY_PENDING",
         "This organization already has an application awaiting a decision",
         409
       );
     }
-
-    const application = await tx.organizerApplication.create({
-      data: {
-        organizationId: input.organizationId,
-        applicantUserId: input.applicantUserId,
-        applicationMessage: input.applicationMessage,
-        ...(input.websiteUrl ? { websiteUrl: input.websiteUrl } : {})
-      },
-      select: {
-        id: true,
-        organizationId: true,
-        status: true,
-        applicationMessage: true,
-        websiteUrl: true,
-        submittedAt: true
-      }
-    });
-
-    await tx.auditLog.create({
-      data: {
-        actorId: input.applicantUserId,
-        actorType: "user",
-        action: "organizer.application.submitted",
-        resourceType: "organizer_application",
-        resourceId: application.id,
-        metadata: { organizationId: input.organizationId }
-      }
-    });
-
-    return application;
-  });
+    throw error;
+  }
 }
 
 export async function listMyOrganizerApplications(userId: string) {
