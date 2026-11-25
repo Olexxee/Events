@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { authenticateRequest } from "../identity/identity.authentication.js";
-import { requireAuthenticated } from "../../shared/middleware/authentication.js";
+import {
+  requireAuthenticated
+} from "../../shared/middleware/authentication.js";
 import { requirePermission } from "../../shared/middleware/authorization.js";
 import { validateRequest } from "../../shared/middleware/validate-request.js";
 import {
