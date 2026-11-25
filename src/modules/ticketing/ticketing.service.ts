@@ -1,6 +1,8 @@
 import * as db from "./ticketing.db.js";
 
-export async function createTicketType(input: Parameters<typeof db.createTicketType>[0]) {
+export async function createTicketType(
+  input: Parameters<typeof db.createTicketType>[0]
+) {
   return db.createTicketType(input);
 }
 export async function listTicketTypes(eventId: string, userId: string) {

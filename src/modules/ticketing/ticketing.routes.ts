@@ -17,8 +17,38 @@ import {
 } from "./ticketing.validators.js";
 
 export const ticketingRouter = Router();
-ticketingRouter.get("/events/:eventId/ticket-types", authenticateRequest, requireAuthenticated, validateRequest(eventIdSchema), listTicketTypesController);
-ticketingRouter.post("/managed/events/:eventId/ticket-types", authenticateRequest, requireAuthenticated, validateRequest(createTicketTypeSchema), createTicketTypeController);
-ticketingRouter.get("/managed/events/:eventId/ticket-types", authenticateRequest, requireAuthenticated, validateRequest(eventIdSchema), listManagedTicketTypesController);
-ticketingRouter.post("/events/:eventId/ticket-holds", authenticateRequest, requireAuthenticated, validateRequest(holdSchema), createHoldController);
-ticketingRouter.post("/ticket-holds/:id/release", authenticateRequest, requireAuthenticated, validateRequest(holdIdSchema), releaseHoldController);
+ticketingRouter.get(
+  "/events/:eventId/ticket-types",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(eventIdSchema),
+  listTicketTypesController
+);
+ticketingRouter.post(
+  "/managed/events/:eventId/ticket-types",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(createTicketTypeSchema),
+  createTicketTypeController
+);
+ticketingRouter.get(
+  "/managed/events/:eventId/ticket-types",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(eventIdSchema),
+  listManagedTicketTypesController
+);
+ticketingRouter.post(
+  "/events/:eventId/ticket-holds",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(holdSchema),
+  createHoldController
+);
+ticketingRouter.post(
+  "/ticket-holds/:id/release",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(holdIdSchema),
+  releaseHoldController
+);
