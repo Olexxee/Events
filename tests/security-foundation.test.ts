@@ -41,6 +41,7 @@ function createSecurityTestApp() {
       req.auth = {
         subjectId: "test-user",
         subjectType: "user",
+        sessionId: "test-session",
         permissions: ["events:read"]
       };
       next();
