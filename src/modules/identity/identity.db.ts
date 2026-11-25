@@ -316,3 +316,17 @@ export async function userHasOrganizationPermission(
 
 export type StoredPlatformRole = PlatformRole;
 export type TransactionClient = Prisma.TransactionClient;
+
+export async function findUserById(userId: string) {
+  return getPrismaClient().user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      status: true,
+      emailVerifiedAt: true,
+      createdAt: true,
+      profile: { select: { displayName: true, phone: true } }
+    }
+  });
+}
