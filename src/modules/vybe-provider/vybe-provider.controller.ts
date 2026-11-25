@@ -3,7 +3,6 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { getValidatedRequest } from "../../shared/middleware/validate-request.js";
 import { successResponse } from "../../shared/responses/success-response.js";
 import {
-  addVybeProviderEvidenceController as addEvidence,
   applyToBecomeVybeProvider,
   decideVybeProviderApplication,
   getMyVybeProviderApplications,
