@@ -1,11 +1,11 @@
 # Vybe — Experiences Marketplace Design Gate
 
-**Status:** Proposed design; awaiting product-owner approval  
+**Status:** Design in progress; Vybe branding and staged catalogue rollout (VYBE-001) approved  
 **Customer-facing brand:** Vybe  
 **Domain owner:** Vybe  
 **Depends on:** Identity & Access, Organizations, Events, Event Access  
 **Integrates with:** Ticketing & Admission, Commerce, independent Payments, Finance, Notifications, Operations & Trust  
-**Implementation authorization:** None. This is a design proposal; it does not authorize Prisma models, migrations, APIs, workers, or provider integrations.
+**Implementation authorization:** None. Product scope decisions are being approved incrementally; this document does not authorize Prisma models, migrations, APIs, workers, or provider integrations.
 
 Vybe is the platform's experiences and bookings marketplace. It covers accommodation, dining, drinks, tables, lounges, VIP experiences, and other bookable services. It is not a hotel-management module and must not be designed around one generic reservation shape.
 
@@ -108,7 +108,18 @@ Price is not a category identifier. Material changes to price, inclusions, capac
 | VIP & premium experiences | Hosted experiences, premium access | Capacity/slots; admission remains Ticketing-owned |
 | Other services | Transport, styling, photography, event support | Category-specific resource and fulfilment constraint |
 
-These are catalogue families, not a requirement to launch every category simultaneously. Shared descriptive metadata is acceptable; flattening every inventory type into one generic quantity counter is not.
+**Approved rollout (VYBE-001): staged.** Vybe supports all six families architecturally, but a family or subcategory becomes bookable only after its operational launch gates are met. This is a phased activation strategy, not a permanent reduction of product scope. Shared descriptive metadata is acceptable; flattening every inventory type into one generic quantity counter is not.
+
+Before activating any family, require: (1) an approved provider and verified authority to sell; (2) a secured, correctly modelled inventory source; (3) enforceable capacity/availability and concurrency controls; (4) published pricing, inclusions, restrictions, cancellation and fulfilment terms; (5) trained operational ownership for provider/customer support and exceptions; and (6) category-appropriate safety, licensing, privacy and compliance review. A category must remain disabled if any critical gate is unmet.
+
+| Family | Minimum family-specific activation gate |
+|---|---|
+| Accommodation | Room-category definitions, per-night allocated capacity, occupancy limits, check-in/out rules, and a tested overbooking/reaccommodation process |
+| Dining | Service periods, table/seat or prepared-quantity capacity, party-size rules, and turnaround/buffer handling where relevant |
+| Drinks | Quantity and service-window controls, responsible-service procedures, and required age/licensing controls |
+| Tables & lounges | Defined resources or capacity pools, occupancy limits, reservation time windows, and overlap prevention |
+| VIP & premium experiences | Explicit inclusions/exclusions, capacity or slots, eligibility rules, and clear separation from Ticketing-owned admission |
+| Other services | A documented category-specific scarce resource, booking constraint, fulfilment proof, and exception process before listing is enabled |
 
 ### 4.2 Event association
 
@@ -351,4 +362,4 @@ The product owner must approve or amend the proposed directions in Section 15 be
 
 ---
 
-**Document status:** Proposed Vybe design, with staged catalogue rollout approved (VYBE-001). It consolidates existing accommodation/hospitality policies under the Vybe brand, preserves independent Payments and Finance boundaries, and makes unresolved decisions explicit. No schema, migration, API, or provider implementation is authorized.
+**Document status:** Vybe branding and staged catalogue rollout (VYBE-001) are approved. The remaining marketplace policies are still under product design and must be resolved before implementation. This document consolidates existing accommodation/hospitality policies under the Vybe brand, preserves independent Payments and Finance boundaries, and distinguishes approved decisions from proposals. No schema, migration, API, or provider implementation is authorized.

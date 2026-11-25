@@ -1,6 +1,6 @@
 # Event Platform — Product Blueprint
 
-> **Status:** Shared foundation, Identity & Access, organizer applications, Event marketplace core, and PostgreSQL integration verification implemented; Vybe branding and marketplace design documented in the current proposal  
+> **Status:** Shared foundation, Identity & Access, organizer applications, Event marketplace core, and PostgreSQL integration verification implemented; Vybe branding and staged catalogue rollout approved; remaining marketplace policies in design  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
 > **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is merged in [PR #5](https://github.com/Olexxee/Events/pull/5), and the Event marketplace design gate is merged in [PR #6](https://github.com/Olexxee/Events/pull/6). The Event core is implemented in [PR #7](https://github.com/Olexxee/Events/pull/7), and PostgreSQL migration/integration verification is merged in [PR #8](https://github.com/Olexxee/Events/pull/8). The Event Access design gate and implementation are merged in [PR #10](https://github.com/Olexxee/Events/pull/10). Ticketing & Admission design defaults are approved and the first catalog/inventory-holds implementation slice is in [PR #12](https://github.com/Olexxee/Events/pull/12).
@@ -575,9 +575,9 @@ The following items are not yet approved and must be resolved during product dis
 
 ### Vybe — experiences marketplace
 
-The proposed marketplace model, provider governance, inventory archetypes, booking lifecycles, fulfilment boundaries, Payments/Commerce contracts, and unresolved decisions are consolidated in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md). **Staged catalogue rollout (VYBE-001) is approved:** all catalogue families are supported architecturally, with activation phased by operational and provider readiness. Remaining design decisions require approval before implementation; no Vybe schema or implementation is authorized.
+The Vybe marketplace model, provider governance, inventory archetypes, booking lifecycles, fulfilment boundaries, Payments/Commerce contracts, and unresolved decisions are consolidated in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md). **Staged catalogue rollout (VYBE-001) is approved:** all six catalogue families are supported architecturally, with activation gated by provider approval, secured inventory, capacity controls, customer terms, operational support, and category-specific safety/compliance readiness. Remaining design decisions require approval before implementation; no Vybe schema or implementation is authorized.
 
-Open decisions include room-category versus specific-room selection, external inventory certification, unused hotel allocation release, category-specific cancellation windows, provider-confirmation payment treatment, provider approval evidence, event-cancellation response deadlines, refund liability after settlement, and catalogue activation sequencing beyond the approved staged rollout.
+Open decisions include external inventory certification, unused hotel allocation release, category-specific cancellation windows, provider-confirmation payment treatment, provider approval evidence, event-cancellation response deadlines, refund liability after settlement, booking amendments, and launch prominence for standalone versus event-linked discovery. Room-category/quantity selection is the default; specific-room selection is an explicit optional offering model.
 
 ### Connect and safety
 
@@ -620,6 +620,6 @@ A release should not be considered production-ready unless:
 
 ---
 
-**Naming decision:** Vybe is the approved customer-facing brand for experiences and bookings. Hospitality remains a descriptive/internal term where useful; it is not the product brand. The proposed marketplace design is documented in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md) and requires explicit product-owner approval before implementation.
+**Naming decision:** Vybe is the approved customer-facing brand for experiences and bookings. Hospitality remains a descriptive/internal term where useful; it is not the product brand. The marketplace design is documented in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md); Vybe branding and staged catalogue rollout are approved, while remaining product decisions require explicit approval before implementation.
 
 **Document status:** Initial product blueprint. Confirmed decisions are recorded in Section 2. Recommendations and unresolved questions are explicitly marked throughout. Update this document as business decisions are made; do not silently convert proposals into approved requirements.
