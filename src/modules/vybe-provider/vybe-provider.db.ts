@@ -358,6 +358,7 @@ export async function reviewProviderApplication(input: {
       }));
       await tx.vybeProviderApproval.create({
         data: {
+          applicationId: application.id,
           providerProfileId: profile.id,
           category: application.category,
           locations: locations as Prisma.InputJsonValue,
