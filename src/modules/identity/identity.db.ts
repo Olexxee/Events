@@ -84,6 +84,15 @@ export async function createAccount(input: {
       now
     );
     await tx.session.create({ data: session.data });
+    await tx.auditLog.create({
+      data: {
+        actorId: user.id,
+        actorType: "user",
+        action: "identity.account.registered",
+        resourceType: "user",
+        resourceId: user.id
+      }
+    });
 
     return { user, tokens: session.tokens };
   });
@@ -103,7 +112,19 @@ export async function createSession(
   input: NewSessionInput
 ): Promise<CreatedSession> {
   const session = sessionData(input, new Date());
-  await getPrismaClient().session.create({ data: session.data });
+  const prisma = getPrismaClient();
+  await prisma.$transaction(async (tx) => {
+    await tx.session.create({ data: session.data });
+    await tx.auditLog.create({
+      data: {
+        actorId: input.userId,
+        actorType: "user",
+        action: "identity.session.created",
+        resourceType: "user",
+        resourceId: input.userId
+      }
+    });
+  });
   return session.tokens;
 }
 
@@ -127,7 +148,11 @@ export async function findSessionByAccessHash(accessTokenHash: string) {
 
 export async function touchSession(sessionId: string, at: Date): Promise<void> {
   await getPrismaClient().session.updateMany({
-    where: { id: sessionId, revokedAt: null },
+    where: {
+      id: sessionId,
+      revokedAt: null,
+      OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: new Date(at.getTime() - 5 * 60 * 1000) } }]
+    },
     data: { lastUsedAt: at }
   });
 }
@@ -155,6 +180,16 @@ export async function rotateRefreshSession(
         await tx.session.updateMany({
           where: { familyId: previous.familyId, revokedAt: null },
           data: { revokedAt: now, revokeReason: "refresh_token_reuse" }
+        });
+        await tx.auditLog.create({
+          data: {
+            actorId: previous.userId,
+            actorType: "user",
+            action: "identity.session.refresh_reuse_detected",
+            resourceType: "session",
+            resourceId: previous.id,
+            outcome: "denied"
+          }
         });
       }
       return { status: "invalid" as const };
@@ -198,6 +233,15 @@ export async function rotateRefreshSession(
       now
     );
     await tx.session.create({ data: next.data });
+    await tx.auditLog.create({
+      data: {
+        actorId: previous.userId,
+        actorType: "user",
+        action: "identity.session.rotated",
+        resourceType: "session",
+        resourceId: previous.id
+      }
+    });
 
     return {
       status: "rotated" as const,
@@ -213,15 +257,27 @@ export async function revokeSessionFamily(
   reason: string
 ): Promise<void> {
   const prisma = getPrismaClient();
-  const session = await prisma.session.findFirst({
-    where: { id: sessionId, userId },
-    select: { familyId: true }
-  });
-  if (!session) return;
+  await prisma.$transaction(async (tx) => {
+    const session = await tx.session.findFirst({
+      where: { id: sessionId, userId },
+      select: { familyId: true }
+    });
+    if (!session) return;
 
-  await prisma.session.updateMany({
-    where: { familyId: session.familyId, revokedAt: null },
-    data: { revokedAt: new Date(), revokeReason: reason }
+    await tx.session.updateMany({
+      where: { familyId: session.familyId, revokedAt: null },
+      data: { revokedAt: new Date(), revokeReason: reason }
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: userId,
+        actorType: "user",
+        action: "identity.session.revoked",
+        resourceType: "session",
+        resourceId: sessionId,
+        metadata: { reason }
+      }
+    });
   });
 }
 
@@ -256,6 +312,15 @@ export async function createOrganizationForUser(
         slug: true,
         status: true,
         createdAt: true
+      }
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: userId,
+        actorType: "user",
+        action: "organization.created",
+        resourceType: "organization",
+        resourceId: organization.id
       }
     });
     return organization;
