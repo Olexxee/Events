@@ -15,8 +15,8 @@ const offeringContent = {
   location: { city: "Ile-Ife", state: "Osun", country: "Nigeria" },
   eventAssociation: "PROVIDER_WIDE",
   price: { amountMinor: "4500000", currency: "NGN", unit: "PER_NIGHT" },
-  cancellationTerms: "Cancellation terms are disclosed before any customer commitment.",
-  fulfilmentTerms: "The provider confirms check-in instructions before the arrival date.",
+  cancellationTerms: "Cancellation terms are disclosed before customer commitment.",
+  fulfilmentTerms: "The provider confirms check-in instructions before arrival.",
   attributes: {
     category: "ACCOMMODATION",
     propertyType: "APARTMENT",
@@ -29,7 +29,7 @@ const offeringContent = {
 
 describe("Vybe catalogue validation", () => {
   it("accepts a category-matched accommodation draft", () => {
-    expect(createVybeOfferingSchema.safeParse({
+    const result = createVybeOfferingSchema.safeParse({
       params: {},
       query: {},
       body: {
@@ -37,11 +37,12 @@ describe("Vybe catalogue validation", () => {
         category: "ACCOMMODATION",
         content: offeringContent
       }
-    }).success).toBe(true);
+    });
+    expect(result.success).toBe(true);
   });
 
   it("rejects category attributes that do not match the offering category", () => {
-    expect(createVybeOfferingSchema.safeParse({
+    const result = createVybeOfferingSchema.safeParse({
       params: {},
       query: {},
       body: {
@@ -49,26 +50,27 @@ describe("Vybe catalogue validation", () => {
         category: "DINING",
         content: offeringContent
       }
-    }).success).toBe(false);
+    });
+    expect(result.success).toBe(false);
   });
 
   it("requires accommodation pricing to be per night", () => {
-    const invalid = {
-      ...offeringContent,
-      price: { ...offeringContent.price, unit: "PER_PACKAGE" }
-    };
-    expect(createVybeOfferingSchema.safeParse({
+    const result = createVybeOfferingSchema.safeParse({
       params: {},
       query: {},
       body: {
         organizationId: "7a7dbf1e-1b23-4f45-9f30-cc68a0d6f23b",
         category: "ACCOMMODATION",
-        content: invalid
+        content: {
+          ...offeringContent,
+          price: { ...offeringContent.price, unit: "PER_PACKAGE" }
+        }
       }
-    }).success).toBe(false);
+    });
+    expect(result.success).toBe(false);
   });
 
-  it("accepts public catalogue queries and publish requests without request bodies", () => {
+  it("accepts public catalogue queries and publish requests without bodies", () => {
     expect(listVybeCatalogueSchema.safeParse({
       params: {},
       query: { category: "ACCOMMODATION", city: "Ile-Ife" },
@@ -81,13 +83,13 @@ describe("Vybe catalogue validation", () => {
     }).success).toBe(true);
   });
 
-  it("requires evidence-backed completed activation checks", () => {
-    const result = activateVybeCategorySchema.safeParse({
+  it("validates evidence-backed activation check entries", () => {
+    expect(activateVybeCategorySchema.safeParse({
       params: { category: "ACCOMMODATION" },
       query: {},
       body: {
         active: true,
-        reason: "Accommodation launch readiness was reviewed and approved.",
+        reason: "Accommodation launch readiness was reviewed.",
         checks: [{
           key: "secured_room_category_allocation",
           completed: true,
@@ -95,7 +97,6 @@ describe("Vybe catalogue validation", () => {
           notes: "Signed room category allocation is on file."
         }]
       }
-    });
-    expect(result.success).toBe(true);
+    }).success).toBe(true);
   });
 });
