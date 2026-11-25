@@ -239,8 +239,6 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
       })
     ).not.toBeNull();
   });
-});
-
 
   it("creates an event-scoped grant only after organizer approval of an access request", async () => {
     const draft = await createDraftEvent("approval-required-event", "APPROVAL_REQUIRED");
@@ -335,3 +333,4 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     await decideRequest({ requestId: request.id, eventId: draft.id, organizationId, actorId: ownerId, decision: "APPROVED", reason: "Approved after invitation" });
     expect(await myAccess(draft.id, recipient.id)).toMatchObject({ canViewDetails: true, canCheckout: true });
   });
+});
