@@ -1,13 +1,13 @@
 # Ticketing & Admission — Design Gate
 
-**Status:** Proposed MVP policy; awaiting product-owner approval  
+**Status:** Approved MVP policy; implementation in progress  
 **Owner:** Ticketing & Admission  
 **Depends on:** Identity & Access, Event marketplace, Event Access  
 **Integrates with:** Commerce, Payments, Finance, Notifications, Connect, Operations
 
 Ticketing owns sellable admission products, inventory, temporary holds, issued admission credentials, transfers, admission validation, and ticket entitlements. It does not own order totals, payment-provider truth, refunds execution, organizer balances, or the financial ledger. Commerce orchestrates orders; Payments verifies collections and executes approved refunds; Finance owns ledger and settlement truth.
 
-This document is a design gate only. It authorizes no schema, migration, API, payment-provider, or ticketing implementation until the product owner approves the policies.
+The product owner approved all ten MVP defaults in Section 15 on 2026-11-25. This authorizes Ticketing schema, APIs, transactional inventory workflows, and PostgreSQL integration tests. It does not authorize a payment provider, financial ledger, refund engine, or settlement implementation.
 
 ## 1. Non-negotiable domain boundaries
 

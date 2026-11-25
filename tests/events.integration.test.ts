@@ -35,6 +35,10 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
   });
 
   beforeEach(async () => {
+    await prisma.ticketHoldLine.deleteMany();
+    await prisma.ticketHold.deleteMany();
+    await prisma.ticketTypeVersion.deleteMany();
+    await prisma.ticketType.deleteMany();
     await prisma.eventAccessHold.deleteMany();
     await prisma.eventAccessGrant.deleteMany();
     await prisma.eventAccessRequest.deleteMany();
