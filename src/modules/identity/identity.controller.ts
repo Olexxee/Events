@@ -67,7 +67,11 @@ export const logoutController: RequestHandler = async (req, res, next) => {
         }
       });
     }
-    await logout(req.auth.sessionId, req.auth.subjectId);
+    const { sessionId, subjectId } = req.auth;
+    if (!sessionId || !subjectId) {
+      return next(new Error("Authenticated session context is incomplete"));
+    }
+    await logout(sessionId, subjectId);
     return successResponse(res, { loggedOut: true });
   } catch (error) {
     return next(error);
