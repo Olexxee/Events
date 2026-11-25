@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma, VybeCategory } from "@prisma/client";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
@@ -79,7 +80,7 @@ export async function updateOfferingDraft(input: { offeringId: string; actorUser
       draft = await tx.vybeOfferingVersion.create({ data: { offeringId: offering.id, version, content: input.content as unknown as Prisma.InputJsonValue, createdByUserId: input.actorUserId } });
     }
     await tx.auditLog.create({ data: { actorId: input.actorUserId, actorType: "user", action: "vybe.offering.draft_updated", resourceType: "vybe_offering", resourceId: offering.id, metadata: { category: offering.category, version: draft.version } } });
-    await enqueueOutboxMessage(tx, { aggregateType: "vybe_offering", aggregateId: offering.id, eventType: "vybe.offering.draft_updated.v1", deduplicationKey: `vybe.offering:${offering.id}:draft-update:${draft.id}:${draft.createdAt.toISOString()}`, payload: { offeringId: offering.id, category: offering.category, version: draft.version } });
+    await enqueueOutboxMessage(tx, { aggregateType: "vybe_offering", aggregateId: offering.id, eventType: "vybe.offering.draft_updated.v1", deduplicationKey: `vybe.offering:${offering.id}:draft-update:${randomUUID()}`, payload: { offeringId: offering.id, category: offering.category, version: draft.version } });
     return { offeringId: offering.id, version: draft };
   });
 }
@@ -119,7 +120,7 @@ export async function activateCategory(input: { category: VybeCategory; actorUse
       update: { isActive: input.active, checklist: input.checks as unknown as Prisma.InputJsonValue, reason: input.reason, activatedByUserId: input.active ? input.actorUserId : null, activatedAt: input.active ? new Date() : null }
     });
     await tx.auditLog.create({ data: { actorId: input.actorUserId, actorType: "user", action: input.active ? "vybe.category.activated" : "vybe.category.deactivated", resourceType: "vybe_category", resourceId: input.category, metadata: { reason: input.reason, previousActive: previous?.isActive ?? false, checks: input.checks.map((check) => check.key) } } });
-    await enqueueOutboxMessage(tx, { aggregateType: "vybe_category", aggregateId: input.category, eventType: input.active ? "vybe.category.activated.v1" : "vybe.category.deactivated.v1", deduplicationKey: `vybe.category:${input.category}:activation:${activation.updatedAt.toISOString()}`, payload: { category: input.category, active: input.active, reason: input.reason } });
+    await enqueueOutboxMessage(tx, { aggregateType: "vybe_category", aggregateId: input.category, eventType: input.active ? "vybe.category.activated.v1" : "vybe.category.deactivated.v1", deduplicationKey: `vybe.category:${input.category}:activation:${randomUUID()}`, payload: { category: input.category, active: input.active, reason: input.reason } });
     return activation;
   });
 }
