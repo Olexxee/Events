@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { authenticateRequest } from "../identity/identity.authentication.js";
 import { requireAuthenticated } from "../../shared/middleware/authentication.js";
 import { AppError } from "../../shared/errors/app-error.js";
@@ -15,7 +16,7 @@ import {
 } from "./event-access.validators.js";
 
 export const eventAccessRouter = Router();
-const requirePlatformIntervention = (req: import("express").Request, _res: import("express").Response, next: import("express").NextFunction) => {
+const requirePlatformIntervention = (req: Request, _res: Response, next: NextFunction) => {
   if (!req.auth) return next(new AppError("UNAUTHENTICATED", "Authentication is required", 401));
   if (!req.auth.permissions.includes("platform:events:access:intervene"))
     return next(new AppError("FORBIDDEN", "Platform event-access intervention permission is required", 403));
