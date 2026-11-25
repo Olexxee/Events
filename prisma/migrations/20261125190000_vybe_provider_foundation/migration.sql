@@ -124,7 +124,8 @@ CREATE TABLE "vybe_provider_approvals" (
 );
 
 CREATE UNIQUE INDEX "vybe_provider_profiles_organization_id_key" ON "vybe_provider_profiles"("organization_id");
-CREATE UNIQUE INDEX "vybe_provider_approvals_profile_category_key" ON "vybe_provider_approvals"("provider_profile_id", "category");
+CREATE INDEX "vybe_provider_approvals_profile_category_status_idx" ON "vybe_provider_approvals"("provider_profile_id", "category", "status");
+CREATE UNIQUE INDEX "vybe_provider_approvals_one_active_per_category_key" ON "vybe_provider_approvals"("provider_profile_id", "category") WHERE "status" = 'ACTIVE';
 CREATE UNIQUE INDEX "vybe_provider_application_locations_scope_key" ON "vybe_provider_application_locations"("application_id", "city", "state", "country");
 CREATE UNIQUE INDEX "vybe_provider_applications_one_active_per_org_category_key"
   ON "vybe_provider_applications"("organization_id", "category")
