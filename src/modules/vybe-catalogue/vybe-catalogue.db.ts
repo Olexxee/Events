@@ -68,8 +68,7 @@ export async function updateOfferingDraft(input: { offeringId: string; actorUser
     const offering = await tx.vybeOffering.findUnique({ where: { id: input.offeringId }, include: { providerProfile: true, versions: { orderBy: { version: "desc" } } } });
     if (!offering) fail("VYBE_OFFERING_NOT_FOUND", "Offering was not found", 404);
     if (offering.status === "ARCHIVED") fail("VYBE_OFFERING_ARCHIVED", "Archived offerings cannot be edited");
-    const membership = await tx.organizationMembership.findUnique({ where: { organizationId_userId: { organizationId: offering.providerProfile.organizationId, userId: input.actorUserId } }, select: { role: true, status: true, organization: { select: { status: true } } } });
-    if (!membership || membership.status !== "ACTIVE" || membership.organization.status !== "ACTIVE" || !["OWNER", "ADMIN"].includes(membership.role)) fail("ORGANIZATION_AUTHORITY_REQUIRED", "An active organization owner or admin is required", 403);
+    await assertOrganizationAuthority(tx, { organizationId: offering.providerProfile.organizationId, userId: input.actorUserId, allowedRoles: ["OWNER", "ADMIN"] });
     if (input.content.attributes.category !== offering.category) fail("VYBE_OFFERING_CATEGORY_MISMATCH", "Offering content must match its original category", 400);
     await assertProviderScope(tx, offering.providerProfileId, offering.category, input.content.location);
     let draft = offering.versions.find((version) => version.status === "DRAFT");
@@ -90,8 +89,7 @@ export async function publishOffering(input: { offeringId: string; actorUserId: 
   return prisma.$transaction(async (tx) => {
     const offering = await tx.vybeOffering.findUnique({ where: { id: input.offeringId }, include: { providerProfile: true, versions: { where: { status: "DRAFT" }, orderBy: { version: "desc" }, take: 1 } } });
     if (!offering) fail("VYBE_OFFERING_NOT_FOUND", "Offering was not found", 404);
-    const membership = await tx.organizationMembership.findUnique({ where: { organizationId_userId: { organizationId: offering.providerProfile.organizationId, userId: input.actorUserId } }, select: { role: true, status: true, organization: { select: { status: true } } } });
-    if (!membership || membership.status !== "ACTIVE" || membership.organization.status !== "ACTIVE" || !["OWNER", "ADMIN"].includes(membership.role)) fail("ORGANIZATION_AUTHORITY_REQUIRED", "An active organization owner or admin is required", 403);
+    await assertOrganizationAuthority(tx, { organizationId: offering.providerProfile.organizationId, userId: input.actorUserId, allowedRoles: ["OWNER", "ADMIN"] });
     const draft = offering.versions[0];
     if (!draft) fail("VYBE_OFFERING_DRAFT_REQUIRED", "Create or update a draft before publishing");
     const content = draft.content as unknown as VybeOfferingContent;
