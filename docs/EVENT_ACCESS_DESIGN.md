@@ -1,6 +1,6 @@
 # Event Access — Design Gate
 
-**Status:** Proposed policy; approval required before schema/API implementation  
+**Status:** Approved policy; implementation in progress  
 **Owner:** Event Access  
 **Depends on:** Identity & Access, Organizations, and the Event marketplace  
 **Integrates with:** Ticketing & Admission, Notifications, Trust & Safety
@@ -181,9 +181,9 @@ Required database protections:
 - Concurrent acceptance, approval, rejection, and revocation cannot create contradictory active states.
 - Event cancellation and organizer suspension invalidate the applicable access pathways without mutating ticket/payment/ledger records.
 
-## 11. Decisions required before implementation
+## 11. Approved decisions and implementation contract
 
-Please confirm or change these recommendations:
+The product owner approved all seven recommendations. They are binding implementation requirements:
 
 1. **Invitation recipients:** existing registered accounts only for MVP, using verified email; external email/phone invites deferred.
 2. **Invitation effect:** acceptance creates a grant for restricted details and checkout eligibility, but never a ticket or inventory hold.
@@ -193,4 +193,29 @@ Please confirm or change these recommendations:
 6. **Policy changes:** changing visibility/access policy triggers immediate re-evaluation; existing grants are not silently treated as tickets.
 7. **No attendee directory:** organizers see only the request/invitation information needed to decide access; attendees cannot browse the guest list.
 
-Schema, migrations, APIs, and background jobs remain blocked until these policies are approved.
+Schema and API implementation are authorized under these decisions. Background expiry processing is supplemental only; authorization checks enforce expiry synchronously.
+
+
+## 12. Approved policy-transition semantics
+
+The following deterministic rules close the policy-transition questions for the MVP:
+
+- When visibility or access policy becomes stricter, every access check evaluates the current event policy; an old URL, invitation token, or previously approved request cannot bypass it.
+- When either visibility or access policy is `INVITATION_ONLY`, only an active invitation-backed grant (or an explicitly audited platform grant) authorizes restricted details and checkout. A grant sourced from an access request is no longer sufficient and must be invalidated when the stricter policy is applied.
+- When policy changes from `INVITATION_ONLY` to a less restrictive policy, historical grants remain recorded but are not required if the new policy permits open access. They never become tickets.
+- When policy changes to `APPROVAL_REQUIRED`, checkout requires an active grant. An invitation-backed grant remains valid unless revoked or expired.
+- Event cancellation, completion, postponement, organizer suspension, moderation restriction, or an active platform access hold blocks new grants and restricted access immediately.
+- Sales-paused events may still expose permitted event details, but access resolution must not authorize checkout.
+- All future event policy mutation endpoints must apply the policy transition and audit/outbox effects in the same transaction. This MVP currently does not expose post-publication event policy mutation.
+
+## 13. Implementation notes and explicit follow-up work
+
+The implementation uses PostgreSQL partial unique indexes for one pending invitation/request and one active grant per event/user. Invitation tokens are random, single-use, and persisted only as SHA-256 digests. Access grants are independent of ticket inventory and admission. Audit and transactional outbox records accompany grants, revocations, and organizer decisions.
+
+The following operational work remains required before a broad production launch:
+
+- Integrate verified-email delivery and invitation notification delivery. Invitation issuance is rejected unless the recipient has an existing active account with a verified email; raw tokens are returned only once to the authorized issuer.
+- Add PostgreSQL-backed rate limits for request submission, invitation issuance, and token attempts.
+- Add a scheduled expiry worker for cleanup and notifications. Synchronous expiry checks remain authoritative.
+- Integrate Ticketing and Connect consumers for grant/revocation outbox events; this module does not mutate ticket, payment, or ledger records.
+- Add policy mutation orchestration when published-event editing is implemented.
