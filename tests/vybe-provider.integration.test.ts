@@ -20,6 +20,19 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
   });
 
   afterAll(async () => {
+    await prisma.vybeProviderApproval.deleteMany();
+    await prisma.vybeProviderReview.deleteMany();
+    await prisma.vybeProviderEvidence.deleteMany();
+    await prisma.vybeProviderApplicationLocation.deleteMany();
+    await prisma.vybeProviderApplication.deleteMany();
+    await prisma.vybeProviderProfile.deleteMany();
+    await prisma.outboxMessage.deleteMany({
+      where: {
+        aggregateType: {
+          in: ["vybe_provider_application", "vybe_provider_approval"]
+        }
+      }
+    });
     await disconnectDatabase();
   });
 
