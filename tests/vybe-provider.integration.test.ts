@@ -62,7 +62,7 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
       supplyAuthorityStatement:
         "Our organization owns and directly operates these apartments.",
       supplyAuthorityAttested: true,
-      termsVersion: "vybe-provider-2026-01",
+      termsAccepted: true,
       locations: [
         { city: "Ile-Ife", state: "Osun", country: "Nigeria" }
       ],
