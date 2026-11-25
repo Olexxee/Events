@@ -20,7 +20,11 @@ const DUMMY_PASSWORD_HASH = hashPassword("events-dummy-password-never-used");
 import type { SessionMetadata } from "./identity.types.js";
 
 function invalidCredentials(): AppError {
-  return new AppError("INVALID_CREDENTIALS", "Email or password is incorrect", 401);
+  return new AppError(
+    "INVALID_CREDENTIALS",
+    "Email or password is incorrect",
+    401
+  );
 }
 
 function sessionResponse(tokens: {
@@ -85,7 +89,12 @@ export async function login(
     user?.passwordCredential?.passwordHash ?? (await DUMMY_PASSWORD_HASH);
   const passwordMatches = await verifyPassword(input.password, passwordHash);
 
-  if (!user || !user.passwordCredential || user.status !== "ACTIVE" || !passwordMatches) {
+  if (
+    !user ||
+    !user.passwordCredential ||
+    user.status !== "ACTIVE" ||
+    !passwordMatches
+  ) {
     throw invalidCredentials();
   }
 
@@ -101,13 +110,17 @@ export async function login(
   };
 }
 
-export async function refresh(
-  refreshToken: string,
-  metadata: SessionMetadata
-) {
-  const result = await rotateRefreshSession(digestToken(refreshToken), metadata);
+export async function refresh(refreshToken: string, metadata: SessionMetadata) {
+  const result = await rotateRefreshSession(
+    digestToken(refreshToken),
+    metadata
+  );
   if (result.status !== "rotated") {
-    throw new AppError("INVALID_SESSION", "The session is no longer valid", 401);
+    throw new AppError(
+      "INVALID_SESSION",
+      "The session is no longer valid",
+      401
+    );
   }
   return { session: sessionResponse(result.tokens) };
 }
