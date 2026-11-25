@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-const emailSchema = z.string().trim().email().max(320).transform((value) => value.toLowerCase());
+const emailSchema = z
+  .string()
+  .trim()
+  .email()
+  .max(320)
+  .transform((value) => value.toLowerCase());
 
 export const registerSchema = z.object({
   body: z.object({
