@@ -43,7 +43,8 @@ CREATE TABLE "event_access_requests" (
   CONSTRAINT "event_access_requests_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "event_access_requests_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT "event_access_requests_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT "event_access_requests_requester_user_id_fkey" FOREIGN KEY ("requester_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+  CONSTRAINT "event_access_requests_requester_user_id_fkey" FOREIGN KEY ("requester_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT "event_access_requests_decided_by_user_id_fkey" FOREIGN KEY ("decided_by_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 CREATE INDEX "event_access_requests_event_id_status_created_at_idx" ON "event_access_requests"("event_id", "status", "created_at");
 CREATE INDEX "event_access_requests_requester_user_id_created_at_idx" ON "event_access_requests"("requester_user_id", "created_at");
@@ -68,6 +69,7 @@ CREATE TABLE "event_access_grants" (
   CONSTRAINT "event_access_grants_event_id_fkey" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT "event_access_grants_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT "event_access_grants_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT "event_access_grants_revoked_by_user_id_fkey" FOREIGN KEY ("revoked_by_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT "event_access_grants_source_id_nonempty" CHECK ("source_id" IS NOT NULL)
 );
 CREATE INDEX "event_access_grants_event_id_user_id_status_expires_at_idx" ON "event_access_grants"("event_id", "user_id", "status", "expires_at");
