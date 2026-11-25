@@ -157,6 +157,9 @@ ALTER TABLE "vybe_provider_application_locations"
 ALTER TABLE "vybe_provider_evidence"
   ADD CONSTRAINT "vybe_provider_evidence_application_id_fkey"
   FOREIGN KEY ("application_id") REFERENCES "vybe_provider_applications"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "vybe_provider_evidence"
+  ADD CONSTRAINT "vybe_provider_evidence_reviewed_by_user_id_fkey"
+  FOREIGN KEY ("reviewed_by_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "vybe_provider_reviews"
   ADD CONSTRAINT "vybe_provider_reviews_application_id_fkey"
   FOREIGN KEY ("application_id") REFERENCES "vybe_provider_applications"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
