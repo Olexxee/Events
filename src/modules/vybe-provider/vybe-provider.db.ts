@@ -4,6 +4,11 @@ import type {
   VybeProviderApplicationStatus
 } from "@prisma/client";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
+import { assertActiveVerifiedAccount } from "../identity/identity.contracts.js";
+import {
+  assertIndependentOrganizationReviewer,
+  assertOrganizationAuthority
+} from "../organizations/organizations.contracts.js";
 import { AppError } from "../../shared/errors/app-error.js";
 
 const CURRENT_PROVIDER_TERMS_VERSION = "vybe-provider-v1";
@@ -33,48 +38,12 @@ export async function submitProviderApplication(input: {
 
   try {
     return await prisma.$transaction(async (tx) => {
-      const [user, membership] = await Promise.all([
-        tx.user.findUnique({
-          where: { id: input.applicantUserId },
-          select: { status: true, emailVerifiedAt: true }
-        }),
-        tx.organizationMembership.findUnique({
-          where: {
-            organizationId_userId: {
-              organizationId: input.organizationId,
-              userId: input.applicantUserId
-            }
-          },
-          select: {
-            role: true,
-            status: true,
-            organization: {
-              select: { id: true, name: true, status: true }
-            }
-          }
-        })
-      ]);
-
-      if (!user || user.status !== "ACTIVE" || !user.emailVerifiedAt) {
-        throw new AppError(
-          "VYBE_PROVIDER_VERIFIED_ACCOUNT_REQUIRED",
-          "A verified, active account is required to apply as a Vybe provider",
-          403
-        );
-      }
-
-      if (
-        !membership ||
-        membership.status !== "ACTIVE" ||
-        !["OWNER", "ADMIN"].includes(membership.role) ||
-        membership.organization.status !== "ACTIVE"
-      ) {
-        throw new AppError(
-          "VYBE_PROVIDER_ORGANIZATION_FORBIDDEN",
-          "An active organization owner or admin must submit the application",
-          403
-        );
-      }
+      await assertActiveVerifiedAccount(tx, input.applicantUserId);
+      await assertOrganizationAuthority(tx, {
+        organizationId: input.organizationId,
+        userId: input.applicantUserId,
+        allowedRoles: ["OWNER", "ADMIN"]
+      });
 
       const providerProfile = await tx.vybeProviderProfile.findUnique({
         where: { organizationId: input.organizationId },
@@ -93,14 +62,16 @@ export async function submitProviderApplication(input: {
         });
       }
 
-      const existingApproval = await tx.vybeProviderApproval.findFirst({
-        where: {
-          providerProfile: { organizationId: input.organizationId },
-          category: input.category,
-          status: { in: ["ACTIVE", "SUSPENDED", "REVOKED"] }
-        },
-        select: { status: true }
-      });
+      const existingApproval = providerProfile
+        ? await tx.vybeProviderApproval.findFirst({
+            where: {
+              providerProfileId: providerProfile.id,
+              category: input.category,
+              status: { in: ["ACTIVE", "SUSPENDED", "REVOKED"] }
+            },
+            select: { status: true }
+          })
+        : null;
 
       if (existingApproval) {
         throw new AppError(
@@ -215,9 +186,6 @@ export async function listMyProviderApplications(userId: string) {
         select: { action: true, reason: true, createdAt: true },
         orderBy: { createdAt: "asc" }
       },
-      organization: {
-        select: { id: true, name: true, slug: true }
-      }
     },
     orderBy: { submittedAt: "desc" }
   });
@@ -248,16 +216,6 @@ export async function listProviderApplications() {
         },
         orderBy: { createdAt: "asc" }
       },
-      organization: {
-        select: { id: true, name: true, slug: true, status: true }
-      },
-      applicant: {
-        select: {
-          id: true,
-          email: true,
-          profile: { select: { displayName: true } }
-        }
-      }
     },
     orderBy: { submittedAt: "asc" },
     take: 100
@@ -301,22 +259,10 @@ export async function reviewProviderApplication(input: {
       );
     }
 
-    const reviewerMembership = await tx.organizationMembership.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: application.organizationId,
-          userId: input.reviewerUserId
-        }
-      },
-      select: { id: true }
+    await assertIndependentOrganizationReviewer(tx, {
+      organizationId: application.organizationId,
+      reviewerUserId: input.reviewerUserId
     });
-    if (reviewerMembership) {
-      throw new AppError(
-        "VYBE_PROVIDER_CONFLICTED_REVIEWER",
-        "Organization members and former members cannot review this provider application",
-        403
-      );
-    }
 
     if (!OPEN_APPLICATION_STATUSES.includes(application.status)) {
       throw new AppError(
@@ -538,32 +484,11 @@ export async function addProviderApplicationEvidence(input: {
       );
     }
 
-    const membership = await tx.organizationMembership.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: application.organizationId,
-          userId: input.applicantUserId
-        }
-      },
-      select: {
-        status: true,
-        role: true,
-        organization: { select: { status: true } }
-      }
+    await assertOrganizationAuthority(tx, {
+      organizationId: application.organizationId,
+      userId: input.applicantUserId,
+      allowedRoles: ["OWNER", "ADMIN"]
     });
-
-    if (
-      !membership ||
-      membership.status !== "ACTIVE" ||
-      !["OWNER", "ADMIN"].includes(membership.role) ||
-      membership.organization.status !== "ACTIVE"
-    ) {
-      throw new AppError(
-        "VYBE_PROVIDER_ORGANIZATION_FORBIDDEN",
-        "An active organization owner or admin must submit evidence",
-        403
-      );
-    }
 
     for (const item of input.evidence) {
       await tx.vybeProviderEvidence.updateMany({
@@ -656,22 +581,10 @@ export async function changeProviderApprovalStatus(input: {
       );
     }
 
-    const reviewerMembership = await tx.organizationMembership.findUnique({
-      where: {
-        organizationId_userId: {
-          organizationId: approval.application.organizationId,
-          userId: input.reviewerUserId
-        }
-      },
-      select: { id: true }
+    await assertIndependentOrganizationReviewer(tx, {
+      organizationId: approval.application.organizationId,
+      reviewerUserId: input.reviewerUserId
     });
-    if (reviewerMembership) {
-      throw new AppError(
-        "VYBE_PROVIDER_CONFLICTED_REVIEWER",
-        "Organization members and former members cannot change provider approval",
-        403
-      );
-    }
 
     if (input.action === "SUSPENDED" && approval.status !== "ACTIVE") {
       throw new AppError(
