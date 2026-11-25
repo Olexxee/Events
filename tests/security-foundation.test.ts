@@ -2,8 +2,8 @@ import express from "express";
 import request from "supertest";
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { errorHandler } from "../src/shared/middleware/error-handler.js";
 import { requireAuthenticated } from "../src/shared/middleware/authentication.js";
+import { errorHandler } from "../src/shared/middleware/error-handler.js";
 import { requirePermission } from "../src/shared/middleware/authorization.js";
 import {
   getValidatedRequest,
@@ -25,7 +25,7 @@ function createSecurityTestApp() {
       req.auth = {
         subjectId: "test-user",
         subjectType: "user",
-        permissions: ["admin:read"]
+        permissions: ["admin:read"],
       };
       next();
     },
@@ -40,7 +40,7 @@ function createSecurityTestApp() {
       req.auth = {
         subjectId: "test-user",
         subjectType: "user",
-        permissions: ["events:read"]
+        permissions: ["events:read"],
       };
       next();
     },
@@ -55,7 +55,7 @@ function createSecurityTestApp() {
       z.object({
         body: z.object({ title: z.string().min(3) }),
         params: z.object({}),
-        query: z.object({})
+        query: z.object({}),
       })
     ),
     (req, res) => {
