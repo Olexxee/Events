@@ -25,7 +25,7 @@ const common = {
   eventAssociation: z.enum(["PROVIDER_WIDE", "EVENT_SPECIFIC", "EVENT_ASSOCIATED"]),
   eventId: uuid.optional(),
   price: z.object({
-    amountMinor: z.string().regex(/^\\d{1,18}$/),
+    amountMinor: z.string().regex(/^[0-9]{1,18}$/),
     currency: z.literal("NGN"),
     unit: z.enum(["PER_PERSON", "PER_ITEM", "PER_PACKAGE", "PER_NIGHT", "PER_SESSION", "PER_TABLE"])
   }).strict(),
@@ -33,7 +33,7 @@ const common = {
   fulfilmentTerms: z.string().trim().min(20).max(2000)
 };
 const categoryAttributes = z.discriminatedUnion("category", [
-  z.object({ category: z.literal("ACCOMMODATION"), propertyType: z.enum(["HOTEL", "APARTMENT", "GUESTHOUSE", "HOSTEL", "VILLA"]), roomCategory: z.string().trim().min(2).max(100), maxOccupancy: z.number().int().min(1).max(30), checkInTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/), checkOutTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/) }).strict(),
+  z.object({ category: z.literal("ACCOMMODATION"), propertyType: z.enum(["HOTEL", "APARTMENT", "GUESTHOUSE", "HOSTEL", "VILLA"]), roomCategory: z.string().trim().min(2).max(100), maxOccupancy: z.number().int().min(1).max(30), checkInTime: z.string().regex(/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/), checkOutTime: z.string().regex(/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/) }).strict(),
   z.object({ category: z.literal("DINING"), cuisine: z.string().trim().min(2).max(100), servicePeriods: z.array(z.string().trim().min(2).max(80)).min(1).max(8), minPartySize: z.number().int().min(1).max(50), maxPartySize: z.number().int().min(1).max(100), reservationDurationMinutes: z.number().int().min(15).max(600) }).strict().refine(v => v.maxPartySize >= v.minPartySize, { path: ["maxPartySize"], message: "Maximum party size must be at least the minimum" }),
   z.object({ category: z.literal("DRINKS"), packageType: z.string().trim().min(2).max(100), quantity: z.number().int().min(1).max(10000), serviceWindow: z.string().trim().min(2).max(160), ageRestricted: z.boolean() }).strict(),
   z.object({ category: z.literal("TABLES_LOUNGES"), resourceType: z.string().trim().min(2).max(100), minOccupancy: z.number().int().min(1).max(100), maxOccupancy: z.number().int().min(1).max(300), durationMinutes: z.number().int().min(15).max(1440) }).strict().refine(v => v.maxOccupancy >= v.minOccupancy, { path: ["maxOccupancy"], message: "Maximum occupancy must be at least the minimum" }),
