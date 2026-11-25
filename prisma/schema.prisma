@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Shared infrastructure only. Domain models are introduced with their owning modules.
+model OutboxMessage {
+  id            String    @id @default(uuid()) @db.Uuid
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  deduplicationKey String @unique
+  payload       Json
+  occurredAt    DateTime  @default(now()) @db.Timestamptz(6)
+  availableAt   DateTime  @default(now()) @db.Timestamptz(6)
+  attempts      Int       @default(0)
+  processedAt   DateTime? @db.Timestamptz(6)
+  lastError     String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([processedAt, availableAt])
+  @@index([aggregateType, aggregateId, occurredAt])
+  @@map("outbox_messages")
+}
