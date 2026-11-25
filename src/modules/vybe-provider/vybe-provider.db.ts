@@ -391,3 +391,84 @@ export async function reviewProviderApplication(input: {
     return updated;
   });
 }
+
+export async function addProviderApplicationEvidence(input: {
+  applicationId: string;
+  applicantUserId: string;
+  evidence: {
+    evidenceType: string;
+    requirementReason: string;
+    storageReference: string;
+  }[];
+}) {
+  const prisma = getPrismaClient();
+  return prisma.$transaction(async (tx) => {
+    const application = await tx.vybeProviderApplication.findUnique({
+      where: { id: input.applicationId },
+      select: {
+        id: true,
+        organizationId: true,
+        applicantUserId: true,
+        status: true
+      }
+    });
+    if (!application) {
+      throw new AppError("VYBE_PROVIDER_APPLICATION_NOT_FOUND", "Vybe provider application was not found", 404);
+    }
+    if (application.applicantUserId !== input.applicantUserId) {
+      throw new AppError("VYBE_PROVIDER_APPLICATION_FORBIDDEN", "Only the applicant may add evidence", 403);
+    }
+    if (application.status !== "NEEDS_INFORMATION") {
+      throw new AppError("VYBE_PROVIDER_EVIDENCE_NOT_REQUESTED", "Additional evidence can only be submitted after the review team requests information", 409);
+    }
+    const membership = await tx.organizationMembership.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: application.organizationId,
+          userId: input.applicantUserId
+        }
+      },
+      select: { status: true, role: true, organization: { select: { status: true } } }
+    });
+    if (!membership || membership.status !== "ACTIVE" || !["OWNER", "ADMIN"].includes(membership.role) || membership.organization.status !== "ACTIVE") {
+      throw new AppError("VYBE_PROVIDER_ORGANIZATION_FORBIDDEN", "An active organization owner or admin must submit evidence", 403);
+    }
+
+    for (const item of input.evidence) {
+      await tx.vybeProviderEvidence.updateMany({
+        where: {
+          applicationId: application.id,
+          evidenceType: item.evidenceType,
+          status: { in: ["PENDING", "ACCEPTED", "REJECTED"] }
+        },
+        data: { status: "SUPERSEDED" }
+      });
+    }
+
+    const created = await tx.vybeProviderEvidence.createMany({
+      data: input.evidence.map((item) => ({
+        applicationId: application.id,
+        ...item
+      }))
+    });
+    await tx.vybeProviderApplication.update({
+      where: { id: application.id },
+      data: { status: "SUBMITTED" }
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: input.applicantUserId,
+        actorType: "user",
+        action: "vybe.provider_application.evidence_submitted",
+        resourceType: "vybe_provider_application",
+        resourceId: application.id,
+        metadata: { evidenceCount: created.count }
+      }
+    });
+    return tx.vybeProviderEvidence.findMany({
+      where: { applicationId: application.id, status: "PENDING" },
+      select: { id: true, evidenceType: true, requirementReason: true, status: true, createdAt: true },
+      orderBy: { createdAt: "desc" }
+    });
+  });
+}
