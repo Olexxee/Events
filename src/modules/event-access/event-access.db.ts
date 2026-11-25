@@ -244,7 +244,7 @@ export async function setPlatformHold(input: { eventId: string; actorId: string;
     if (!event) fail("EVENT_NOT_FOUND", "Event was not found", 404);
     if (input.release) {
       const hold = await tx.eventAccessHold.findFirst({ where: { eventId: input.eventId, releasedAt: null }, orderBy: { createdAt: "desc" } });
-      if (!hold) fail("ACCESS_HOLD_NOT_ACTIVE", "No active access hold exists", 404);
+      if (!hold) throw new AppError("ACCESS_HOLD_NOT_ACTIVE", "No active access hold exists", 404);
       await tx.eventAccessHold.update({ where: { id: hold.id }, data: { releasedAt: new Date(), releasedByUserId: input.actorId } });
     } else {
       await tx.eventAccessHold.create({ data: { eventId: input.eventId, reason: input.reason, createdByUserId: input.actorId } });
