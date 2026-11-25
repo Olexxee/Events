@@ -51,12 +51,16 @@ async function createGrant(tx: Prisma.TransactionClient, input: {
   if (existing) {
     const currentEvent = await tx.event.findUniqueOrThrow({ where: { id: input.eventId }, select: { visibility: true, accessPolicy: true } });
     const invitationRequired = currentEvent.visibility === "INVITATION_ONLY" || currentEvent.accessPolicy === "INVITATION_ONLY";
+    if (input.source === "ACCESS_REQUEST" && currentEvent.visibility === "INVITATION_ONLY" && currentEvent.accessPolicy === "APPROVAL_REQUIRED" && existing.source === "INVITATION") {
+      return tx.eventAccessGrant.update({ where: { id: existing.id }, data: { canCheckout: true } });
+    }
     if (!invitationRequired || existing.source !== "ACCESS_REQUEST") return existing;
     await tx.eventAccessGrant.update({ where: { id: existing.id }, data: { status: "REVOKED", revokedAt: new Date(), revokeReason: "Access policy changed to invitation-only" } });
     await tx.outboxMessage.create({ data: { aggregateType: "event_access_grant", aggregateId: existing.id, eventType: "EventAccessRevoked", deduplicationKey: `event.access.policy-revoked:${existing.id}`, payload: { eventId: input.eventId, grantId: existing.id, reason: "POLICY_CHANGED" } } });
   }
+  const currentEvent = await tx.event.findUniqueOrThrow({ where: { id: input.eventId }, select: { accessPolicy: true } });
   const grant = await tx.eventAccessGrant.create({
-    data: { ...input, canViewDetails: true, canCheckout: true }
+    data: { ...input, canViewDetails: true, canCheckout: !(input.source === "INVITATION" && currentEvent.accessPolicy === "APPROVAL_REQUIRED") }
   });
   await tx.outboxMessage.create({
     data: {
@@ -74,7 +78,10 @@ export async function submitRequest(eventId: string, userId: string, message?: s
     if (!user || user.status !== "ACTIVE") fail("ACCOUNT_INACTIVE", "An active account is required", 403);
     const { event } = await activeEvent(tx, eventId);
     if (event.accessPolicy !== "APPROVAL_REQUIRED") fail("ACCESS_REQUEST_NOT_ALLOWED", "This event does not accept access requests", 400);
-    if (event.visibility === "INVITATION_ONLY") fail("INVITATION_REQUIRED", "This event requires an organizer invitation", 403);
+    if (event.visibility === "INVITATION_ONLY") {
+      const invitationGrant = await tx.eventAccessGrant.findFirst({ where: { eventId, userId, source: "INVITATION", status: "ACTIVE", expiresAt: { gt: new Date() } }, select: { id: true } });
+      if (!invitationGrant) fail("INVITATION_REQUIRED", "This event requires an organizer invitation before requesting checkout approval", 403);
+    }
     const existingGrant = await tx.eventAccessGrant.findFirst({
       where: { eventId, userId, status: "ACTIVE", expiresAt: { gt: new Date() } }, select: { id: true }
     });
@@ -145,7 +152,7 @@ export async function decideRequest(input: { requestId: string; organizationId: 
   return prisma.$transaction(async (tx) => {
     await assertManager(tx, input.organizationId, input.eventId, input.actorId);
     const { event, grantExpiry } = await activeEvent(tx, input.eventId);
-    if (event.accessPolicy !== "APPROVAL_REQUIRED" || event.visibility === "INVITATION_ONLY")
+    if (event.accessPolicy !== "APPROVAL_REQUIRED")
       fail("ACCESS_REQUEST_POLICY_CHANGED", "This event no longer accepts access requests");
     const request = await tx.eventAccessRequest.findFirst({
       where: { id: input.requestId, eventId: input.eventId, organizationId: input.organizationId, status: "SUBMITTED" }
