@@ -313,7 +313,8 @@ export async function reviewProviderApplication(input: {
       const changed = await tx.vybeProviderEvidence.updateMany({
         where: {
           id: evidenceDecision.evidenceId,
-          applicationId: application.id
+          applicationId: application.id,
+          status: "PENDING"
         },
         data: {
           status: evidenceDecision.status,
@@ -325,9 +326,9 @@ export async function reviewProviderApplication(input: {
 
       if (changed.count !== 1) {
         throw new AppError(
-          "VYBE_PROVIDER_EVIDENCE_NOT_FOUND",
-          "One or more evidence records do not belong to this application",
-          404
+          "VYBE_PROVIDER_EVIDENCE_NOT_REVIEWABLE",
+          "One or more evidence records are missing, already reviewed, or do not belong to this application",
+          409
         );
       }
     }
@@ -461,7 +462,11 @@ export async function reviewProviderApplication(input: {
         metadata: {
           organizationId: application.organizationId,
           category: application.category,
-          reason: input.reason
+          reason: input.reason,
+          evidenceDecisions: (input.evidenceDecisions ?? []).map((item) => ({
+            evidenceId: item.evidenceId,
+            status: item.status
+          }))
         }
       }
     });
@@ -563,7 +568,11 @@ export async function addProviderApplicationEvidence(input: {
 
     await tx.vybeProviderApplication.update({
       where: { id: application.id },
-      data: { status: "SUBMITTED" }
+      data: {
+        status: "SUBMITTED",
+        reviewedAt: null,
+        decisionReason: null
+      }
     });
 
     await tx.auditLog.create({
