@@ -1,11 +1,11 @@
 # Event Platform — Product Blueprint
 
-> **Status:** Shared foundation, Identity & Access, organizer applications, Event marketplace core, and PostgreSQL integration verification implemented  
+> **Status:** Shared foundation, Identity & Access, organizer applications, Event marketplace core, and PostgreSQL integration verification implemented; Vybe branding and marketplace design documented in the current proposal  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
 > **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is merged in [PR #5](https://github.com/Olexxee/Events/pull/5), and the Event marketplace design gate is merged in [PR #6](https://github.com/Olexxee/Events/pull/6). The Event core is implemented in [PR #7](https://github.com/Olexxee/Events/pull/7), and PostgreSQL migration/integration verification is merged in [PR #8](https://github.com/Olexxee/Events/pull/8). The Event Access design gate and implementation are merged in [PR #10](https://github.com/Olexxee/Events/pull/10). Ticketing & Admission design defaults are approved and the first catalog/inventory-holds implementation slice is in [PR #12](https://github.com/Olexxee/Events/pull/12).
 
-The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Vybe, Connect, and other domain modules.
+The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Vybe, Connect, and other domain modules. Vybe is the customer-facing experiences marketplace brand; its design gate is maintained in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md).
 
 This document records decisions made during product discovery. It distinguishes confirmed decisions from recommendations and unresolved questions so implementation does not accidentally turn assumptions into business rules.
 
@@ -573,13 +573,11 @@ The following items are not yet approved and must be resolved during product dis
 - Commerce, payment-provider, refund execution, ledger, and settlement design decisions remain separate
 - Event postponement and material-change options beyond the approved Event marketplace requirements
 
-### Accommodation and hospitality
+### Vybe — experiences marketplace
 
-- Whether room selection is by room type or specific room
-- External inventory synchronization method
-- Room cancellation windows and supplier liability
-- Hospitality supplier onboarding and licensing checks
-- Add-on pricing and fee treatment
+The proposed marketplace model, provider governance, inventory archetypes, booking lifecycles, fulfilment boundaries, Payments/Commerce contracts, and unresolved decisions are consolidated in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md). The design remains unapproved; no Vybe schema or implementation is authorized.
+
+Open decisions include room-category versus specific-room selection, external inventory certification, unused hotel allocation release, category-specific cancellation windows, provider-confirmation payment treatment, provider approval evidence, event-cancellation response deadlines, refund liability after settlement, and initial catalogue rollout scope.
 
 ### Connect and safety
 
@@ -622,6 +620,6 @@ A release should not be considered production-ready unless:
 
 ---
 
-**Naming decision:** Vybe is the approved customer-facing brand for experiences and bookings. Hospitality remains a descriptive/internal domain term where useful; it is not the product brand. The next gate is a complete Vybe design, not implementation.
+**Naming decision:** Vybe is the approved customer-facing brand for experiences and bookings. Hospitality remains a descriptive/internal term where useful; it is not the product brand. The proposed marketplace design is documented in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md) and requires explicit product-owner approval before implementation.
 
 **Document status:** Initial product blueprint. Confirmed decisions are recorded in Section 2. Recommendations and unresolved questions are explicitly marked throughout. Update this document as business decisions are made; do not silently convert proposals into approved requirements.
