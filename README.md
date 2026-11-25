@@ -1,9 +1,9 @@
 # Event Platform — Product Blueprint
 
-> **Status:** Foundation and Identity & Access implementation in progress  
+> **Status:** Shared foundation and Identity & Access merged; organizer verification design in progress  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
-> **Implementation status:** Shared backend foundation is merged. Identity & Access is under implementation in PR #2; merge is gated on the full CI pipeline passing against the latest PR head. Business-domain modules remain gated by their design and review phases.
+> **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). Organizer verification is being designed; no verification-domain schema or implementation will be added until its design gate is approved. Business-domain modules remain gated by their design and review phases.
 
 The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Hospitality, Connect, and other domain modules.
 
