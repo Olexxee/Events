@@ -1,0 +1,38 @@
+name: Format Ticketing PR files
+on:
+  push:
+    branches:
+      - feat/ticketing-inventory-holds
+    paths:
+      - .github/workflows/format-ticketing-pr.yml
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/ticketing-inventory-holds
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund --legacy-peer-deps
+      - name: Format Ticketing files and remove temporary workflow
+        run: |
+          npx prettier --write \
+            src/modules/ticketing/ticketing.controller.ts \
+            src/modules/ticketing/ticketing.db.ts \
+            src/modules/ticketing/ticketing.routes.ts \
+            src/modules/ticketing/ticketing.service.ts \
+            src/modules/ticketing/ticketing.validators.ts \
+            tests/ticketing.integration.test.ts
+          rm .github/workflows/format-ticketing-pr.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/modules/ticketing/ticketing.controller.ts src/modules/ticketing/ticketing.db.ts src/modules/ticketing/ticketing.routes.ts src/modules/ticketing/ticketing.service.ts src/modules/ticketing/ticketing.validators.ts tests/ticketing.integration.test.ts .github/workflows/format-ticketing-pr.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "style(ticketing): apply Prettier formatting"
+            git push origin HEAD:feat/ticketing-inventory-holds
+          fi
