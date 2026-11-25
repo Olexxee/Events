@@ -19,7 +19,7 @@ describe("Vybe provider application validation", () => {
         supplyAuthorityStatement:
           "Our organization owns and directly operates these apartments.",
         supplyAuthorityAttested: true,
-        termsVersion: "vybe-provider-2026-01",
+        termsAccepted: true,
         locations: [
           { city: "Ile-Ife", state: "Osun", country: "Nigeria" }
         ]
@@ -40,7 +40,7 @@ describe("Vybe provider application validation", () => {
           "We operate a restaurant and offer table reservations.",
         supplyAuthorityStatement: "We own and operate the restaurant.",
         supplyAuthorityAttested: false,
-        termsVersion: "v1",
+        termsAccepted: true,
         locations: [
           { city: "Lagos", state: "Lagos", country: "Nigeria" }
         ]
