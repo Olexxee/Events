@@ -32,7 +32,7 @@ When billing is designed, charges must be disclosed to the relevant payer, comme
 
 - **Organizer and provider service delivery:** Organizers are responsible for delivering their advertised events. Hospitality providers are responsible for delivering their advertised services and honouring confirmed reservations.
 - **Platform governance:** Events owns marketplace rules, organizer/provider platform access, moderation, trust and safety controls, and dispute coordination. The platform is not automatically the producer or fulfilment operator merely because a transaction is processed through it.
-- **Publishing:** Verified organizers may publish without individual manual approval of every event. Events retains moderation, restriction, suspension, and takedown powers.
+- **Publishing:** Organizations with approved organizer applications may publish without individual manual approval of every event. Events retains moderation, restriction, suspension, and takedown powers.
 - **Refund authority:** Events retains final authority over refunds governed by platform policy. Organizers and providers may submit evidence and explanations but cannot independently override platform-governed refund decisions. Applicable law and mandatory consumer rights remain controlling.
 - **Customer support:** A centralized support system receives and tracks issues, routes them to the responsible domain or operator, and provides platform-level escalation and oversight.
 - **Financial source of truth:** Events owns the authoritative ledger and settlement records. Gross collections, organizer/provider liabilities, platform-earned revenue, reserves, refunds, adjustments, and payouts must remain separately represented.
@@ -48,7 +48,7 @@ The initial Osun State launch prioritizes two organizer customer groups:
 - **Independent organizers:** individuals and small teams organizing events.
 - **Professional event organizers:** established operators and businesses managing events, including recurring or larger-scale productions.
 
-Corporate and institutional organizers, and curated-experience operators, remain supported customer segments but are not the primary drivers of initial product prioritization. This priority does not prohibit other eligible organizers from registering or publishing. Verification, permissions, operational limits, and moderation requirements remain applicable according to risk and role.
+Corporate and institutional organizers, and curated-experience operators, remain supported customer segments but are not the primary drivers of initial product prioritization. This priority does not prohibit other eligible organizers from registering or publishing. Organizer access is granted through a lightweight application; routine CAC or identity-document KYC is not required for ordinary organizers. Permissions and moderation requirements remain applicable.
 
 
 ## 1. Design principles
@@ -178,7 +178,7 @@ The diagrams are conceptual. The physical schema must use explicit foreign keys,
 - An Organization has memberships and may own many events.
 - Membership role/status is scoped to the organization. A single global role on User must not be the authorization source.
 - Event staff assignments are scoped to one event and one user, optionally requiring valid organization membership.
-- Verification is a case/history, not a boolean that erases reviewer, reason, or decision history.
+- Organizer access is represented by an auditable application and decision history, not a client-controlled role flag. Hospitality-provider approval is separate.
 
 ### 4.2 Events and access
 
@@ -256,7 +256,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 | Session | Identity | Revocable authenticated session/device record |
 | Organization | Organizations | Organizer or hospitality business identity |
 | OrganizationMembership | Organizations | Scoped user relationship, role, and membership status |
-| VerificationCase | Organizations / Trust | Subject, evidence references, decision, reviewer, timestamps, reason, history |
+| OrganizerApplication | Organizations / Trust | Organization, applicant, application statement, status, reviewer, decision reason, timestamps, audit history |
 | EventStaffAssignment | Events / Access | Event-specific staff assignment and permission set |
 
 ### 5.2 Events and access
@@ -509,7 +509,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 
 ## 10. Security and authorization invariants
 
-1. Verified organizers may publish eligible events without manual event-by-event approval; platform oversight, moderation, suspension, and takedown powers remain.
+1. Organizations with approved organizer applications may publish eligible events without manual event-by-event approval; platform oversight, moderation, suspension, and takedown powers remain.
 2. Private-event access is approved by the organizer or authorized event manager, with platform admin oversight.
 3. Access approval does not create a ticket or prove payment.
 4. Only the current holder may use an active ticket, subject to event policy.
