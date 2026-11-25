@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
-import { getValidatedRequest } from "../../shared/middleware/validate-request.js";
 import { AppError } from "../../shared/errors/app-error.js";
+import { getValidatedRequest } from "../../shared/middleware/validate-request.js";
 import { successResponse } from "../../shared/responses/success-response.js";
 import {
   applyForOrganizerAccess,
@@ -39,7 +39,9 @@ export const myOrganizerApplicationsController: RequestHandler = async (
   next
 ) => {
   try {
-    if (!req.auth) throw new Error("Authenticated context is required");
+    if (!req.auth) {
+      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    }
     const applications = await getMyOrganizerApplications(req.auth.subjectId);
     return successResponse(res, { applications });
   } catch (error) {
