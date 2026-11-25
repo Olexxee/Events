@@ -721,6 +721,7 @@ model VybeProviderApplication {
   locations                VybeProviderApplicationLocation[]
   evidence                 VybeProviderEvidence[]
   reviews                  VybeProviderReview[]
+  approvals                VybeProviderApproval[]
 
   @@index([organizationId, category, status, submittedAt])
   @@index([applicantUserId, submittedAt])
@@ -776,6 +777,7 @@ model VybeProviderReview {
 
 model VybeProviderApproval {
   id                String   @id @default(uuid()) @db.Uuid
+  applicationId     String   @unique @map("application_id") @db.Uuid
   providerProfileId String   @map("provider_profile_id") @db.Uuid
   category          VybeCategory
   status            VybeProviderApprovalStatus @default(ACTIVE)
@@ -792,6 +794,7 @@ model VybeProviderApproval {
   revocationReason  String?  @map("revocation_reason") @db.VarChar(1000)
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  application       VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
   providerProfile   VybeProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
   grantor           User @relation("VybeApprovalGrantor", fields: [approvedByUserId], references: [id], onDelete: Restrict)
   suspender         User? @relation("VybeApprovalSuspender", fields: [suspendedByUserId], references: [id], onDelete: Restrict)
