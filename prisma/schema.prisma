@@ -166,6 +166,58 @@ enum TicketHoldStatus {
   @@map("ticket_hold_status")
 }
 
+enum VybeCategory {
+  ACCOMMODATION
+  DINING
+  DRINKS
+  TABLES_LOUNGES
+  VIP_EXPERIENCES
+  OTHER_SERVICES
+
+  @@map("vybe_category")
+}
+
+enum VybeProviderApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  NEEDS_INFORMATION
+  APPROVED
+  REJECTED
+  WITHDRAWN
+
+  @@map("vybe_provider_application_status")
+}
+
+enum VybeProviderApprovalStatus {
+  ACTIVE
+  SUSPENDED
+  REVOKED
+  EXPIRED
+
+  @@map("vybe_provider_approval_status")
+}
+
+enum VybeProviderReviewAction {
+  REVIEW_STARTED
+  INFORMATION_REQUESTED
+  APPROVED
+  REJECTED
+  SUSPENDED
+  REVOKED
+
+  @@map("vybe_provider_review_action")
+}
+
+enum VybeEvidenceStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  SUPERSEDED
+
+  @@map("vybe_evidence_status")
+}
+
 // Shared infrastructure.
 model OutboxMessage {
   id               String    @id @default(uuid()) @db.Uuid
@@ -230,6 +282,12 @@ model User {
   eventAccessHoldsReleased EventAccessHold[] @relation("EventAccessHoldReleaser")
   ticketTypesCreated TicketType[] @relation("TicketTypeCreator")
   ticketHolds TicketHold[]
+  vybeApplicationsSubmitted VybeProviderApplication[] @relation("VybeApplicationApplicant")
+  vybeProviderReviews VybeProviderReview[]
+  vybeEvidenceReviewed VybeProviderEvidence[] @relation("VybeEvidenceReviewer")
+  vybeApprovalsGranted VybeProviderApproval[] @relation("VybeApprovalGrantor")
+  vybeApprovalsSuspended VybeProviderApproval[] @relation("VybeApprovalSuspender")
+  vybeApprovalsRevoked VybeProviderApproval[] @relation("VybeApprovalRevoker")
   eventAccessRequestsDecided EventAccessRequest[] @relation("EventAccessRequestDecider")
   eventAccessGrantsRevoked EventAccessGrant[] @relation("EventAccessGrantRevoker")
 
@@ -298,6 +356,8 @@ model Organization {
   eventInvitations EventInvitation[]
   eventAccessRequests EventAccessRequest[]
   eventAccessGrants EventAccessGrant[]
+  vybeProviderProfile VybeProviderProfile?
+  vybeProviderApplications VybeProviderApplication[]
 
   @@index([status, createdAt])
   @@map("organizations")
@@ -627,4 +687,122 @@ model TicketHoldLine {
   @@unique([holdId, ticketTypeId])
   @@index([ticketTypeId, holdId])
   @@map("ticket_hold_lines")
+}
+
+
+model VybeProviderProfile {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @unique @map("organization_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  approvals      VybeProviderApproval[]
+
+  @@map("vybe_provider_profiles")
+}
+
+model VybeProviderApplication {
+  id                       String   @id @default(uuid()) @db.Uuid
+  organizationId           String   @map("organization_id") @db.Uuid
+  applicantUserId          String   @map("applicant_user_id") @db.Uuid
+  category                 VybeCategory
+  serviceDescription       String   @map("service_description") @db.VarChar(1500)
+  supplyAuthorityStatement String   @map("supply_authority_statement") @db.VarChar(2000)
+  supplyAuthorityAttested  Boolean  @default(false) @map("supply_authority_attested")
+  termsVersion             String   @map("terms_version") @db.VarChar(40)
+  termsAcceptedAt          DateTime @map("terms_accepted_at") @db.Timestamptz(6)
+  status                   VybeProviderApplicationStatus @default(SUBMITTED)
+  submittedAt              DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt               DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  decisionReason           String?  @map("decision_reason") @db.VarChar(1000)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization             Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  applicant                User @relation("VybeApplicationApplicant", fields: [applicantUserId], references: [id], onDelete: Restrict)
+  locations                VybeProviderApplicationLocation[]
+  evidence                 VybeProviderEvidence[]
+  reviews                  VybeProviderReview[]
+  approval                 VybeProviderApproval?
+
+  @@index([organizationId, category, status, submittedAt], map: "vybe_provider_applications_org_category_status_idx")
+  @@index([applicantUserId, submittedAt], map: "vybe_provider_applications_applicant_submitted_idx")
+  @@index([status, submittedAt], map: "vybe_provider_applications_status_submitted_idx")
+  @@map("vybe_provider_applications")
+}
+
+model VybeProviderApplicationLocation {
+  id            String   @id @default(uuid()) @db.Uuid
+  applicationId String   @map("application_id") @db.Uuid
+  city          String   @db.VarChar(100)
+  state         String   @db.VarChar(100)
+  country       String   @db.VarChar(100)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  application   VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+
+  @@unique([applicationId, city, state, country], map: "vybe_provider_application_locations_scope_key")
+  @@index([city, state, country], map: "vybe_provider_application_locations_geo_idx")
+  @@map("vybe_provider_application_locations")
+}
+
+model VybeProviderEvidence {
+  id               String   @id @default(uuid()) @db.Uuid
+  applicationId    String   @map("application_id") @db.Uuid
+  evidenceType     String   @map("evidence_type") @db.VarChar(100)
+  requirementReason String  @map("requirement_reason") @db.VarChar(1000)
+  storageReference String   @map("storage_reference") @db.VarChar(1000)
+  status           VybeEvidenceStatus @default(PENDING)
+  reviewedByUserId String?  @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt       DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  reviewReason     String?  @map("review_reason") @db.VarChar(1000)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  application      VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  reviewer         User? @relation("VybeEvidenceReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, status], map: "vybe_provider_evidence_application_status_idx")
+  @@map("vybe_provider_evidence")
+}
+
+model VybeProviderReview {
+  id            String   @id @default(uuid()) @db.Uuid
+  applicationId String   @map("application_id") @db.Uuid
+  reviewerUserId String  @map("reviewer_user_id") @db.Uuid
+  action        VybeProviderReviewAction
+  reason        String   @db.VarChar(1000)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  application  VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  reviewer     User @relation(fields: [reviewerUserId], references: [id], onDelete: Restrict)
+
+  @@index([applicationId, createdAt], map: "vybe_provider_reviews_application_created_idx")
+  @@index([reviewerUserId, createdAt], map: "vybe_provider_reviews_reviewer_created_idx")
+  @@map("vybe_provider_reviews")
+}
+
+model VybeProviderApproval {
+  id                String   @id @default(uuid()) @db.Uuid
+  applicationId     String   @unique @map("application_id") @db.Uuid
+  providerProfileId String   @map("provider_profile_id") @db.Uuid
+  category          VybeCategory
+  status            VybeProviderApprovalStatus @default(ACTIVE)
+  locations         Json     @default("[]")
+  conditions        Json     @default("[]")
+  approvedByUserId  String   @map("approved_by_user_id") @db.Uuid
+  approvedAt        DateTime @default(now()) @map("approved_at") @db.Timestamptz(6)
+  expiresAt         DateTime? @map("expires_at") @db.Timestamptz(6)
+  suspendedAt       DateTime? @map("suspended_at") @db.Timestamptz(6)
+  suspendedByUserId String?  @map("suspended_by_user_id") @db.Uuid
+  suspensionReason  String?  @map("suspension_reason") @db.VarChar(1000)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
+  revokedByUserId   String?  @map("revoked_by_user_id") @db.Uuid
+  revocationReason  String?  @map("revocation_reason") @db.VarChar(1000)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  application       VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  providerProfile   VybeProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  grantor           User @relation("VybeApprovalGrantor", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+  suspender         User? @relation("VybeApprovalSuspender", fields: [suspendedByUserId], references: [id], onDelete: Restrict)
+  revoker           User? @relation("VybeApprovalRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([providerProfileId, category, status], map: "vybe_provider_approvals_profile_category_status_idx")
+  @@index([category, status, expiresAt], map: "vybe_provider_approvals_category_status_expiry_idx")
+  @@map("vybe_provider_approvals")
 }

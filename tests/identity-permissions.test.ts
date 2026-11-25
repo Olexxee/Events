@@ -58,3 +58,17 @@ describe("organizer application review permission", () => {
     ).toBe(false);
   });
 });
+
+describe("Vybe provider review permission", () => {
+  it("is limited to platform admins and super admins", () => {
+    expect(resolvePlatformPermissions(["PLATFORM_ADMIN"])).toContain(
+      "platform:vybe:providers:review"
+    );
+    expect(resolvePlatformPermissions(["SUPER_ADMIN"])).toContain(
+      "platform:vybe:providers:review"
+    );
+    expect(
+      resolvePlatformPermissions(["SUPPORT", "FINANCE_ADMIN"])
+    ).not.toContain("platform:vybe:providers:review");
+  });
+});
