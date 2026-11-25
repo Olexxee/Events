@@ -3,7 +3,7 @@
 > **Status:** Shared foundation, Identity & Access, organizer applications, Event marketplace core, and PostgreSQL integration verification implemented  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
-> **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is merged in [PR #5](https://github.com/Olexxee/Events/pull/5), and the Event marketplace design gate is merged in [PR #6](https://github.com/Olexxee/Events/pull/6). The Event core is implemented in [PR #7](https://github.com/Olexxee/Events/pull/7), and PostgreSQL migration/integration verification is merged in [PR #8](https://github.com/Olexxee/Events/pull/8). The Event Access design gate is approved and its implementation is in progress on a dedicated branch. Event Access remains separate from ticketing, hospitality approval, and payout verification.
+> **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is merged in [PR #5](https://github.com/Olexxee/Events/pull/5), and the Event marketplace design gate is merged in [PR #6](https://github.com/Olexxee/Events/pull/6). The Event core is implemented in [PR #7](https://github.com/Olexxee/Events/pull/7), and PostgreSQL migration/integration verification is merged in [PR #8](https://github.com/Olexxee/Events/pull/8). The Event Access design gate and implementation are merged in [PR #10](https://github.com/Olexxee/Events/pull/10). Ticketing & Admission is now in its design gate; ticketing implementation has not started.
 
 The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Hospitality, Connect, and other domain modules.
 
@@ -538,9 +538,9 @@ Potential domains:
 2. **Platform foundation and Identity & Access:** the shared Node 22/strict TypeScript/Express 5 scaffold, centralized error/response handling, Prisma/PostgreSQL baseline, transactional outbox, request IDs, Zod validation, append-only audit persistence, and security foundation are merged. Identity & Access is merged in [PR #2](https://github.com/Olexxee/Events/pull/2): user accounts, scrypt password credentials, opaque revocable sessions, refresh-token rotation/reuse detection, organization memberships, and trusted platform/organization permission resolution. Its exact PR head passed Prisma validation, typecheck, lint, formatting, all 17 tests, and build before merge.
 3. **Organizer access:** lightweight application schema, migration, submission/status endpoints, admin review, audit events, and permission boundaries implemented and merged in [PR #5](https://github.com/Olexxee/Events/pull/5). Publishing enforcement, applicant notifications, organizer terms, payout verification, and hospitality approval remain separate follow-up work.
 4. **Event marketplace:** [design gate](docs/EVENT_MARKETPLACE_DESIGN.md) approved and Event core implemented in [PR #7](https://github.com/Olexxee/Events/pull/7). PostgreSQL migration execution and five database-backed Event integration tests are merged in [PR #8](https://github.com/Olexxee/Events/pull/8). Ticketing and downstream commerce remain excluded.
-5. **Event Access:** [design gate](docs/EVENT_ACCESS_DESIGN.md) drafted. Confirm invitation identity, grant semantics, approval workflow, expiry, revocation, and platform oversight before implementation.
-6. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, and ledger integration.
-7. **Operational controls:** guest management, check-in, event changes, refunds, reconciliation, settlements.
+5. **Event Access:** [design gate](docs/EVENT_ACCESS_DESIGN.md) approved and implementation merged in [PR #10](https://github.com/Olexxee/Events/pull/10). Invitation, request, grant, revocation, platform holds, audit/outbox, and PostgreSQL integration coverage are implemented. Ticketing and Connect consumers remain follow-up integrations.
+6. **Ticketing & Admission:** [design gate](docs/TICKETING_ADMISSION_DESIGN.md) drafted. Approve inventory, holds, issuance, transfer, QR admission, entitlements, and refund consequences before schema/API implementation.
+7. **Commerce and Payments:** checkout/order orchestration, payment-provider verification, refunds execution, ledger, and settlement are separate design/implementation gates.
 8. **Hospitality:** drink catalogue, entitlements, redemption, accommodation inventory and reservations, partner workspace.
 9. **Connect:** opt-in event-specific profiles, mutual introductions, blocking, reporting, and moderation.
 10. **Hardening and launch:** security, privacy, compliance review, payment-provider approval, operational testing, observability, and launch readiness.
@@ -569,14 +569,9 @@ The following items are not yet approved and must be resolved during product dis
 
 ### Ticketing and event operations
 
-- Ticket transfer policy and transfer limits
-- Whether resale is prohibited or supported under controlled rules
-- Group booking rules
-- Guest approval workflow details
-- Exact venue disclosure timing
-- Event postponement and material-change options
-- Event staff permissions and check-in procedures
-- Capacity and waitlist behaviour
+- Ticketing & Admission defaults awaiting approval in [docs/TICKETING_ADMISSION_DESIGN.md](docs/TICKETING_ADMISSION_DESIGN.md)
+- Commerce, payment-provider, refund execution, ledger, and settlement design decisions remain separate
+- Event postponement and material-change options beyond the approved Event marketplace requirements
 
 ### Accommodation and hospitality
 
