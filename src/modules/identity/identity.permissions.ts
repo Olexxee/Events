@@ -7,6 +7,7 @@ const ROLE_PERMISSIONS: Record<PlatformRole, readonly string[]> = {
     "platform:moderation:manage",
     "platform:organizers:review",
     "platform:vybe:providers:review",
+    "platform:vybe:catalogue:manage",
     "platform:events:access:intervene"
   ],
   FINANCE_ADMIN: ["finance:read", "finance:reconcile"],
