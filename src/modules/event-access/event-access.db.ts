@@ -94,6 +94,7 @@ export async function submitRequest(eventId: string, userId: string, message?: s
       select: { id: true, eventId: true, status: true, message: true, createdAt: true }
     });
     await tx.auditLog.create({ data: { actorId: userId, actorType: "user", action: "event.access.requested", resourceType: "event_access_request", resourceId: request.id } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event_access_request", aggregateId: request.id, eventType: "EventAccessRequested", deduplicationKey: `event.access.requested:${request.id}`, payload: { eventId, organizationId: event.organizationId, requestId: request.id, requesterUserId: userId } } });
     return request;
   });
 }
@@ -133,6 +134,7 @@ export async function withdrawRequest(requestId: string, userId: string) {
     });
     if (changed.count !== 1) fail("ACCESS_REQUEST_NOT_WITHDRAWABLE", "The request does not exist or is no longer pending", 404);
     await tx.auditLog.create({ data: { actorId: userId, actorType: "user", action: "event.access.request.withdrawn", resourceType: "event_access_request", resourceId: requestId } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event_access_request", aggregateId: requestId, eventType: "EventAccessRequestWithdrawn", deduplicationKey: `event.access.request.withdrawn:${requestId}`, payload: { requestId, requesterUserId: userId } } });
     return { id: requestId, status: "WITHDRAWN" as const };
   });
 }
@@ -170,6 +172,7 @@ export async function decideRequest(input: { requestId: string; organizationId: 
       await createGrant(tx, { eventId: event.id, organizationId: event.organizationId, userId: request.requesterUserId, source: "ACCESS_REQUEST", sourceId: request.id, expiresAt: grantExpiry });
     }
     await tx.auditLog.create({ data: { actorId: input.actorId, actorType: "user", action: `event.access.request.${input.decision.toLowerCase()}`, resourceType: "event_access_request", resourceId: request.id, metadata: { reason: input.reason } } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event_access_request", aggregateId: request.id, eventType: input.decision === "APPROVED" ? "EventAccessRequestApproved" : "EventAccessRequestRejected", deduplicationKey: `event.access.request.decision:${request.id}`, payload: { eventId: event.id, requestId: request.id, requesterUserId: request.requesterUserId, decision: input.decision, reason: input.reason } } });
     return { id: request.id, status: input.decision };
   });
 }
@@ -193,6 +196,7 @@ export async function issueInvitation(input: { eventId: string; organizationId: 
       select: { id: true, eventId: true, status: true, expiresAt: true }
     });
     await tx.auditLog.create({ data: { actorId: input.actorId, actorType: "user", action: "event.access.invitation.issued", resourceType: "event_invitation", resourceId: invitation.id, metadata: { recipientUserId: recipient.id } } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event_invitation", aggregateId: invitation.id, eventType: "EventInvitationIssued", deduplicationKey: `event.access.invitation.issued:${invitation.id}`, payload: { eventId: event.id, invitationId: invitation.id, recipientUserId: recipient.id, expiresAt: invitation.expiresAt } } });
     return invitation;
   });
   return { invitation: result, token: rawToken };
@@ -213,6 +217,7 @@ export async function respondToInvitation(token: string, userId: string, decisio
     if (changed.count !== 1) fail("INVITATION_INVALID", "Invitation is invalid or unavailable", 404);
     if (decision === "ACCEPTED") await createGrant(tx, { eventId: event.id, organizationId: event.organizationId, userId, source: "INVITATION", sourceId: invitation.id, expiresAt: grantExpiry });
     await tx.auditLog.create({ data: { actorId: userId, actorType: "user", action: `event.access.invitation.${decision.toLowerCase()}`, resourceType: "event_invitation", resourceId: invitation.id } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event_invitation", aggregateId: invitation.id, eventType: decision === "ACCEPTED" ? "EventInvitationAccepted" : "EventInvitationDeclined", deduplicationKey: `event.access.invitation.response:${invitation.id}`, payload: { eventId: event.id, invitationId: invitation.id, recipientUserId: userId, decision } } });
     return { id: invitation.id, status: decision };
   });
 }
@@ -268,6 +273,7 @@ export async function revokeInvitation(input: { invitationId: string; eventId: s
     });
     if (changed.count !== 1) fail("INVITATION_NOT_REVOCABLE", "Pending invitation was not found", 404);
     await tx.auditLog.create({ data: { actorId: input.actorId, actorType: "user", action: "event.access.invitation.revoked", resourceType: "event_invitation", resourceId: input.invitationId, metadata: { reason: input.reason } } });
+    await tx.outboxMessage.create({ data: { aggregateType: "event_invitation", aggregateId: input.invitationId, eventType: "EventInvitationRevoked", deduplicationKey: `event.access.invitation.revoked:${input.invitationId}`, payload: { eventId: input.eventId, invitationId: input.invitationId, reason: input.reason } } });
     return { id: input.invitationId, status: "REVOKED" as const };
   });
 }
