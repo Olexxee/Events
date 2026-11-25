@@ -44,10 +44,6 @@ jobs:
         run: npm run prisma:migrate:deploy
       - run: npm run typecheck
       - run: npm run lint
-      - name: Temporary formatter diagnostic
-        run: |
-          npx prettier --write tests/events.integration.test.ts
-          cat tests/events.integration.test.ts
       - run: npm run format:check
       - run: npm test
       - run: npm run build
