@@ -6,7 +6,8 @@ import {
   applyToBecomeVybeProvider,
   decideVybeProviderApplication,
   getMyVybeProviderApplications,
-  getVybeProviderApplicationQueue
+  getVybeProviderApplicationQueue,
+  submitAdditionalVybeProviderEvidence
 } from "./vybe-provider.service.js";
 
 export const submitVybeProviderApplicationController: RequestHandler = async (req, res, next) => {
@@ -72,6 +73,24 @@ export const reviewVybeProviderApplicationController: RequestHandler = async (re
       ...input
     });
     return successResponse(res, { application });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const addVybeProviderEvidenceController: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    const { id } = getValidatedRequest<{ params: { id: string } }>(res).params;
+    const { evidence } = getValidatedRequest<{
+      body: { evidence: { evidenceType: string; requirementReason: string; storageReference: string }[] };
+    }>(res).body;
+    const records = await submitAdditionalVybeProviderEvidence({
+      applicationId: id,
+      applicantUserId: req.auth.subjectId,
+      evidence
+    });
+    return successResponse(res, { evidence: records }, 201);
   } catch (error) {
     return next(error);
   }
