@@ -33,7 +33,7 @@ export const submitVybeProviderApplicationController: RequestHandler = async (
         serviceDescription: string;
         supplyAuthorityStatement: string;
         supplyAuthorityAttested: true;
-        termsVersion: string;
+        termsAccepted: true;
         locations: { city: string; state: string; country: string }[];
         evidence?: {
           evidenceType: string;
