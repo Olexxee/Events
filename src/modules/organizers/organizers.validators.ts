@@ -6,7 +6,16 @@ export const submitOrganizerApplicationSchema = z.object({
   body: z.object({
     organizationId: uuidSchema,
     applicationMessage: z.string().trim().min(20).max(2000),
-    websiteUrl: z.string().trim().url().max(500).optional()
+    websiteUrl: z
+      .string()
+      .trim()
+      .url()
+      .max(500)
+      .refine(
+        (value) => value.startsWith("https://") || value.startsWith("http://"),
+        "Website URL must use HTTP or HTTPS"
+      )
+      .optional()
   }),
   params: z.object({}),
   query: z.object({})
