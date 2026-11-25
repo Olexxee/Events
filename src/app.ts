@@ -19,13 +19,9 @@ export function createApp(dependencies: AppDependencies = {}): Express {
 
   app.get("/health", (_req, res) => successResponse(res, { status: "ok" }));
 
-  app.get(`${prefix}/health/ready`, async (_req, res, next) => {
-    try {
-      await databasePing();
-      return successResponse(res, { status: "ready", database: "connected" });
-    } catch (error) {
-      return next(error);
-    }
+  app.get(`${prefix}/health/ready`, async (_req, res) => {
+    await databasePing();
+    return successResponse(res, { status: "ready", database: "connected" });
   });
 
   app.use(notFoundHandler);
