@@ -63,9 +63,7 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
         "Our organization owns and directly operates these apartments.",
       supplyAuthorityAttested: true,
       termsAccepted: true,
-      locations: [
-        { city: "Ile-Ife", state: "Osun", country: "Nigeria" }
-      ],
+      locations: [{ city: "Ile-Ife", state: "Osun", country: "Nigeria" }],
       ...(withEvidence
         ? {
             evidence: [
@@ -124,7 +122,9 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
   it("prevents organization-affiliated platform reviewers from reviewing", async () => {
     const { user, organization } = await createApplicant();
     const reviewer = await prisma.user.create({
-      data: { email: `vybe-conflicted-reviewer-${crypto.randomUUID()}@events.test` }
+      data: {
+        email: `vybe-conflicted-reviewer-${crypto.randomUUID()}@events.test`
+      }
     });
     await prisma.organizationMembership.create({
       data: {
@@ -170,7 +170,8 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
         {
           evidenceId: evidence.id,
           status: "ACCEPTED",
-          reason: "The evidence is current and satisfies the recorded requirement."
+          reason:
+            "The evidence is current and satisfies the recorded requirement."
         }
       ]
     });
@@ -216,8 +217,10 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
       evidence: [
         {
           evidenceType: "operating-permit",
-          requirementReason: "Replacement evidence requested by the review team.",
-          storageReference: "private://vybe/evidence/operating-permit-v2"
+          requirementReason:
+            "Replacement evidence requested by the review team.",
+          storageReference:
+            "private://vybe/evidence/operating-permit-v2"
         }
       ]
     });
@@ -272,7 +275,8 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
       approvalId: approval.id,
       reviewerUserId: reviewer.id,
       action: "REVOKED",
-      reason: "The provider failed to resolve the documented safety concern."
+      reason:
+        "The provider failed to resolve the documented safety concern."
     });
 
     expect(revoked.status).toBe("REVOKED");
