@@ -67,8 +67,8 @@ describe("Vybe provider review permission", () => {
     expect(resolvePlatformPermissions(["SUPER_ADMIN"])).toContain(
       "platform:vybe:providers:review"
     );
-    expect(resolvePlatformPermissions(["SUPPORT", "FINANCE_ADMIN"])).not.toContain(
-      "platform:vybe:providers:review"
-    );
+    expect(
+      resolvePlatformPermissions(["SUPPORT", "FINANCE_ADMIN"])
+    ).not.toContain("platform:vybe:providers:review");
   });
 });
