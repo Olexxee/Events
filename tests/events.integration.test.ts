@@ -311,3 +311,27 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     await setPlatformHold({ eventId: draft.id, actorId: ownerId, reason: "Safety review", release: false });
     await expect(myAccess(draft.id, memberId)).rejects.toMatchObject({ code: "EVENT_ACCESS_ON_HOLD", statusCode: 403 });
   });
+
+
+  it("requires both an invitation and organizer approval for invitation-only approval-required events", async () => {
+    const recipient = await prisma.user.create({
+      data: { email: `dual-gate-${crypto.randomUUID()}@events.test`, emailVerifiedAt: new Date() }
+    });
+    const draft = await createDraftEvent("dual-gate-event", "APPROVAL_REQUIRED", "INVITATION_ONLY");
+    await prisma.organizerApplication.create({
+      data: {
+        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        applicationMessage: "Approved integration fixture",
+        decisionReason: "Integration fixture approval",
+        reviewedAt: new Date(), reviewedByUserId: ownerId
+      }
+    });
+    await publishDraft(draft.id, ownerId);
+    await expect(submitRequest(draft.id, recipient.id)).rejects.toMatchObject({ code: "INVITATION_REQUIRED", statusCode: 403 });
+    const issued = await issueInvitation({ eventId: draft.id, organizationId, actorId: ownerId, recipientEmail: recipient.email });
+    await respondToInvitation(issued.token, recipient.id, "ACCEPTED");
+    expect(await myAccess(draft.id, recipient.id)).toMatchObject({ canViewDetails: true, canCheckout: false });
+    const request = await submitRequest(draft.id, recipient.id, "Please approve checkout access.");
+    await decideRequest({ requestId: request.id, eventId: draft.id, organizationId, actorId: ownerId, decision: "APPROVED", reason: "Approved after invitation" });
+    expect(await myAccess(draft.id, recipient.id)).toMatchObject({ canViewDetails: true, canCheckout: true });
+  });
