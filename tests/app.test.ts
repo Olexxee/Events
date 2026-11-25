@@ -33,12 +33,8 @@ describe("API foundation", () => {
     const response = await request(app).get("/api/v1/health/ready");
 
     expect(response.status).toBe(500);
-    expect(response.body.error.message).toBe(
-      "An unexpected error occurred"
-    );
-    expect(JSON.stringify(response.body)).not.toContain(
-      "database details"
-    );
+    expect(response.body.error.message).toBe("An unexpected error occurred");
+    expect(JSON.stringify(response.body)).not.toContain("database details");
   });
 
   it("returns a consistent not-found response", async () => {
