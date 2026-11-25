@@ -50,3 +50,15 @@ export const reviewVybeProviderApplicationSchema = z.object({
   params: z.object({ id: uuidSchema }),
   query: z.object({})
 });
+
+export const addVybeProviderEvidenceSchema = z.object({
+  body: {
+    evidence: z.array(z.object({
+      evidenceType: z.string().trim().min(2).max(100),
+      requirementReason: z.string().trim().min(10).max(1000),
+      storageReference: z.string().trim().min(5).max(1000)
+    })).min(1).max(10)
+  },
+  params: z.object({ id: uuidSchema }),
+  query: z.object({})
+});
