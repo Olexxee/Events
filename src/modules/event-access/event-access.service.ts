@@ -8,3 +8,5 @@ export const issueInvitation = db.issueInvitation;
 export const respondToInvitation = db.respondToInvitation;
 export const revokeGrant = db.revokeGrant;
 export const setPlatformHold = db.setPlatformHold;
+export const revokeInvitation = db.revokeInvitation;
+export const revokeGrantByPlatform = db.revokeGrantByPlatform;
