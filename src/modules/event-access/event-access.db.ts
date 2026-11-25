@@ -87,7 +87,7 @@ export async function submitRequest(eventId: string, userId: string, message?: s
     const existingGrant = await tx.eventAccessGrant.findFirst({
       where: { eventId, userId, status: "ACTIVE", expiresAt: { gt: new Date() } }, select: { id: true }
     });
-    if (existingGrant) fail("ACCESS_ALREADY_GRANTED", "You already have access to this event");
+    if (existingGrant?.canCheckout) fail("ACCESS_ALREADY_GRANTED", "You already have checkout access to this event");
     const request = await tx.eventAccessRequest.create({
       data: { eventId, organizationId: event.organizationId, requesterUserId: userId, ...(message ? { message } : {}) },
       select: { id: true, eventId: true, status: true, message: true, createdAt: true }
