@@ -20,9 +20,7 @@ describe("Vybe provider application validation", () => {
           "Our organization owns and directly operates these apartments.",
         supplyAuthorityAttested: true,
         termsAccepted: true,
-        locations: [
-          { city: "Ile-Ife", state: "Osun", country: "Nigeria" }
-        ]
+        locations: [{ city: "Ile-Ife", state: "Osun", country: "Nigeria" }]
       },
       params: {},
       query: {}
@@ -41,9 +39,7 @@ describe("Vybe provider application validation", () => {
         supplyAuthorityStatement: "We own and operate the restaurant.",
         supplyAuthorityAttested: false,
         termsAccepted: true,
-        locations: [
-          { city: "Lagos", state: "Lagos", country: "Nigeria" }
-        ]
+        locations: [{ city: "Lagos", state: "Lagos", country: "Nigeria" }]
       },
       params: {},
       query: {}
@@ -61,7 +57,7 @@ describe("Vybe provider application validation", () => {
           "We operate a restaurant and offer table reservations.",
         supplyAuthorityStatement: "We own and operate the restaurant.",
         supplyAuthorityAttested: true,
-        termsVersion: "v1",
+        termsAccepted: true,
         locations: [
           { city: "Lagos", state: "Lagos", country: "Nigeria" }
         ],
