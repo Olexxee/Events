@@ -29,7 +29,7 @@ export const submitVybeProviderApplicationSchema = z.object({
     serviceDescription: z.string().trim().min(20).max(1500),
     supplyAuthorityStatement: z.string().trim().min(20).max(2000),
     supplyAuthorityAttested: z.literal(true),
-    termsVersion: z.string().trim().min(1).max(40),
+    termsAccepted: z.literal(true),
     locations: z.array(locationSchema).min(1).max(10),
     evidence: z.array(evidenceSchema).max(10).optional()
   }),
