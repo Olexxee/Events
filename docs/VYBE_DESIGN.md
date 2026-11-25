@@ -332,7 +332,7 @@ No real payment provider should be selected or embedded in Vybe. A test adapter 
 
 | ID | Decision | Proposed direction | Why it matters |
 |---|---|---|---|
-| VYBE-001 | Launch catalogue scope | Stage families if operations cannot support all categories at launch | Defines MVP inventory models |
+| VYBE-001 | Launch catalogue scope | **Approved: staged launch.** All six catalogue families remain in the architecture, but activation is phased by provider readiness, inventory controls, operational capacity, and safety/compliance readiness. | Defines MVP inventory models and launch sequencing |
 | VYBE-002 | Provider-confirmation payment | Prefer no capture before provider acceptance; evaluate authorization-only or pay-after-acceptance with Payments | Avoids charging for rejected requests |
 | VYBE-003 | Unused hotel allocation | Contractual release cutoff with per-night reconciliation | Prevents double-selling |
 | VYBE-004 | Room selection | Default room-category/quantity pool; specific-room only when explicitly offered | Determines inventory complexity |
@@ -351,4 +351,4 @@ The product owner must approve or amend the proposed directions in Section 15 be
 
 ---
 
-**Document status:** Proposed Vybe design. It consolidates existing accommodation/hospitality policies under the Vybe brand, preserves independent Payments and Finance boundaries, and makes unresolved decisions explicit. No schema, migration, API, or provider implementation is authorized.
+**Document status:** Proposed Vybe design, with staged catalogue rollout approved (VYBE-001). It consolidates existing accommodation/hospitality policies under the Vybe brand, preserves independent Payments and Finance boundaries, and makes unresolved decisions explicit. No schema, migration, API, or provider implementation is authorized.
