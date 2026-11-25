@@ -1,6 +1,7 @@
 import { z } from "zod";
 const uuid = z.string().uuid();
 const reason = z.string().trim().min(5).max(1000);
+export const organizationEventParams = z.object({ body: z.object({}), params: z.object({ organizationId: uuid, eventId: uuid }), query: z.object({}) });
 export const eventIdParams = z.object({ body: z.object({}), params: z.object({ eventId: uuid }), query: z.object({}) });
 export const requestCreate = z.object({ body: z.object({ message: z.string().trim().max(500).optional() }), params: z.object({ eventId: uuid }), query: z.object({}) });
 export const requestIdParams = z.object({ body: z.object({}), params: z.object({ requestId: uuid }), query: z.object({}) });
