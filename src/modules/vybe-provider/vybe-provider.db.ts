@@ -6,6 +6,8 @@ import type {
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 
+const CURRENT_PROVIDER_TERMS_VERSION = "vybe-provider-v1";
+
 const OPEN_APPLICATION_STATUSES: VybeProviderApplicationStatus[] = [
   "SUBMITTED",
   "UNDER_REVIEW",
@@ -19,7 +21,7 @@ export async function submitProviderApplication(input: {
   serviceDescription: string;
   supplyAuthorityStatement: string;
   supplyAuthorityAttested: true;
-  termsVersion: string;
+  termsAccepted: true;
   locations: { city: string; state: string; country: string }[];
   evidence?: {
     evidenceType: string;
@@ -138,7 +140,7 @@ export async function submitProviderApplication(input: {
           serviceDescription: input.serviceDescription,
           supplyAuthorityStatement: input.supplyAuthorityStatement,
           supplyAuthorityAttested: input.supplyAuthorityAttested,
-          termsVersion: input.termsVersion,
+          termsVersion: CURRENT_PROVIDER_TERMS_VERSION,
           termsAcceptedAt: new Date(),
           locations: { create: input.locations },
           ...(input.evidence?.length
