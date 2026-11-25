@@ -18,7 +18,11 @@ export const submitVybeProviderApplicationController: RequestHandler = async (
 ) => {
   try {
     if (!req.auth) {
-      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+      throw new AppError(
+        "UNAUTHENTICATED",
+        "Authentication is required",
+        401
+      );
     }
     const input = getValidatedRequest<{
       body: {
@@ -59,9 +63,15 @@ export const myVybeProviderApplicationsController: RequestHandler = async (
 ) => {
   try {
     if (!req.auth) {
-      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+      throw new AppError(
+        "UNAUTHENTICATED",
+        "Authentication is required",
+        401
+      );
     }
-    const applications = await getMyVybeProviderApplications(req.auth.subjectId);
+    const applications = await getMyVybeProviderApplications(
+      req.auth.subjectId
+    );
     return successResponse(res, { applications });
   } catch (error) {
     return next(error);
@@ -88,7 +98,11 @@ export const reviewVybeProviderApplicationController: RequestHandler = async (
 ) => {
   try {
     if (!req.auth) {
-      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+      throw new AppError(
+        "UNAUTHENTICATED",
+        "Authentication is required",
+        401
+      );
     }
     const { id } = getValidatedRequest<{
       params: { id: string };
@@ -128,9 +142,15 @@ export const addVybeProviderEvidenceController: RequestHandler = async (
 ) => {
   try {
     if (!req.auth) {
-      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+      throw new AppError(
+        "UNAUTHENTICATED",
+        "Authentication is required",
+        401
+      );
     }
-    const { id } = getValidatedRequest<{ params: { id: string } }>(res).params;
+    const { id } = getValidatedRequest<{
+      params: { id: string };
+    }>(res).params;
     const { evidence } = getValidatedRequest<{
       body: {
         evidence: {
