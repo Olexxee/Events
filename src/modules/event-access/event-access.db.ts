@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error.js";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 
@@ -8,7 +9,7 @@ const fail = (code: string, message: string, status = 409): never => {
   throw new AppError(code, message, status);
 };
 
-async function activeEvent(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0], eventId: string) {
+async function activeEvent(tx: Prisma.TransactionClient, eventId: string) {
   const event = await tx.event.findUnique({
     where: { id: eventId },
     include: { schedules: true, organization: { select: { status: true } }, accessHold: true }
@@ -23,7 +24,7 @@ async function activeEvent(tx: Parameters<Parameters<typeof prisma.$transaction>
   return { event, grantExpiry: endsAt };
 }
 
-async function assertManager(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0], organizationId: string, eventId: string, userId: string) {
+async function assertManager(tx: Prisma.TransactionClient, organizationId: string, eventId: string, userId: string) {
   const membership = await tx.organizationMembership.findUnique({
     where: { organizationId_userId: { organizationId, userId } },
     select: { role: true, status: true, organization: { select: { status: true } } }
@@ -38,7 +39,7 @@ async function assertManager(tx: Parameters<Parameters<typeof prisma.$transactio
   if (!event) fail("EVENT_NOT_FOUND", "Event was not found", 404);
 }
 
-async function createGrant(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0], input: {
+async function createGrant(tx: Prisma.TransactionClient, input: {
   eventId: string; organizationId: string; userId: string;
   source: "INVITATION" | "ACCESS_REQUEST" | "PLATFORM"; sourceId: string; expiresAt: Date;
 }) {
