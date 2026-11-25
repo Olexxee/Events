@@ -3,7 +3,7 @@
 > **Status:** Foundation implementation  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
-> **Implementation status:** Shared backend foundation is authorized and underway. Product-domain modules remain gated by their design and review phases.
+> **Implementation status:** Shared backend foundation implemented through request context, authentication/authorization contracts, request validation, append-only audit persistence, and initial security tests. CI verification is the current gate; business-domain modules remain gated by their design and review phases.
 
 The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Hospitality, Connect, and other domain modules.
 
@@ -488,19 +488,20 @@ The data model should support:
 
 Potential initial city candidates discussed include Lagos, Abuja, Port Harcourt, and Ibadan. This is a shortlist for evaluation, not a final launch commitment or market ranking.
 
-## 16. Proposed technical direction — not yet locked
+## 16. Confirmed technical direction and implementation constraints
 
-The following is a candidate stack based on existing project conventions. Confirm it before implementation:
+The backend foundation uses the following confirmed stack:
 
 - Runtime: Node.js 22
-- Backend: Express 5, ES modules
+- Backend: Express 5, TypeScript strict mode, ES modules
 - Database: PostgreSQL
-- ORM: Prisma
+- ORM: Prisma 6
 - Validation: Zod
-- Frontend: React + TypeScript
-- Payments: Paystack, subject to merchant/product approval and settlement design
-- Email: Resend
-- Media: Cloudinary
+- Logging: Pino
+- Tests: Vitest and Supertest
+- API namespace: `/api/v1`
+
+Frontend technology and external providers for payments, email, and media are not part of the current backend foundation and remain subject to their respective implementation decisions. Do not introduce provider-specific integrations during foundation work without explicit authorization.
 
 ### Backend architecture
 
@@ -537,10 +538,10 @@ Potential domains:
 - moderation-and-safety
 - reporting-and-audit
 
-## 17. Proposed delivery phases
+## 17. Delivery phases and implementation tracking
 
-1. **Product and policy foundation:** finalize foundational business rules, roles, organizer terms, refund policy, settlement policy, and safety requirements. Commercial pricing remains deferred to the billing phase.
-2. **Platform foundation:** identity, permissions, organizer onboarding, geography, admin workspace.
+1. **Product and policy foundation:** foundational product boundaries and key business rules have been recorded. Commercial pricing remains deferred to the billing phase.
+2. **Platform foundation:** shared backend scaffold and cross-cutting infrastructure are in progress. Completed: Node 22/strict TypeScript/Express 5 setup, centralized error and response handling, Prisma/PostgreSQL baseline with transactional outbox, request IDs, authentication and authorization middleware contracts, Zod request validation, append-only audit-log persistence, and initial security tests. Current gate: full CI must pass before Identity and Access implementation begins. Next: implement credential-backed identity, sessions, organization membership, and trusted permission resolution; organizer onboarding, geography, and admin workspace follow their domain design gates.
 3. **Event marketplace:** event lifecycle, discovery, publishing, visibility, access policies.
 4. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, and ledger integration.
 5. **Operational controls:** guest management, check-in, event changes, refunds, reconciliation, settlements.
