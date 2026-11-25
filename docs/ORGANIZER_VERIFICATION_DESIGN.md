@@ -1,183 +1,72 @@
-# Organizer Verification — Design Gate
+# Organizer Role Applications
 
-**Status:** Policy direction updated; implementation design requires revision  
-**Owner:** Organizations / Trust  
-**Depends on:** Identity & Access foundation (merged in PR #2)  
-**Scope:** Organizer publishing verification. Hospitality-provider approval remains a separate scope and lifecycle.
+**Status:** Initial application workflow implemented in PR (pending CI and merge)
+**Owner:** Organizations / Trust
+**Scope:** Permission for an organization to publish events. Hospitality-provider approval and payout verification remain separate.
 
-This document turns the current product requirements into a reviewable workflow. The product policy direction is that organizer access is open by application with lightweight onboarding; this document still requires detailed workflow and technical review before schema implementation.
+## 1. Product policy
 
-## 1. Product requirements already established
+- Any registered user may become an organizer by creating an organization and applying for the organizer role.
+- Ordinary organizers are not required to submit CAC documents, business-registration records, identity documents, or other routine KYC evidence.
+- The application is short: select an existing organization and explain what it intends to organize. A website is optional.
+- Platform administrators approve or reject applications with a recorded reason.
+- An approved organization may publish eligible events without event-by-event manual approval.
+- Platform moderation, event restrictions, suspension, and takedown remain available.
+- Organizer approval does not authorize hospitality listings and does not release funds. Hospitality approval and payout-beneficiary verification are separate workflows.
 
-- An organization may have multiple users through scoped memberships.
-- A user may participate in more than one organization and may hold different roles in each.
-- Organizer access is granted through an auditable role application and approval history, not a client-controlled role flag.
-- Any registered user may apply for organizer access.
-- Ordinary organizers do not need CAC or business-registration documents.
-- Initial approval is lightweight: a basic application, reachable email and phone verification, acceptance of organizer terms, and platform approval of the organizer role.
-- Approved organizers may publish eligible events without manual approval of every event. Platform moderation, proportionate limits, risk-based event review, suspension, and takedown authority remain.
-- Payout beneficiary verification is separate from organizer onboarding and is required before the first settlement, not before applying or publishing.
-- Additional identity/business evidence may be requested only where a specific risk, legal obligation, event category, or transaction threshold justifies it.
-- Hospitality-provider approval is separate from organizer/event-publishing verification. An organization may use the same account and workspace, but must pass the additional hospitality approval before listing hospitality inventory.
+## 2. Application workflow
 
-## 2. Recommended separation of concerns
+An applicant first creates an organization through the existing organization endpoint. Organization creation is open to any authenticated user; the creator becomes its OWNER. The owner can then submit an application for that organization.
 
-Do not build a heavyweight KYC case-management system for ordinary organizer onboarding. Model a lightweight `OrganizerApplication` with applicant, organization, application answers, status, reviewer/decision metadata, and timestamps. Preserve every submission and decision in the audit log. Store optional evidence references only when a documented risk or legal trigger requires them. Keep terms acceptance as a versioned record. Do not introduce trust scoring or a separate trust-assessment subsystem in this phase.
+Current API:
 
-The identity and access layer remains authoritative for users, sessions, and memberships. The Organizations module owns verification cases and organization trust. A verification decision must not mutate a user's global role or membership role.
+| Method | Path | Purpose | Authorization |
+|---|---|---|---|
+| POST | `/api/v1/organizer-applications` | Submit an application | Authenticated organization OWNER |
+| GET | `/api/v1/organizer-applications/mine` | List own applications and decisions | Authenticated applicant |
+| GET | `/api/v1/organizer-applications` | Review queue (first 100) | Platform admin or super admin |
+| PATCH | `/api/v1/organizer-applications/:id/decision` | Approve or reject with reason | Platform admin or super admin |
 
-## 3. Verification scopes
+Submission fields:
+- `organizationId`: existing active organization owned by the applicant.
+- `applicationMessage`: 20–2,000 characters describing the organizer's intended activity.
+- `websiteUrl`: optional HTTP/HTTPS URL.
 
-Keep organizer-role approval and hospitality-provider approval as separate workflows. An approved organizer is not automatically a hospitality provider. The organizer application should not collect hospitality evidence or business-registration documents by default.
+The application is not a global user role. Approval is attached to the organization, while each user's ability to act within that organization continues to come from active organization membership and scoped permissions.
 
-Each case is attached to an Organization. Evidence may relate to the organization or to a representative user acting for it. The data model must retain the evidence subject and the submitter separately.
+## 3. Status and decision rules
 
-## 4. Proposed case lifecycle
+Statuses are persisted as:
+- `SUBMITTED`
+- `UNDER_REVIEW`
+- `NEEDS_INFORMATION`
+- `APPROVED`
+- `REJECTED`
+- `WITHDRAWN`
+- `SUSPENDED`
+- `REVOKED`
 
-Recommended states:
+The initial API implements submission and final approval/rejection. The other states are reserved for later review and enforcement workflows; they are not directly writable by clients.
 
-- `DRAFT`: not submitted; editable by an authorized organization representative.
-- `SUBMITTED`: evidence and declarations submitted; awaiting triage.
-- `UNDER_REVIEW`: assigned to an authorized reviewer.
-- `NEEDS_INFORMATION`: reviewer requests specific additional evidence.
-- `APPROVED`: all required checks passed for the case scope.
-- `REJECTED`: the application did not meet requirements.
-- `SUSPENDED`: a previously approved scope is temporarily disabled.
-- `REVOKED`: approval withdrawn by an authorized platform decision.
-- `EXPIRED`: approval or evidence validity period ended and re-verification is required.
+Rules:
+- Only an active organization OWNER may submit.
+- At most one active application may exist per organization. A PostgreSQL partial unique index enforces this under concurrent submissions.
+- An organization with an approved, suspended, or revoked application cannot bypass that state by submitting another application.
+- A rejected organization may submit a new application; prior decisions remain in history.
+- Only users with the trusted `platform:organizers:review` permission may review. The permission is granted to PLATFORM_ADMIN and SUPER_ADMIN, not SUPPORT or FINANCE_ADMIN.
+- Approval/rejection is conditional on the application still being active, so concurrent decisions cannot overwrite one another.
+- Every submission and final decision is written to the append-only audit log with actor, organization, outcome, and decision reason.
 
-Proposed transitions:
+## 4. Privacy and KYC boundaries
 
-| From | To | Actor / condition |
-|---|---|---|
-| DRAFT | SUBMITTED | Organization owner or explicitly authorized representative |
-| SUBMITTED | UNDER_REVIEW | Verification queue/reviewer assignment |
-| UNDER_REVIEW | NEEDS_INFORMATION | Reviewer records required evidence and reason |
-| NEEDS_INFORMATION | SUBMITTED | Authorized representative supplies requested information |
-| UNDER_REVIEW | APPROVED | Reviewer confirms every required check and a final approver authorizes |
-| UNDER_REVIEW | REJECTED | Reviewer records reason and any permitted re-application condition |
-| APPROVED | SUSPENDED | Authorized trust/safety intervention |
-| APPROVED | REVOKED | Authorized final decision with reason |
-| APPROVED | EXPIRED | Validity period or evidence expiry reached |
-| SUSPENDED | UNDER_REVIEW | Reinstatement/review process explicitly opened |
+The ordinary application collects no identity-document numbers, CAC records, bank-account details, or private identity evidence. The review queue returns applicant email and display name only; it does not expose phone numbers or identity data.
 
-No controller may set an arbitrary state. The service must validate every transition and append the corresponding event and decision record in the same transaction.
+Additional evidence may be introduced only for a documented legal requirement or a specific risk trigger. If that becomes necessary, it must have a separate purpose, access policy, retention policy, and audit trail. Do not turn exceptional checks into a default onboarding checklist.
 
-## 5. Optional evidence handling and privacy
+No payout data is collected here. Finance must verify a payout beneficiary before the first settlement. Hospitality providers must pass their own approval before listing hospitality inventory.
 
-Ordinary organizer applications should not require identity documents, CAC certificates, or other business-registration evidence. If a specific risk, legal obligation, event category, or transaction threshold justifies additional evidence, store it outside PostgreSQL in approved private object storage; PostgreSQL stores only references and review metadata.
+## 5. Publishing integration requirement
 
-When optional evidence is collected, minimum metadata includes:
+The future Events publishing service must query the current organizer approval for the owning organization. It must not rely on a client-side badge or a cached application result. Pending or rejected applications do not grant publishing access; suspension or revocation must block new publishing synchronously.
 
-- Evidence type and verification scope.
-- Subject type and subject reference (organization or representative user).
-- Submitter user ID.
-- Private storage object reference.
-- MIME type, byte size, checksum, and upload timestamp.
-- Issuer/provider and external verification reference, where applicable.
-- Valid-from/valid-until dates, where the document has an expiry.
-- Review status, reviewer, review timestamp, and reason.
-
-Security requirements:
-
-- Never expose storage object keys or signed URLs through public organization/event APIs.
-- Generate short-lived download access only after an authorization and purpose check.
-- Log evidence view, download, submission, replacement, and deletion/purge actions.
-- Do not log document contents, full identity numbers, bank account numbers, OTPs, passwords, or raw provider payloads.
-- Encrypt evidence at rest and in transit; define access roles and retention before collecting real documents.
-- Retain only the minimum evidence required for the stated purpose and applicable legal obligations. Exact retention periods are unresolved.
-- A checksum detects accidental change; it is not proof that a document is genuine.
-
-## 6. Authorization
-
-Proposed access boundaries:
-
-- Organization OWNER: submit, view status, and respond to information requests for their organization.
-- Organization ADMIN: same only if the organization owner explicitly grants the verification-management capability; do not assume every admin should view identity evidence.
-- Verification reviewer: inspect assigned cases and evidence, request information, and recommend an outcome.
-- Final approver: approve/reject/revoke within the assigned approval scope.
-- Platform support: no default access to identity evidence.
-- Super admin: privileged access is still purpose-limited and audited; it is not an excuse to bypass workflow history.
-
-Reviewer and approver separation is recommended for high-risk or settlement-enabled organizations. Whether it is mandatory for every case is an open policy decision.
-
-Platform permissions should be explicit, for example:
-
-- `verification:case:read`
-- `verification:case:review`
-- `verification:case:decide`
-- `verification:evidence:read`
-- `verification:case:override`
-
-These permissions must be granted through trusted platform-role administration, never from client input. Organization membership permissions must not grant platform review authority.
-
-## 7. Publishing and settlement gates
-
-Recommended capability checks:
-
-**Organizer publishing**
-- Organization is active.
-- The user has an approved organizer-role application/current organizer authorization.
-- Email and phone are verified.
-- Current organizer terms version has been accepted.
-- No active platform restriction blocks publishing.
-- No routine identity-document or business-registration check is required.
-
-**Settlements**
-- All publishing eligibility checks above remain valid.
-- A payout beneficiary is verified and linked to the organization through the Finance-owned payout-account workflow before the first settlement.
-- No settlement hold, risk restriction, or compliance block applies.
-
-The event-publishing service must ask the Organizations/Trust service for current eligibility. It must not trust a client-side badge, cached organization flag, or old approval event as the sole authorization source. If an organization is suspended or its approval is revoked, new publishing must be blocked synchronously.
-
-Exact eligibility rules, evidence freshness, and whether some checks can be deferred until the first settlement remain open.
-
-## 8. Organizer approval is not hospitality approval
-
-Organizer-role approval grants event-organizing capabilities only. Hospitality listings require a separate provider application and approval. Do not add opaque trust scoring or automated risk scores to the organizer application foundation. If the platform later introduces risk-based limits, document the inputs, user notice, review rights, and appeal path first.
-
-## 9. Required invariants and tests
-
-Before implementation, the design must guarantee:
-
-1. An organization cannot publish without current organizer-publishing approval and all required gates.
-2. Hospitality approval is independent and does not follow automatically from organizer approval.
-3. A user cannot submit, inspect, or change a case for an organization without current scoped authority.
-4. Client requests cannot set verification status, trust level, reviewer, approver, or decision reason.
-5. A decision always records actor, scope, reason, timestamp, and prior/current state.
-6. Evidence is private by default; public event and organization responses never serialize evidence metadata or storage references.
-7. Rejection, expiry, suspension, or revocation does not erase prior decisions or evidence history.
-8. Re-submission creates a traceable case version/attempt; it does not rewrite a rejected case.
-9. Duplicate concurrent approvals/rejections cannot create contradictory final decisions.
-10. A revoked or suspended approval blocks new publishing without waiting for asynchronous projection cleanup.
-11. Platform overrides require a dedicated permission, reason, and audit record.
-12. Organization membership removal immediately removes the former member's case/evidence access.
-
-Required tests include cross-organization access denial, reviewer scope denial, evidence privacy, illegal state transitions, duplicate concurrent decisions, suspension/revocation propagation, expired evidence, and audit completeness.
-
-## 10. Remaining decisions — resolve before schema implementation
-
-| Decision | Recommended default | Why it is still open |
-|---|---|---|
-| Who may apply for organizer access? | Any registered user; organization owner or authorized creator completes the application | Open access is a product requirement; delegation applies only after an organization exists |
-| Required evidence by organizer type | Basic application, verified email/phone, and accepted terms; request additional evidence only for documented risk/legal triggers | Avoid unnecessary KYC and barriers to ordinary event organizers |
-| Representative identity | No blanket identity-document check for ordinary organizers; apply additional checks only when justified by risk or law | Avoid imposing full KYC on every applicant |
-| Email/phone verification | Verify the accountable representative before publishing | Channel/provider, expiry, resend, and recovery rules are not selected |
-| Payout beneficiary | Verify the beneficiary before first settlement, not before organizer approval or publishing | Finance owns payout controls and data minimization |
-| Reviewer/approver separation | Two-person approval for high-risk or payout-enabled cases | Staffing and operational burden |
-| Rejection and appeal | Reasoned rejection plus one documented appeal/re-application path | Appeal deadlines and reviewer independence |
-| Evidence expiry/re-verification | Expiring documents trigger re-review before continued publishing/settlement | Exact validity periods vary by document and law |
-| Evidence retention/deletion | Minimum necessary retention, with legal hold support | Nigerian legal and provider requirements require specialist review |
-| Trust levels and limits | Keep trust labels informational until policy is approved | Thresholds and impact are not defined |
-| Organizer publishing during review | Block publishing until the lightweight organizer application is approved | Role approval remains a clear gate; individual event approval is not the default |
-
-## 11. Explicitly out of scope
-
-- Selecting an identity, CAC, phone OTP, bank verification, email, or object-storage vendor.
-- Implementing payment, payout, settlement, or commercial rules.
-- Implementing hospitality-provider approval (it shares the framework but requires a separate checklist and policy).
-- Event-by-event approval for every event from an already verified organizer.
-- Automatic risk scoring or opaque trust ranking.
-- Creating a public API that exposes identity evidence or private venue information.
-
-**Exit gate:** confirm the remaining operational details, then produce the lightweight application schema, migration, service contracts, and concurrency/security test plan. Do not implement routine KYC collection for ordinary organizers.
+The application workflow does not yet implement event publishing, payout verification, hospitality approval, applicant notifications, or organizer-terms acceptance. These remain explicit follow-up work before public launch.

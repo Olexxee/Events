@@ -5,6 +5,7 @@ import { successResponse } from "./shared/responses/success-response.js";
 import { pingDatabase } from "./infrastructure/database/prisma.js";
 import { requestContext } from "./shared/middleware/request-context.js";
 import { identityRouter } from "./modules/identity/identity.routes.js";
+import { organizersRouter } from "./modules/organizers/organizers.routes.js";
 
 export interface AppDependencies {
   databasePing?: () => Promise<void>;
@@ -23,6 +24,7 @@ export function createApp(dependencies: AppDependencies = {}): Express {
   app.get("/health", (_req, res) => successResponse(res, { status: "ok" }));
 
   app.use(prefix, identityRouter);
+  app.use(prefix, organizersRouter);
 
   app.get(`${prefix}/health/ready`, async (_req, res) => {
     await databasePing();

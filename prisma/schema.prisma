@@ -39,6 +39,19 @@ enum OrganizationMembershipStatus {
   @@map("organization_membership_status")
 }
 
+enum OrganizerApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  NEEDS_INFORMATION
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  SUSPENDED
+  REVOKED
+
+  @@map("organizer_application_status")
+}
+
 enum PlatformRole {
   SUPPORT
   PLATFORM_ADMIN
@@ -102,6 +115,8 @@ model User {
   memberships       OrganizationMembership[]
   platformRoles     PlatformRoleAssignment[]
   createdOrganizations Organization[]        @relation("OrganizationCreator")
+  organizerApplicationsSubmitted OrganizerApplication[] @relation("OrganizerApplicationApplicant")
+  organizerApplicationsReviewed  OrganizerApplication[] @relation("OrganizerApplicationReviewer")
 
   @@index([status, createdAt])
   @@map("users")
@@ -163,6 +178,7 @@ model Organization {
   updatedAt   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdBy   User                       @relation("OrganizationCreator", fields: [createdById], references: [id], onDelete: Restrict)
   memberships OrganizationMembership[]
+  organizerApplications OrganizerApplication[]
 
   @@index([status, createdAt])
   @@map("organizations")
@@ -196,4 +212,27 @@ model PlatformRoleAssignment {
   @@unique([userId, role])
   @@index([role, grantedAt])
   @@map("platform_role_assignments")
+}
+
+model OrganizerApplication {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  organizationId     String                     @map("organization_id") @db.Uuid
+  applicantUserId    String                     @map("applicant_user_id") @db.Uuid
+  status             OrganizerApplicationStatus @default(SUBMITTED)
+  applicationMessage String                     @map("application_message") @db.VarChar(2000)
+  websiteUrl         String?                    @map("website_url") @db.VarChar(500)
+  submittedAt        DateTime                   @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt         DateTime?                  @map("reviewed_at") @db.Timestamptz(6)
+  reviewedByUserId   String?                    @map("reviewed_by_user_id") @db.Uuid
+  decisionReason     String?                    @map("decision_reason") @db.VarChar(1000)
+  createdAt          DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization       Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  applicant          User                       @relation("OrganizerApplicationApplicant", fields: [applicantUserId], references: [id], onDelete: Restrict)
+  reviewer           User?                      @relation("OrganizerApplicationReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([applicantUserId, submittedAt])
+  @@index([status, submittedAt])
+  @@index([organizationId, status])
+  @@map("organizer_applications")
 }
