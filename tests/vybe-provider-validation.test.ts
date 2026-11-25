@@ -14,15 +14,20 @@ describe("Vybe provider application validation", () => {
       body: {
         organizationId,
         category: "ACCOMMODATION",
-        serviceDescription: "We operate a small collection of serviced apartments.",
-        supplyAuthorityStatement: "Our organization owns and directly operates these apartments.",
+        serviceDescription:
+          "We operate a small collection of serviced apartments.",
+        supplyAuthorityStatement:
+          "Our organization owns and directly operates these apartments.",
         supplyAuthorityAttested: true,
         termsVersion: "vybe-provider-2026-01",
-        locations: [{ city: "Ile-Ife", state: "Osun", country: "Nigeria" }]
+        locations: [
+          { city: "Ile-Ife", state: "Osun", country: "Nigeria" }
+        ]
       },
       params: {},
       query: {}
     });
+
     expect(result.success).toBe(true);
   });
 
@@ -31,15 +36,19 @@ describe("Vybe provider application validation", () => {
       body: {
         organizationId,
         category: "DINING",
-        serviceDescription: "We operate a restaurant and offer table reservations.",
+        serviceDescription:
+          "We operate a restaurant and offer table reservations.",
         supplyAuthorityStatement: "We own and operate the restaurant.",
         supplyAuthorityAttested: false,
         termsVersion: "v1",
-        locations: [{ city: "Lagos", state: "Lagos", country: "Nigeria" }]
+        locations: [
+          { city: "Lagos", state: "Lagos", country: "Nigeria" }
+        ]
       },
       params: {},
       query: {}
     });
+
     expect(result.success).toBe(false);
   });
 
@@ -48,20 +57,26 @@ describe("Vybe provider application validation", () => {
       body: {
         organizationId,
         category: "DINING",
-        serviceDescription: "We operate a restaurant and offer table reservations.",
+        serviceDescription:
+          "We operate a restaurant and offer table reservations.",
         supplyAuthorityStatement: "We own and operate the restaurant.",
         supplyAuthorityAttested: true,
         termsVersion: "v1",
-        locations: [{ city: "Lagos", state: "Lagos", country: "Nigeria" }],
-        evidence: [{
-          evidenceType: "food-safety",
-          requirementReason: "short",
-          storageReference: "private://evidence/food-safety"
-        }]
+        locations: [
+          { city: "Lagos", state: "Lagos", country: "Nigeria" }
+        ],
+        evidence: [
+          {
+            evidenceType: "food-safety",
+            requirementReason: "short",
+            storageReference: "private://evidence/food-safety"
+          }
+        ]
       },
       params: {},
       query: {}
     });
+
     expect(result.success).toBe(false);
   });
 
@@ -71,30 +86,36 @@ describe("Vybe provider application validation", () => {
         decision: "APPROVED",
         reason: "Required evidence has been reviewed and accepted.",
         conditions: ["Approval is limited to the submitted locations."],
-        evidenceDecisions: [{
-          evidenceId: applicationId,
-          status: "ACCEPTED",
-          reason: "The submitted document is current and relevant."
-        }]
+        evidenceDecisions: [
+          {
+            evidenceId: applicationId,
+            status: "ACCEPTED",
+            reason: "The submitted document is current and relevant."
+          }
+        ]
       },
       params: { id: applicationId },
       query: {}
     });
+
     expect(result.success).toBe(true);
   });
 
   it("validates requested evidence resubmission", () => {
     const result = addVybeProviderEvidenceSchema.safeParse({
       body: {
-        evidence: [{
-          evidenceType: "food-safety",
-          requirementReason: "Requested by the provider review team.",
-          storageReference: "private://evidence/food-safety"
-        }]
+        evidence: [
+          {
+            evidenceType: "food-safety",
+            requirementReason: "Requested by the provider review team.",
+            storageReference: "private://evidence/food-safety"
+          }
+        ]
       },
       params: { id: applicationId },
       query: {}
     });
+
     expect(result.success).toBe(true);
   });
 });
