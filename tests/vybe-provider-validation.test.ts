@@ -58,9 +58,7 @@ describe("Vybe provider application validation", () => {
         supplyAuthorityStatement: "We own and operate the restaurant.",
         supplyAuthorityAttested: true,
         termsAccepted: true,
-        locations: [
-          { city: "Lagos", state: "Lagos", country: "Nigeria" }
-        ],
+        locations: [{ city: "Lagos", state: "Lagos", country: "Nigeria" }],
         evidence: [
           {
             evidenceType: "food-safety",
