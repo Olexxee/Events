@@ -15,6 +15,8 @@ import {
 } from "./identity.db.js";
 import { resolvePlatformPermissions } from "./identity.permissions.js";
 import { hashPassword, verifyPassword } from "./password.service.js";
+
+const DUMMY_PASSWORD_HASH = hashPassword("events-dummy-password-never-used");
 import type { SessionMetadata } from "./identity.types.js";
 
 function invalidCredentials(): AppError {
@@ -79,12 +81,11 @@ export async function login(
 ) {
   const user = await findCredentialByEmail(input.email.trim().toLowerCase());
 
-  if (
-    !user ||
-    !user.passwordCredential ||
-    user.status !== "ACTIVE" ||
-    !(await verifyPassword(input.password, user.passwordCredential.passwordHash))
-  ) {
+  const passwordHash =
+    user?.passwordCredential?.passwordHash ?? (await DUMMY_PASSWORD_HASH);
+  const passwordMatches = await verifyPassword(input.password, passwordHash);
+
+  if (!user || !user.passwordCredential || user.status !== "ACTIVE" || !passwordMatches) {
     throw invalidCredentials();
   }
 
