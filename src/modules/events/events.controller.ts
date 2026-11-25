@@ -37,7 +37,9 @@ export const publishEventController: RequestHandler = async (req, res, next) => 
 export const managedEventsController: RequestHandler = async (req, res, next) => {
   try {
     const organizationId = req.params.organizationId;
-    if (!organizationId) throw new AppError("ORGANIZATION_CONTEXT_REQUIRED", "Organization context is required", 400);
+    if (typeof organizationId !== "string" || !organizationId) {
+      throw new AppError("ORGANIZATION_CONTEXT_REQUIRED", "Organization context is required", 400);
+    }
     return successResponse(res, { events: await service.getManagedEvents(organizationId, actor(req)) });
   } catch (error) { return next(error); }
 };
