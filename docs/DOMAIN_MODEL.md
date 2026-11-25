@@ -4,7 +4,7 @@
 > **Scope:** Domain ownership, entity relationships, data dictionary, lifecycle boundaries, and Prisma design constraints  
 > **Implementation status:** The shared backend foundation is authorized. Domain models, domain modules, migrations, and provider integrations remain subject to their design and implementation gates.
 
-This document expands the confirmed product decisions in the root README. Identity & Access, organizer applications, and the Event marketplace core are implemented; the remaining domain entities are conceptual until their individual design gates and implementation phases are approved. Recommendations and unresolved policies are identified explicitly. Event Access policy is tracked in [EVENT_ACCESS_DESIGN.md](EVENT_ACCESS_DESIGN.md).
+This document expands the confirmed product decisions in the root README. Identity & Access, organizer applications, and the Event marketplace core are implemented; the remaining domain entities are conceptual until their individual design gates and implementation phases are approved. Recommendations and unresolved policies are identified explicitly. Event Access policy and implementation are tracked in [EVENT_ACCESS_DESIGN.md](EVENT_ACCESS_DESIGN.md) and merged PR #10. Ticketing & Admission policy is proposed in [TICKETING_ADMISSION_DESIGN.md](TICKETING_ADMISSION_DESIGN.md); it remains design-only pending approval.
 
 ## Product identity and domain implications
 
@@ -192,8 +192,10 @@ The diagrams are conceptual. The physical schema must use explicit foreign keys,
 
 ### 4.3 Ticketing
 
+The proposed Ticketing & Admission policies, including ticket types, inventory holds, ticket issuance, transfers, QR admission, entitlements, and invariants, are specified in [TICKETING_ADMISSION_DESIGN.md](TICKETING_ADMISSION_DESIGN.md). The following are architectural constraints, not authorization to implement before the design gate is approved:
+
 - A ticket type belongs to one event.
-- A ticket inventory record is scoped to a ticket type, unless a reviewed inventory-pool design is required.
+- A ticket inventory record is scoped to a ticket type unless a reviewed inventory-pool design is required.
 - A hold reserves inventory temporarily and must expire or be consumed exactly once.
 - A ticket has one current holder and one event/ticket type. Transfer history is retained separately.
 - Check-in records are append-only attempts/outcomes. Repeated scans must not create multiple admissions.
