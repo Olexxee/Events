@@ -1,5 +1,6 @@
 import {
   addProviderApplicationEvidence,
+  changeProviderApprovalStatus,
   listMyProviderApplications,
   listProviderApplications,
   reviewProviderApplication,
@@ -24,4 +25,8 @@ export async function decideVybeProviderApplication(input: Parameters<typeof rev
 
 export async function submitAdditionalVybeProviderEvidence(input: Parameters<typeof addProviderApplicationEvidence>[0]) {
   return addProviderApplicationEvidence(input);
+}
+
+export async function updateVybeProviderApprovalStatus(input: Parameters<typeof changeProviderApprovalStatus>[0]) {
+  return changeProviderApprovalStatus(input);
 }
