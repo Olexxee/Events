@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-import type { TicketTypeStatus } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error.js";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 
@@ -149,7 +148,7 @@ export async function listTicketTypes(eventId: string, userId: string) {
     const now = new Date();
     const types = await tx.ticketType.findMany({
       where: { eventId, status: "ACTIVE" },
-      include: { versions: { where: { version: { equals: 1 } } } },
+      include: { versions: true },
       orderBy: { createdAt: "asc" }
     });
     const held = await tx.ticketHoldLine.groupBy({
@@ -162,10 +161,10 @@ export async function listTicketTypes(eventId: string, userId: string) {
       .filter((type) =>
         (!type.salesStartsAt || type.salesStartsAt <= now) &&
         (!type.salesEndsAt || type.salesEndsAt > now) &&
-        type.versions[0]
+        type.versions.find((version) => version.version === type.currentVersion)
       )
       .map((type) => {
-        const version = type.versions[0]!;
+        const version = type.versions.find((item) => item.version === type.currentVersion)!;
         const available = Math.max(0, type.capacity - type.issuedQuantity - (heldByType.get(type.id) ?? 0));
         return {
           id: type.id, name: type.name, description: type.description,
