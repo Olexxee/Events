@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-namespace -- Express request augmentation requires declaration merging. */
+
 export type PrincipalType = "user" | "service";
 
 export interface AuthPrincipal {
