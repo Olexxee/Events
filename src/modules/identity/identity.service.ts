@@ -4,6 +4,7 @@ import {
   createSession,
   digestToken,
   findCredentialByEmail,
+  findUserById,
   findSessionByAccessHash,
   listOrganizationsForUser,
   revokeSessionFamily,
@@ -162,4 +163,12 @@ export async function canAccessOrganization(
   permission: string
 ) {
   return userHasOrganizationPermission(userId, organizationId, permission);
+}
+
+export async function getCurrentUser(userId: string) {
+  const user = await findUserById(userId);
+  if (!user || user.status !== "ACTIVE") {
+    throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+  }
+  return user;
 }
