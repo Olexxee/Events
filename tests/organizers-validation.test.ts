@@ -10,7 +10,7 @@ describe("organizer application validation", () => {
       body: {
         organizationId: "7a7dbf1e-1b23-4f45-9f30-cc68a0d6f23b",
         applicationMessage:
-          "I organize community music events and want to publish our next programme.",
+          "I organize local events and want to publish our next programme.",
         websiteUrl: "https://example.com"
       },
       params: {},
