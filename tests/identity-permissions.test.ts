@@ -31,6 +31,8 @@ describe("platform permission resolution", () => {
       "SUPER_ADMIN"
     ] as PlatformRole[]);
 
-    expect(permissions.filter((permission) => permission === "platform:support:read")).toHaveLength(1);
+    expect(
+      permissions.filter((permission) => permission === "platform:support:read")
+    ).toHaveLength(1);
   });
 });
