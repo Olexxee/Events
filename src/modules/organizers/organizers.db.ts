@@ -48,15 +48,24 @@ export async function submitOrganizerApplication(input: {
       const existing = await tx.organizerApplication.findFirst({
         where: {
           organizationId: input.organizationId,
-          status: { in: ACTIVE_APPLICATION_STATUSES }
+          status: {
+            in: [
+              ...ACTIVE_APPLICATION_STATUSES,
+              "APPROVED",
+              "SUSPENDED",
+              "REVOKED"
+            ]
+          }
         },
-        select: { id: true }
+        select: { id: true, status: true }
       });
 
       if (existing) {
         throw new AppError(
           "ORGANIZER_APPLICATION_ALREADY_PENDING",
-          "This organization already has an application awaiting a decision",
+          existing.status === "APPROVED"
+            ? "This organization already has organizer approval"
+            : "This organization already has an active or restricted organizer application",
           409
         );
       }
@@ -143,11 +152,12 @@ export async function listOrganizerApplications() {
         select: {
           id: true,
           email: true,
-          profile: { select: { displayName: true, phone: true } }
+          profile: { select: { displayName: true } }
         }
       }
     },
-    orderBy: { submittedAt: "asc" }
+    orderBy: { submittedAt: "asc" },
+    take: 100
   });
 }
 
