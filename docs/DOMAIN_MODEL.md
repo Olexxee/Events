@@ -106,7 +106,7 @@ These diagrams show principal relationships, not every field or join table.
 erDiagram
   USER ||--o{ ORGANIZATION_MEMBERSHIP : joins
   ORGANIZATION ||--o{ ORGANIZATION_MEMBERSHIP : has
-  ORGANIZATION ||--o{ VERIFICATION_CASE : undergoes
+  ORGANIZATION ||--o{ ORGANIZER_APPLICATION : receives
   ORGANIZATION ||--o{ EVENT : organizes
   USER ||--o{ EVENT : creates
   EVENT ||--o{ EVENT_STAFF_ASSIGNMENT : assigns
@@ -212,8 +212,8 @@ The diagrams are conceptual. The physical schema must use explicit foreign keys,
 ### 4.5 Hospitality
 
 - Every hospitality supplier follows the platform's reservation model; providers publish reservable offerings rather than accepting informal, off-platform booking requests as the platform fulfilment record.
-- A HospitalityProvider is an approved provider profile associated with an Organization. Hospitality approval is a separate, explicit approval scope from organizer/event-publishing verification. An already-verified organizer may use the same Organization account and workspace, but must pass hospitality-provider approval before publishing accommodation or other hospitality inventory. Do not require a duplicate organization/account solely because the organizer is also a hospitality supplier.
-- Hospitality approval records its own status, evidence, reviewer, decision reason, timestamps, and revocation/suspension history. Organizer verification alone must never imply hospitality approval; revoking hospitality approval blocks new reservations/listings according to policy without automatically erasing the organizer's separate event-publishing status.
+- A HospitalityProvider is an approved provider profile associated with an Organization. Hospitality approval is a separate, explicit approval scope from organizer/event-publishing verification. An organizer with an approved application may use the same Organization account and workspace, but must pass hospitality-provider approval before publishing accommodation or other hospitality inventory. Do not require a duplicate organization/account solely because the organizer is also a hospitality supplier.
+- Hospitality approval records its own status, evidence, reviewer, decision reason, timestamps, and revocation/suspension history. Organizer approval alone must never imply hospitality approval; revoking hospitality approval blocks new reservations/listings according to policy without automatically erasing the organizer's separate event-publishing status.
 - A provider can publish offerings for multiple events. An offering may be event-specific or provider-wide only if policy explicitly permits it.
 - Each offering defines the reservable item/category, customer-facing specifications and capacity/occupancy, price and pricing rules, quantity or time-bound availability, and applicable reservation/cancellation conditions.
 - Price attaches to a defined category/specification; price alone must never be treated as the category identifier. For example, an accommodation provider may publish 20 equivalent Standard rooms at the same nightly rate as one inventory pool. The customer reserves the category; the provider may assign a specific physical room later unless a specific-room selection is explicitly offered.
@@ -404,7 +404,7 @@ This is the conceptual minimum, not a final scalar-field specification.
 
 | Event | Authoritative owner | Consumer responsibility |
 |---|---|---|
-| OrganizerVerified | Organizations | Events enables eligible publishing |
+| OrganizerApplicationApproved | Organizations | Events enables eligible publishing |
 | EventPublished | Events | Discovery, notifications, analytics |
 | EventAccessGranted | Event Access | Ticketing permits approved purchase path |
 | EventAccessRevoked | Event Access | Ticketing/Operations reevaluate admission; Connect revokes eligibility |
