@@ -327,7 +327,7 @@ export async function createHold(input: {
         fail("ACCOUNT_INACTIVE", "An active account is required", 403);
       const ids = input.items.map((item) => item.ticketTypeId).sort();
       await tx.$queryRaw<Array<{ id: string }>>(
-        Prisma.sql`SELECT id FROM ticket_types WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`
+        Prisma.sql`SELECT id FROM ticket_types WHERE id IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY id FOR UPDATE`
       );
       const types = await tx.ticketType.findMany({
         where: { id: { in: ids }, eventId: input.eventId, status: "ACTIVE" },
