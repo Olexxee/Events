@@ -154,16 +154,14 @@ An account may hold more than one role, subject to verification and authorizatio
 
 ### 5.1 Organizer onboarding
 
-Before publishing or receiving settlements, an organizer should complete applicable checks:
+Any registered user may apply for organizer access. Ordinary event organizers are not required to provide CAC or business-registration documents. Initial onboarding consists of:
 
-- Email and phone verification
-- Identity verification, or business/CAC verification where applicable
-- Bank-account verification
-- Acceptance of organizer terms
-- Platform risk/compliance review
-- Administrative approval of the organizer account
+- A basic organizer application describing the intended use.
+- Verification of a reachable email address and phone number.
+- Acceptance of the current organizer terms and platform policies.
+- Approval of the organizer role by the platform.
 
-After verification, organizers can publish eligible events directly. The platform may apply event-level flags, limits, review, suspension, or takedown where necessary.
+Approved organizers may create and publish eligible events without manual approval of every event. This approval does not authorize hospitality listings or bypass event moderation. Payout-beneficiary verification is a separate Finance-owned control required before the first settlement, not before applying or publishing. Additional identity or business evidence may be requested only where a specific risk, legal obligation, event category, or transaction threshold justifies it. The platform may impose proportionate limits, event-level review, suspension, or takedown where necessary.
 
 ### 5.2 Trust levels
 
