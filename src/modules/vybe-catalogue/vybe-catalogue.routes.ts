@@ -20,10 +20,36 @@ import {
 
 export const vybeCatalogueRouter = Router();
 
-vybeCatalogueRouter.get("/vybe/catalogue", validateRequest(listVybeCatalogueSchema), listVybeCatalogueController);
-vybeCatalogueRouter.post("/vybe/offerings", authenticateRequest, requireAuthenticated, validateRequest(createVybeOfferingSchema), createVybeOfferingController);
-vybeCatalogueRouter.patch("/vybe/offerings/:id/draft", authenticateRequest, requireAuthenticated, validateRequest(updateVybeOfferingDraftSchema), updateVybeOfferingDraftController);
-vybeCatalogueRouter.post("/vybe/offerings/:id/publish", authenticateRequest, requireAuthenticated, validateRequest(publishVybeOfferingSchema), publishVybeOfferingController);
+vybeCatalogueRouter.get(
+  "/vybe/catalogue",
+  validateRequest(listVybeCatalogueSchema),
+  listVybeCatalogueController
+);
+
+vybeCatalogueRouter.post(
+  "/vybe/offerings",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(createVybeOfferingSchema),
+  createVybeOfferingController
+);
+
+vybeCatalogueRouter.patch(
+  "/vybe/offerings/:id/draft",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(updateVybeOfferingDraftSchema),
+  updateVybeOfferingDraftController
+);
+
+vybeCatalogueRouter.post(
+  "/vybe/offerings/:id/publish",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(publishVybeOfferingSchema),
+  publishVybeOfferingController
+);
+
 vybeCatalogueRouter.patch(
   "/vybe/catalogue/categories/:category/activation",
   authenticateRequest,
