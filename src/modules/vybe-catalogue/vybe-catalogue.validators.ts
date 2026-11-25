@@ -58,7 +58,7 @@ const content = z.object({
 export const createVybeOfferingSchema = z.object({
   params: z.object({}),
   query: z.object({}),
-  body: z.object({ organizationId: uuid, category, content })
+  body: z.object({ organizationId: uuid, category, content }).superRefine((value, ctx) => { if (value.category !== value.content.attributes.category) ctx.addIssue({ code: "custom", path: ["content", "attributes", "category"], message: "Offering category and category attributes must match" }); })
 });
 export const updateVybeOfferingDraftSchema = z.object({
   params: z.object({ id: uuid }),
