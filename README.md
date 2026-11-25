@@ -1,9 +1,9 @@
 # Event Platform — Product Blueprint
 
-> **Status:** Shared foundation and Identity & Access merged; organizer verification design in progress  
+> **Status:** Shared foundation, Identity & Access, and lightweight organizer application workflow implemented; event marketplace is next  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
-> **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). Organizer verification is being designed; no verification-domain schema or implementation will be added until its design gate is approved. Business-domain modules remain gated by their design and review phases.
+> **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is implemented in the current feature PR. Routine KYC is not required for ordinary organizers. Event publishing, hospitality approval, and payout verification remain separate follow-up domains.
 
 The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Hospitality, Connect, and other domain modules.
 
@@ -154,14 +154,11 @@ An account may hold more than one role, subject to verification and authorizatio
 
 ### 5.1 Organizer onboarding
 
-Any registered user may apply for organizer access. Ordinary event organizers are not required to provide CAC or business-registration documents. Initial onboarding consists of:
+Any registered user can create an organization and apply for organizer access. Ordinary organizers are not required to submit CAC documents, business-registration records, identity documents, or routine KYC evidence. The application asks the organization owner to explain the intended organizing activity; a website is optional. A platform administrator approves or rejects the application with a recorded reason.
 
-- A basic organizer application describing the intended use.
-- Verification of a reachable email address and phone number.
-- Acceptance of the current organizer terms and platform policies.
-- Approval of the organizer role by the platform.
+Approved organizations may publish eligible events without manual approval of every event. Approval does not authorize hospitality listings or bypass event moderation. Payout-beneficiary verification is a separate Finance-owned control required before the first settlement, not before applying or publishing. Additional evidence may be requested only for a documented legal requirement or specific risk trigger. The platform retains moderation, event-level review, suspension, and takedown powers.
 
-Approved organizers may create and publish eligible events without manual approval of every event. This approval does not authorize hospitality listings or bypass event moderation. Payout-beneficiary verification is a separate Finance-owned control required before the first settlement, not before applying or publishing. Additional identity or business evidence may be requested only where a specific risk, legal obligation, event category, or transaction threshold justifies it. The platform may impose proportionate limits, event-level review, suspension, or takedown where necessary.
+The application endpoints and status rules are documented in [Organizer Role Applications](docs/ORGANIZER_VERIFICATION_DESIGN.md).
 
 ### 5.2 Trust levels
 
@@ -540,7 +537,7 @@ Potential domains:
 
 1. **Product and policy foundation:** foundational product boundaries and key business rules have been recorded. Commercial pricing remains deferred to the billing phase.
 2. **Platform foundation and Identity & Access:** the shared Node 22/strict TypeScript/Express 5 scaffold, centralized error/response handling, Prisma/PostgreSQL baseline, transactional outbox, request IDs, Zod validation, append-only audit persistence, and security foundation are merged. Identity & Access is merged in [PR #2](https://github.com/Olexxee/Events/pull/2): user accounts, scrypt password credentials, opaque revocable sessions, refresh-token rotation/reuse detection, organization memberships, and trusted platform/organization permission resolution. Its exact PR head passed Prisma validation, typecheck, lint, formatting, all 17 tests, and build before merge.
-3. **Organizer verification and administration:** [Organizer Verification design gate](docs/ORGANIZER_VERIFICATION_DESIGN.md) drafted. Resolve evidence, review, appeal, retention, publishing, and settlement policies before creating verification tables or APIs.
+3. **Organizer access:** lightweight application schema, migration, submission/status endpoints, admin review, audit events, and permission boundaries implemented in the organizer application feature PR. Publishing enforcement, applicant notifications, organizer terms, payout verification, and hospitality approval remain separate follow-up work.
 4. **Event marketplace:** event lifecycle, discovery, publishing, visibility, access policies.
 5. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, and ledger integration.
 6. **Operational controls:** guest management, check-in, event changes, refunds, reconciliation, settlements.
