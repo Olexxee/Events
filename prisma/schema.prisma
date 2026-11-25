@@ -52,6 +52,59 @@ enum OrganizerApplicationStatus {
   @@map("organizer_application_status")
 }
 
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  SALES_PAUSED
+  ONGOING
+  COMPLETED
+  POSTPONED
+  CANCELLED
+
+  @@map("event_status")
+}
+
+enum EventFormat {
+  IN_PERSON
+  ONLINE
+  HYBRID
+
+  @@map("event_format")
+}
+
+enum EventVisibility {
+  PUBLIC
+  UNLISTED
+  INVITATION_ONLY
+
+  @@map("event_visibility")
+}
+
+enum EventAccessPolicy {
+  OPEN
+  APPROVAL_REQUIRED
+  INVITATION_ONLY
+
+  @@map("event_access_policy")
+}
+
+enum EventExperienceLevel {
+  STANDARD
+  PREMIUM
+
+  @@map("event_experience_level")
+}
+
+enum EventModerationStatus {
+  CLEAR
+  UNDER_REVIEW
+  RESTRICTED
+  SUSPENDED
+  TAKEDOWN
+
+  @@map("event_moderation_status")
+}
+
 enum PlatformRole {
   SUPPORT
   PLATFORM_ADMIN
@@ -235,4 +288,97 @@ model OrganizerApplication {
   @@index([status, submittedAt])
   @@index([organizationId, status])
   @@map("organizer_applications")
+}
+
+
+model EventCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique @db.VarChar(80)
+  name        String   @db.VarChar(100)
+  description String?  @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  events      Event[]
+
+  @@index([isActive, sortOrder])
+  @@map("event_categories")
+}
+
+model Event {
+  id               String                @id @default(uuid()) @db.Uuid
+  organizationId   String                @map("organization_id") @db.Uuid
+  categoryId       String                @map("category_id") @db.Uuid
+  title            String                @db.VarChar(180)
+  slug             String                @db.VarChar(200)
+  summary          String                @db.VarChar(500)
+  description      String                @db.Text
+  format           EventFormat
+  visibility       EventVisibility       @default(PUBLIC)
+  accessPolicy     EventAccessPolicy     @default(OPEN) @map("access_policy")
+  experienceLevel  EventExperienceLevel? @map("experience_level")
+  status           EventStatus           @default(DRAFT)
+  moderationStatus EventModerationStatus @default(CLEAR) @map("moderation_status")
+  timezone         String                @db.VarChar(80)
+  publishedAt      DateTime?             @map("published_at") @db.Timestamptz(6)
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  category         EventCategory         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  schedules        EventSchedule[]
+  venue            EventVenue?
+  revisions        EventRevision[]
+
+  @@unique([organizationId, slug])
+  @@index([status, visibility, moderationStatus, publishedAt])
+  @@index([categoryId, status, publishedAt])
+  @@index([organizationId, status, updatedAt])
+  @@map("events")
+}
+
+model EventSchedule {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  startsAt  DateTime @map("starts_at") @db.Timestamptz(6)
+  endsAt    DateTime @map("ends_at") @db.Timestamptz(6)
+  label     String?  @db.VarChar(120)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([eventId, startsAt])
+  @@map("event_schedules")
+}
+
+model EventVenue {
+  id                 String   @id @default(uuid()) @db.Uuid
+  eventId            String   @unique @map("event_id") @db.Uuid
+  displayName        String?  @map("display_name") @db.VarChar(160)
+  city               String?  @db.VarChar(100)
+  state              String?  @db.VarChar(100)
+  country            String?  @db.VarChar(100)
+  exactAddress       String?  @map("exact_address") @db.VarChar(500)
+  accessInstructions String?  @map("access_instructions") @db.Text
+  privateUrl         String?  @map("private_url") @db.VarChar(1000)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  event              Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@map("event_venues")
+}
+
+model EventRevision {
+  id             String   @id @default(uuid()) @db.Uuid
+  eventId        String   @map("event_id") @db.Uuid
+  revisionNumber Int      @map("revision_number")
+  actorUserId    String   @map("actor_user_id") @db.Uuid
+  changeType     String   @map("change_type") @db.VarChar(40)
+  snapshot       Json
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@unique([eventId, revisionNumber])
+  @@index([eventId, createdAt])
+  @@map("event_revisions")
 }
