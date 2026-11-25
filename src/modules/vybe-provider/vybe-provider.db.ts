@@ -89,20 +89,20 @@ export async function submitProviderApplication(input: {
             ? "VYBE_PROVIDER_CATEGORY_ALREADY_APPROVED"
             : "VYBE_PROVIDER_CATEGORY_RESTRICTED",
           existingApproval.status === "ACTIVE"
-          ? "This organization is already approved for the selected Vybe category"
-          : "This category is suspended or revoked and cannot be reapplied for without an administrative resolution",
+            ? "This organization is already approved for the selected Vybe category"
+            : "This category is suspended or revoked and cannot be reapplied for without an administrative resolution",
           409
         );
       }
 
       const existingApplication = await tx.vybeProviderApplication.findFirst({
         where: {
-            organizationId: input.organizationId,
-            category: input.category,
-            status: { in: OPEN_APPLICATION_STATUSES }
-          },
-          select: { id: true }
-        });
+          organizationId: input.organizationId,
+          category: input.category,
+          status: { in: OPEN_APPLICATION_STATUSES }
+        },
+        select: { id: true }
+      });
 
       if (existingApplication) {
         throw new AppError(
@@ -161,8 +161,7 @@ export async function submitProviderApplication(input: {
         aggregateType: "vybe_provider_application",
         aggregateId: application.id,
         eventType: "vybe.provider_application.submitted.v1",
-        deduplicationKey:
-          `vybe.provider_application:${application.id}:submitted`,
+        deduplicationKey: `vybe.provider_application:${application.id}:submitted`,
         payload: {
           applicationId: application.id,
           organizationId: application.organizationId,
@@ -442,8 +441,7 @@ export async function reviewProviderApplication(input: {
       aggregateType: "vybe_provider_application",
       aggregateId: application.id,
       eventType: "vybe.provider_application.reviewed.v1",
-      deduplicationKey:
-        `vybe.provider_application:${application.id}:review:${review.id}`,
+      deduplicationKey: `vybe.provider_application:${application.id}:review:${review.id}`,
       payload: {
         applicationId: application.id,
         organizationId: application.organizationId,
@@ -585,8 +583,7 @@ export async function addProviderApplicationEvidence(input: {
       aggregateType: "vybe_provider_application",
       aggregateId: application.id,
       eventType: "vybe.provider_application.evidence_submitted.v1",
-      deduplicationKey:
-        `vybe.provider_application:${application.id}:evidence:${randomUUID()}`,
+      deduplicationKey: `vybe.provider_application:${application.id}:evidence:${randomUUID()}`,
       payload: {
         applicationId: application.id,
         organizationId: application.organizationId,
@@ -702,8 +699,7 @@ export async function changeProviderApprovalStatus(input: {
       aggregateType: "vybe_provider_approval",
       aggregateId: approval.id,
       eventType: `vybe.provider_approval.${input.action.toLowerCase()}.v1`,
-      deduplicationKey:
-        `vybe.provider_approval:${approval.id}:review:${review.id}`,
+      deduplicationKey: `vybe.provider_approval:${approval.id}:review:${review.id}`,
       payload: {
         approvalId: approval.id,
         applicationId: approval.applicationId,
