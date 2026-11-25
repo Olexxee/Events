@@ -2,8 +2,14 @@ import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { AppError } from "../errors/app-error.js";
 
-export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (
+  error: unknown,
+  _req,
+  res,
+  _next
+) => {
   void _next;
+
   if (error instanceof ZodError) {
     return res.status(400).json({
       success: false,
@@ -21,7 +27,11 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({
       success: false,
-      error: { code: error.code, message: error.message, details: error.details }
+      error: {
+        code: error.code,
+        message: error.message,
+        details: error.details
+      }
     });
   }
 
