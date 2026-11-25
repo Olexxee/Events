@@ -7,7 +7,8 @@ import {
   decideVybeProviderApplication,
   getMyVybeProviderApplications,
   getVybeProviderApplicationQueue,
-  submitAdditionalVybeProviderEvidence
+  submitAdditionalVybeProviderEvidence,
+  updateVybeProviderApprovalStatus
 } from "./vybe-provider.service.js";
 
 export const submitVybeProviderApplicationController: RequestHandler = async (req, res, next) => {
@@ -91,6 +92,24 @@ export const addVybeProviderEvidenceController: RequestHandler = async (req, res
       evidence
     });
     return successResponse(res, { evidence: records }, 201);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const changeVybeProviderApprovalStatusController: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    const { id } = getValidatedRequest<{ params: { id: string } }>(res).params;
+    const input = getValidatedRequest<{
+      body: { action: "SUSPENDED" | "REVOKED"; reason: string };
+    }>(res).body;
+    const approval = await updateVybeProviderApprovalStatus({
+      approvalId: id,
+      reviewerUserId: req.auth.subjectId,
+      ...input
+    });
+    return successResponse(res, { approval });
   } catch (error) {
     return next(error);
   }
