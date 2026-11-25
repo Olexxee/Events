@@ -6,6 +6,7 @@ import {
 } from "../src/infrastructure/database/prisma.js";
 import {
   addProviderApplicationEvidence,
+  changeProviderApprovalStatus,
   reviewProviderApplication,
   submitProviderApplication
 } from "../src/modules/vybe-provider/vybe-provider.db.js";
@@ -162,3 +163,46 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
     })).toEqual({ status: "SUBMITTED" });
   });
 });
+
+  it("retains suspension and revocation history and blocks reapplication", async () => {
+    const { user, organization } = await createApplicant();
+    const reviewer = await prisma.user.create({
+      data: { email: `vybe-reviewer-${crypto.randomUUID()}@events.test` }
+    });
+    const application = await submit(user.id, organization.id);
+    await reviewProviderApplication({
+      applicationId: application.id,
+      reviewerUserId: reviewer.id,
+      decision: "APPROVED",
+      reason: "The provider meets the baseline approval requirements."
+    });
+    const approval = await prisma.vybeProviderApproval.findFirstOrThrow({
+      where: { applicationId: application.id }
+    });
+    const suspended = await changeProviderApprovalStatus({
+      approvalId: approval.id,
+      reviewerUserId: reviewer.id,
+      action: "SUSPENDED",
+      reason: "A material safety concern requires immediate restriction."
+    });
+    expect(suspended.status).toBe("SUSPENDED");
+    await expect(submit(user.id, organization.id)).rejects.toMatchObject({
+      code: "VYBE_PROVIDER_CATEGORY_RESTRICTED"
+    });
+    const revoked = await changeProviderApprovalStatus({
+      approvalId: approval.id,
+      reviewerUserId: reviewer.id,
+      action: "REVOKED",
+      reason: "The provider failed to resolve the documented safety concern."
+    });
+    expect(revoked.status).toBe("REVOKED");
+    expect(await prisma.vybeProviderReview.findMany({
+      where: { applicationId: application.id },
+      select: { action: true },
+      orderBy: { createdAt: "asc" }
+    })).toMatchObject([
+      { action: "APPROVED" },
+      { action: "SUSPENDED" },
+      { action: "REVOKED" }
+    ]);
+  });
