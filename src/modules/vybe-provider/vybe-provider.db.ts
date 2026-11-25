@@ -247,7 +247,11 @@ export async function listProviderApplications() {
 export async function reviewProviderApplication(input: {
   applicationId: string;
   reviewerUserId: string;
-  decision: "UNDER_REVIEW" | "NEEDS_INFORMATION" | "APPROVED" | "REJECTED";
+  decision:
+    | "UNDER_REVIEW"
+    | "NEEDS_INFORMATION"
+    | "APPROVED"
+    | "REJECTED";
   reason: string;
   conditions?: string[];
   expiresAt?: string;
@@ -444,7 +448,8 @@ export async function reviewProviderApplication(input: {
       aggregateType: "vybe_provider_application",
       aggregateId: application.id,
       eventType: "vybe.provider_application.reviewed.v1",
-      deduplicationKey: `vybe.provider_application:${application.id}:review:${review.id}`,
+      deduplicationKey:
+        `vybe.provider_application:${application.id}:review:${review.id}`,
       payload: {
         applicationId: application.id,
         organizationId: application.organizationId,
@@ -586,7 +591,8 @@ export async function addProviderApplicationEvidence(input: {
       aggregateType: "vybe_provider_application",
       aggregateId: application.id,
       eventType: "vybe.provider_application.evidence_submitted.v1",
-      deduplicationKey: `vybe.provider_application:${application.id}:evidence:${randomUUID()}`,
+      deduplicationKey:
+        `vybe.provider_application:${application.id}:evidence:${randomUUID()}`,
       payload: {
         applicationId: application.id,
         organizationId: application.organizationId,
@@ -702,7 +708,8 @@ export async function changeProviderApprovalStatus(input: {
       aggregateType: "vybe_provider_approval",
       aggregateId: approval.id,
       eventType: `vybe.provider_approval.${input.action.toLowerCase()}.v1`,
-      deduplicationKey: `vybe.provider_approval:${approval.id}:review:${review.id}`,
+      deduplicationKey:
+        `vybe.provider_approval:${approval.id}:review:${review.id}`,
       payload: {
         approvalId: approval.id,
         applicationId: approval.applicationId,
