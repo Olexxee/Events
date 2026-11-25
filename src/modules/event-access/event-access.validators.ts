@@ -1,0 +1,11 @@
+import { z } from "zod";
+const uuid = z.string().uuid();
+const reason = z.string().trim().min(5).max(1000);
+export const eventIdParams = z.object({ body: z.object({}), params: z.object({ eventId: uuid }), query: z.object({}) });
+export const requestCreate = z.object({ body: z.object({ message: z.string().trim().max(500).optional() }), params: z.object({ eventId: uuid }), query: z.object({}) });
+export const requestIdParams = z.object({ body: z.object({}), params: z.object({ requestId: uuid }), query: z.object({}) });
+export const decisionSchema = z.object({ body: z.object({ decision: z.enum(["APPROVED", "REJECTED"]), reason }), params: z.object({ organizationId: uuid, eventId: uuid, requestId: uuid }), query: z.object({}) });
+export const invitationSchema = z.object({ body: z.object({ recipientEmail: z.string().trim().email().max(320), expiresInDays: z.number().int().min(1).max(7).optional() }), params: z.object({ organizationId: uuid, eventId: uuid }), query: z.object({}) });
+export const invitationTokenSchema = z.object({ body: z.object({}), params: z.object({ token: z.string().min(40).max(128) }), query: z.object({}) });
+export const revokeGrantSchema = z.object({ body: z.object({ reason }), params: z.object({ organizationId: uuid, eventId: uuid, grantId: uuid }), query: z.object({}) });
+export const holdSchema = z.object({ body: z.object({ reason }), params: z.object({ eventId: uuid }), query: z.object({}) });
