@@ -136,7 +136,9 @@ export async function listTicketTypes(eventId: string, userId: string) {
         },
         select: { id: true, source: true }
       });
-      if (!grant) fail("EVENT_CHECKOUT_ACCESS_REQUIRED", "Approved event access is required", 403);
+      if (grant === null) {
+        throw new AppError("EVENT_CHECKOUT_ACCESS_REQUIRED", "Approved event access is required", 403);
+      }
       if (event.accessPolicy === "APPROVAL_REQUIRED" && grant.source === "INVITATION") {
         const request = await tx.eventAccessRequest.findFirst({
           where: { eventId, requesterUserId: userId, status: "APPROVED" },
@@ -244,7 +246,9 @@ export async function createHold(input: {
     const lines = input.items.map((item) => {
       const type = types.find((candidate) => candidate.id === item.ticketTypeId)!;
       const version = type.versions.find((candidate) => candidate.version === type.currentVersion);
-      if (!version) fail("TICKET_VERSION_MISSING", "Ticket price version is unavailable", 500);
+      if (version === undefined) {
+        throw new AppError("TICKET_VERSION_MISSING", "Ticket price version is unavailable", 500);
+      }
       if (
         type.salesStartsAt && type.salesStartsAt > now ||
         type.salesEndsAt && type.salesEndsAt <= now
