@@ -4,12 +4,14 @@ import { requireAuthenticated } from "../../shared/middleware/authentication.js"
 import { requirePermission } from "../../shared/middleware/authorization.js";
 import { validateRequest } from "../../shared/middleware/validate-request.js";
 import {
+  addVybeProviderEvidenceController,
   myVybeProviderApplicationsController,
   reviewVybeProviderApplicationController,
   submitVybeProviderApplicationController,
   vybeProviderApplicationQueueController
 } from "./vybe-provider.controller.js";
 import {
+  addVybeProviderEvidenceSchema,
   reviewVybeProviderApplicationSchema,
   submitVybeProviderApplicationSchema
 } from "./vybe-provider.validators.js";
@@ -46,4 +48,12 @@ vybeProviderRouter.patch(
   requirePermission("platform:vybe:providers:review"),
   validateRequest(reviewVybeProviderApplicationSchema),
   reviewVybeProviderApplicationController
+);
+
+vybeProviderRouter.post(
+  "/vybe/provider-applications/:id/evidence",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(addVybeProviderEvidenceSchema),
+  addVybeProviderEvidenceController
 );
