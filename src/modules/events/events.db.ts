@@ -93,7 +93,7 @@ export async function updateDraft(input: {
         description: input.description, format: input.format, visibility: input.visibility,
         accessPolicy: input.accessPolicy, experienceLevel: input.experienceLevel ?? null, timezone: input.timezone,
         schedules: { deleteMany: {}, create: input.schedules.map((item, index) => ({ startsAt: new Date(item.startsAt), endsAt: new Date(item.endsAt), sortOrder: index, ...(item.label ? { label: item.label } : {}) })) },
-        venue: current.venue ? (input.venue ? { update: input.venue } : { delete: true }) : (input.venue ? { create: input.venue } : undefined)
+        ...(current.venue ? (input.venue ? { venue: { update: input.venue } } : { venue: { delete: true } }) : (input.venue ? { venue: { create: input.venue } } : {}))
       },
       include: eventInclude
     });
