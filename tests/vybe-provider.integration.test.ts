@@ -195,21 +195,20 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
         }
       })
     ).not.toBeNull();
-    expect(
-      await prisma.outboxMessage.findFirst({
-        where: {
-          aggregateType: "vybe_provider_approval",
-          eventType: "vybe.provider_approval.granted.v1"
-        }
-      })
-    ).not.toBeNull();
-
     const profile = await prisma.vybeProviderProfile.findUniqueOrThrow({
       where: { organizationId: organization.id },
       include: { approvals: true }
     });
 
     expect(profile.approvals).toHaveLength(1);
+    expect(
+      await prisma.outboxMessage.findFirst({
+        where: {
+          aggregateId: profile.approvals[0]?.id,
+          eventType: "vybe.provider_approval.granted.v1"
+        }
+      })
+    ).not.toBeNull();
     expect(profile.approvals[0]).toMatchObject({
       category: "ACCOMMODATION",
       status: "ACTIVE",
