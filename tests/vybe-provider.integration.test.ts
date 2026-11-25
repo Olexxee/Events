@@ -151,7 +151,9 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
   it("approves only after submitted evidence has been accepted and creates a scoped approval", async () => {
     const { user, organization } = await createApplicant();
     const reviewer = await prisma.user.create({
-      data: { email: `vybe-reviewer-${crypto.randomUUID()}@events.test` }
+      data: {
+        email: `vybe-reviewer-${crypto.randomUUID()}@events.test`
+      }
     });
     const application = await submit(user.id, organization.id, true);
     const evidence = application.evidence[0];
@@ -195,7 +197,9 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
   it("allows requested evidence to be resubmitted without deleting its review history", async () => {
     const { user, organization } = await createApplicant();
     const reviewer = await prisma.user.create({
-      data: { email: `vybe-reviewer-${crypto.randomUUID()}@events.test` }
+      data: {
+        email: `vybe-reviewer-${crypto.randomUUID()}@events.test`
+      }
     });
     const application = await submit(user.id, organization.id, true);
     const oldEvidence = application.evidence[0];
@@ -244,7 +248,9 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
   it("retains suspension and revocation history and blocks reapplication", async () => {
     const { user, organization } = await createApplicant();
     const reviewer = await prisma.user.create({
-      data: { email: `vybe-reviewer-${crypto.randomUUID()}@events.test` }
+      data: {
+        email: `vybe-reviewer-${crypto.randomUUID()}@events.test`
+      }
     });
     const application = await submit(user.id, organization.id);
 
