@@ -8,7 +8,10 @@ describe("API foundation", () => {
     const response = await request(app).get("/health");
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ success: true, data: { status: "ok" } });
+    expect(response.body).toEqual({
+      success: true,
+      data: { status: "ok" }
+    });
   });
 
   it("reports readiness when the database responds", async () => {
