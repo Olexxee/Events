@@ -379,7 +379,7 @@ model Event {
   invitations      EventInvitation[]
   accessRequests   EventAccessRequest[]
   accessGrants     EventAccessGrant[]
-  accessHold       EventAccessHold?
+  accessHolds      EventAccessHold[]
 
   @@unique([organizationId, slug])
   @@index([status, visibility, moderationStatus, publishedAt])
@@ -518,6 +518,7 @@ model EventAccessHold {
   actor          User      @relation("EventAccessHoldActor", fields: [createdByUserId], references: [id], onDelete: Restrict)
   releaser       User?     @relation("EventAccessHoldReleaser", fields: [releasedByUserId], references: [id], onDelete: Restrict)
 
+  @@index([eventId, releasedAt])
   @@index([releasedAt, createdAt])
   @@map("event_access_holds")
 }
