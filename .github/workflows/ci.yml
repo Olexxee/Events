@@ -20,6 +20,8 @@ jobs:
       - run: npm run prisma:generate
       - run: npm run typecheck
       - run: npm run lint
+      - name: Inspect Prettier output for remaining formatting differences
+        run: npx prettier src/config/env.ts tests/app.test.ts
       - run: npm run format:check
       - run: npm test
       - run: npm run build
