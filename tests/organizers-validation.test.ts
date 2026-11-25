@@ -10,7 +10,7 @@ describe("organizer application validation", () => {
       body: {
         organizationId: "7a7dbf1e-1b23-4f45-9f30-cc68a0d6f23b",
         applicationMessage:
-          "I organize community music events and want to publish our upcoming programme.",
+          "I organize community music events and want to publish our next programme.",
         websiteUrl: "https://example.com"
       },
       params: {},
@@ -20,7 +20,7 @@ describe("organizer application validation", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects applications with missing organization or too little context", () => {
+  it("rejects incomplete applications", () => {
     const result = submitOrganizerApplicationSchema.safeParse({
       body: {
         organizationId: "not-a-uuid",
@@ -47,7 +47,7 @@ describe("organizer application validation", () => {
     const result = decideOrganizerApplicationSchema.safeParse({
       body: {
         decision: "SUSPENDED",
-        reason: "This decision is not available in the application review endpoint."
+        reason: "This decision is not supported."
       },
       params: { id: "7a7dbf1e-1b23-4f45-9f30-cc68a0d6f23b" },
       query: {}
