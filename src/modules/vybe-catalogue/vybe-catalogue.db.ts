@@ -131,8 +131,8 @@ export async function listPublicOfferings(input: { category?: VybeCategory; city
   const activeCategories = active.map((item) => item.category).filter((category) => !input.category || category === input.category);
   if (activeCategories.length === 0) return [];
   const offerings = await prisma.vybeOffering.findMany({
-    where: { status: "PUBLISHED", category: { in: activeCategories }, ...(input.city ? { versions: { some: { version: { equals: undefined } } } } : {}) },
-    include: { versions: true, providerProfile: { select: { organization: { select: { name: true } } } },
+    where: { status: "PUBLISHED", category: { in: activeCategories } },
+    include: { versions: true, providerProfile: { select: { organization: { select: { name: true } } } } },
     orderBy: { updatedAt: "desc" },
     take: 100
   });
