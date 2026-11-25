@@ -13,6 +13,22 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://events:events@localhost:5432/events_ci
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: events
+          POSTGRES_PASSWORD: events
+          POSTGRES_DB: events_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U events -d events_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,9 +39,9 @@ jobs:
       - run: npm rebuild esbuild @prisma/client prisma @prisma/engines
       - name: Validate Prisma schema
         run: npm run prisma:validate
-        env:
-          DATABASE_URL: postgresql://events:events@localhost:5432/events_ci
       - run: npm run prisma:generate
+      - name: Apply migrations to PostgreSQL
+        run: npm run prisma:migrate:deploy
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
