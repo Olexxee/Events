@@ -1,7 +1,4 @@
-import type {
-  OrganizationMembershipRole,
-  Prisma
-} from "@prisma/client";
+import type { OrganizationMembershipRole, Prisma } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error.js";
 
 /**
