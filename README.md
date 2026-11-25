@@ -45,8 +45,11 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 | Organizer access | The customer priority does not exclude other eligible organizer segments; verification and publishing controls still apply |
 | Organizer publishing | Verified organizers can publish without manual approval of every event; platform moderation and takedown powers remain |
 | Payment handling | Platform collects customer payments centrally and reconciles organizer/partner obligations |
-| Platform revenue | Dual-sided ticket transaction fees: customer service fee plus organizer commission deducted from ticket sales |
-| Organizer charging | No separate organizer invoice or mandatory organizer subscription is part of the agreed initial model; organizer commission is deducted from eligible ticket sales |
+| Platform revenue — tickets | Dual-sided ticket transaction fees: customer service fee plus organizer commission deducted from eligible ticket sales |
+| Platform revenue — hospitality | Dual-sided hospitality monetization: disclosed customer booking fee plus provider commission |
+| Organizer charging | No paid organizer subscription plans; core organizer access is free, with ticket transaction commission retained |
+| Provider charging | Commission on fulfilled hospitality reservations; calculation basis, rates, and cancellation/refund treatment remain open |
+| Paid event promotion | Deferred; no paid placement or sponsored ranking at initial launch |
 | Refund governance | Platform establishes and administers the refund framework |
 | Accommodation supply | Organizers and approved accommodation partners may supply rooms; every supplier must pass hospitality-specific approval before listing, separate from organizer/event-publishing verification. Existing organizer accounts can be reused without creating duplicate organizations. |
 | Connect scope | Connect is limited to attendees of the same event |
@@ -71,9 +74,16 @@ The agreed ticket revenue model has two fee components:
 
 There is no separate organizer invoice for this commission. It is withheld through transaction allocation and settlement.
 
-The percentages, fixed-fee options, minimums, caps, tax treatment, processor-fee allocation, and effective dates are **not yet decided**. Previously discussed numerical examples were illustrative only and are not approved rates.
+For hospitality, the agreed model is also dual-sided:
 
-The current decision specifically confirms dual fees on ticket sales. Whether the same fee model applies to accommodation, drinks, or other add-ons remains open and must not be assumed.
+1. **Customer booking fee:** a separately disclosed platform fee charged to the customer.
+2. **Provider commission:** a commission charged to the hospitality provider and deducted from the provider's eligible settlement.
+
+The customer fee and provider commission are separate commercial charges. Provider commission is not an additional customer charge and must not be hidden in the customer's displayed price. Commission is intended to be earned on fulfilled reservations, not merely on booking attempts or pending-provider requests. The exact commissionable amount and treatment of partial fulfilment, cancellations, refunds, and no-shows remain open.
+
+Core organizer access and plans are free: no paid organizer subscription is part of the initial business model. Ticket transaction commission remains applicable. Paid event promotion, sponsored ranking, and paid placement are deferred and are not part of the initial launch model.
+
+Ticket and hospitality fee rates, calculation bases, fixed-fee options, minimums, caps, tax treatment, processor-fee allocation, provider-category variations, and effective dates remain **undecided**. Previously discussed numerical examples were illustrative only and are not approved rates.
 
 Fee rules must be configurable and versioned. Each purchase must retain a snapshot of the pricing rules that applied at the time of purchase.
 
