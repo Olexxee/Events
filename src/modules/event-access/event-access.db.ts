@@ -12,7 +12,7 @@ const fail = (code: string, message: string, status = 409): never => {
 async function activeEvent(tx: Prisma.TransactionClient, eventId: string) {
   const event = await tx.event.findUnique({
     where: { id: eventId },
-    include: { schedules: true, organization: { select: { status: true } }, accessHold: true }
+    include: { schedules: true, organization: { select: { status: true } }, accessHolds: { where: { releasedAt: null }, take: 1 } }
   });
   if (!event || event.status === "DRAFT") fail("EVENT_NOT_FOUND", "Event was not found", 404);
   if (!["PUBLISHED", "SALES_PAUSED", "ONGOING"].includes(event.status) || event.organization.status !== "ACTIVE")
@@ -20,7 +20,7 @@ async function activeEvent(tx: Prisma.TransactionClient, eventId: string) {
   const organizerApproval = await tx.organizerApplication.findFirst({ where: { organizationId: event.organizationId, status: "APPROVED" }, select: { id: true } });
   if (!organizerApproval) fail("ORGANIZER_APPROVAL_REQUIRED", "Organizer approval is no longer active", 403);
   if (event.moderationStatus !== "CLEAR") fail("EVENT_ACCESS_RESTRICTED", "Event access is restricted", 403);
-  if (event.accessHold && !event.accessHold.releasedAt) fail("EVENT_ACCESS_ON_HOLD", "Event access is temporarily restricted", 403);
+  if (event.accessHolds.length > 0) fail("EVENT_ACCESS_ON_HOLD", "Event access is temporarily restricted", 403);
   const endsAt = event.schedules.reduce<Date | null>((latest, item) => !latest || item.endsAt > latest ? item.endsAt : latest, null);
   if (!endsAt || endsAt <= new Date()) fail("EVENT_ACCESS_CLOSED", "The event access window has ended");
   return { event, grantExpiry: endsAt };
@@ -237,9 +237,9 @@ export async function setPlatformHold(input: { eventId: string; actorId: string;
     const event = await tx.event.findUnique({ where: { id: input.eventId }, select: { id: true } });
     if (!event) fail("EVENT_NOT_FOUND", "Event was not found", 404);
     if (input.release) {
-      const hold = await tx.eventAccessHold.findUnique({ where: { eventId: input.eventId } });
-      if (!hold || hold.releasedAt) fail("ACCESS_HOLD_NOT_ACTIVE", "No active access hold exists", 404);
-      await tx.eventAccessHold.update({ where: { eventId: input.eventId }, data: { releasedAt: new Date(), releasedByUserId: input.actorId } });
+      const hold = await tx.eventAccessHold.findFirst({ where: { eventId: input.eventId, releasedAt: null }, orderBy: { createdAt: "desc" } });
+      if (!hold) fail("ACCESS_HOLD_NOT_ACTIVE", "No active access hold exists", 404);
+      await tx.eventAccessHold.update({ where: { id: hold.id }, data: { releasedAt: new Date(), releasedByUserId: input.actorId } });
     } else {
       await tx.eventAccessHold.create({ data: { eventId: input.eventId, reason: input.reason, createdByUserId: input.actorId } });
     }
