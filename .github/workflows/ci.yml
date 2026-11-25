@@ -21,6 +21,7 @@ jobs:
       - run: npm install --global npm@11
       - run: npm ci --no-audit --no-fund --legacy-peer-deps --ignore-scripts
       - run: npm rebuild esbuild @prisma/client prisma @prisma/engines
+      - run: npm run prisma:validate
       - run: npm run prisma:generate
       - run: npm run typecheck
       - run: npm run lint

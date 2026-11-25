@@ -18,7 +18,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"vitest.config.ts\" \"eslint.config.js\" \"tsconfig.json\" \"package.json\" \".github/workflows/*.yml\"",
     "prisma:generate": "prisma generate",
-    "prisma:validate": "prisma validate"
+    "prisma:validate": "prisma validate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:format": "prisma format"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
