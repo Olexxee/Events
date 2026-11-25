@@ -11,7 +11,15 @@ import {
   listPublicEvents,
   publishDraft
 } from "../src/modules/events/events.db.js";
-import { submitRequest, listRequests, decideRequest, issueInvitation, respondToInvitation, myAccess, setPlatformHold } from "../src/modules/event-access/event-access.db.js";
+import {
+  submitRequest,
+  listRequests,
+  decideRequest,
+  issueInvitation,
+  respondToInvitation,
+  myAccess,
+  setPlatformHold
+} from "../src/modules/event-access/event-access.db.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -76,7 +84,11 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     await disconnectDatabase();
   });
 
-  async function createDraftEvent(slug = "integration-event", accessPolicy: "OPEN" | "APPROVAL_REQUIRED" | "INVITATION_ONLY" = "OPEN", visibility: "PUBLIC" | "UNLISTED" | "INVITATION_ONLY" = "PUBLIC") {
+  async function createDraftEvent(
+    slug = "integration-event",
+    accessPolicy: "OPEN" | "APPROVAL_REQUIRED" | "INVITATION_ONLY" = "OPEN",
+    visibility: "PUBLIC" | "UNLISTED" | "INVITATION_ONLY" = "PUBLIC"
+  ) {
     return createDraft({
       organizationId,
       actorUserId: ownerId,
@@ -241,54 +253,95 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
   });
 
   it("creates an event-scoped grant only after organizer approval of an access request", async () => {
-    const draft = await createDraftEvent("approval-required-event", "APPROVAL_REQUIRED");
+    const draft = await createDraftEvent(
+      "approval-required-event",
+      "APPROVAL_REQUIRED"
+    );
     await prisma.organizerApplication.create({
       data: {
-        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        organizationId,
+        applicantUserId: ownerId,
+        status: "APPROVED",
         applicationMessage: "Approved integration fixture",
         decisionReason: "Integration fixture approval",
-        reviewedAt: new Date(), reviewedByUserId: ownerId
+        reviewedAt: new Date(),
+        reviewedByUserId: ownerId
       }
     });
     await publishDraft(draft.id, ownerId);
-    const request = await submitRequest(draft.id, memberId, "I would like to attend.");
+    const request = await submitRequest(
+      draft.id,
+      memberId,
+      "I would like to attend."
+    );
     expect(request.status).toBe("SUBMITTED");
     const queue = await listRequests(draft.id, organizationId, ownerId);
     expect(queue).toHaveLength(1);
     await decideRequest({
-      requestId: request.id, eventId: draft.id, organizationId,
-      actorId: ownerId, decision: "APPROVED", reason: "Request approved"
+      requestId: request.id,
+      eventId: draft.id,
+      organizationId,
+      actorId: ownerId,
+      decision: "APPROVED",
+      reason: "Request approved"
     });
     const access = await myAccess(draft.id, memberId);
     expect(access.canViewDetails).toBe(true);
     expect(access.canCheckout).toBe(true);
     expect(access.grant?.source).toBe("ACCESS_REQUEST");
-    expect(await prisma.eventAccessGrant.count({ where: { eventId: draft.id, userId: memberId, status: "ACTIVE" } })).toBe(1);
-    expect(await prisma.outboxMessage.count({ where: { eventType: "EventAccessGranted", aggregateId: access.grant!.id } })).toBe(1);
+    expect(
+      await prisma.eventAccessGrant.count({
+        where: { eventId: draft.id, userId: memberId, status: "ACTIVE" }
+      })
+    ).toBe(1);
+    expect(
+      await prisma.outboxMessage.count({
+        where: {
+          eventType: "EventAccessGranted",
+          aggregateId: access.grant!.id
+        }
+      })
+    ).toBe(1);
   });
 
   it("binds invitations to verified recipient accounts and prevents reuse", async () => {
     const recipient = await prisma.user.create({
-      data: { email: `verified-${crypto.randomUUID()}@events.test`, emailVerifiedAt: new Date() }
+      data: {
+        email: `verified-${crypto.randomUUID()}@events.test`,
+        emailVerifiedAt: new Date()
+      }
     });
-    const draft = await createDraftEvent("invitation-only-event", "INVITATION_ONLY", "INVITATION_ONLY");
+    const draft = await createDraftEvent(
+      "invitation-only-event",
+      "INVITATION_ONLY",
+      "INVITATION_ONLY"
+    );
     await prisma.organizerApplication.create({
       data: {
-        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        organizationId,
+        applicantUserId: ownerId,
+        status: "APPROVED",
         applicationMessage: "Approved integration fixture",
         decisionReason: "Integration fixture approval",
-        reviewedAt: new Date(), reviewedByUserId: ownerId
+        reviewedAt: new Date(),
+        reviewedByUserId: ownerId
       }
     });
     await publishDraft(draft.id, ownerId);
     const issued = await issueInvitation({
-      eventId: draft.id, organizationId, actorId: ownerId,
+      eventId: draft.id,
+      organizationId,
+      actorId: ownerId,
       recipientEmail: recipient.email
     });
     expect(issued.token).toBeTruthy();
-    await expect(respondToInvitation(issued.token, memberId, "ACCEPTED")).rejects.toMatchObject({ code: "INVITATION_INVALID", statusCode: 404 });
+    await expect(
+      respondToInvitation(issued.token, memberId, "ACCEPTED")
+    ).rejects.toMatchObject({ code: "INVITATION_INVALID", statusCode: 404 });
     await respondToInvitation(issued.token, recipient.id, "ACCEPTED");
-    await expect(respondToInvitation(issued.token, recipient.id, "ACCEPTED")).rejects.toMatchObject({ code: "INVITATION_INVALID", statusCode: 404 });
+    await expect(
+      respondToInvitation(issued.token, recipient.id, "ACCEPTED")
+    ).rejects.toMatchObject({ code: "INVITATION_INVALID", statusCode: 404 });
     const access = await myAccess(draft.id, recipient.id);
     expect(access.canViewDetails).toBe(true);
     expect(access.canCheckout).toBe(true);
@@ -299,38 +352,83 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     const draft = await createDraftEvent("held-event");
     await prisma.organizerApplication.create({
       data: {
-        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        organizationId,
+        applicantUserId: ownerId,
+        status: "APPROVED",
         applicationMessage: "Approved integration fixture",
         decisionReason: "Integration fixture approval",
-        reviewedAt: new Date(), reviewedByUserId: ownerId
+        reviewedAt: new Date(),
+        reviewedByUserId: ownerId
       }
     });
     await publishDraft(draft.id, ownerId);
-    await setPlatformHold({ eventId: draft.id, actorId: ownerId, reason: "Safety review", release: false });
-    await expect(myAccess(draft.id, memberId)).rejects.toMatchObject({ code: "EVENT_ACCESS_ON_HOLD", statusCode: 403 });
+    await setPlatformHold({
+      eventId: draft.id,
+      actorId: ownerId,
+      reason: "Safety review",
+      release: false
+    });
+    await expect(myAccess(draft.id, memberId)).rejects.toMatchObject({
+      code: "EVENT_ACCESS_ON_HOLD",
+      statusCode: 403
+    });
   });
-
 
   it("requires both an invitation and organizer approval for invitation-only approval-required events", async () => {
     const recipient = await prisma.user.create({
-      data: { email: `dual-gate-${crypto.randomUUID()}@events.test`, emailVerifiedAt: new Date() }
+      data: {
+        email: `dual-gate-${crypto.randomUUID()}@events.test`,
+        emailVerifiedAt: new Date()
+      }
     });
-    const draft = await createDraftEvent("dual-gate-event", "APPROVAL_REQUIRED", "INVITATION_ONLY");
+    const draft = await createDraftEvent(
+      "dual-gate-event",
+      "APPROVAL_REQUIRED",
+      "INVITATION_ONLY"
+    );
     await prisma.organizerApplication.create({
       data: {
-        organizationId, applicantUserId: ownerId, status: "APPROVED",
+        organizationId,
+        applicantUserId: ownerId,
+        status: "APPROVED",
         applicationMessage: "Approved integration fixture",
         decisionReason: "Integration fixture approval",
-        reviewedAt: new Date(), reviewedByUserId: ownerId
+        reviewedAt: new Date(),
+        reviewedByUserId: ownerId
       }
     });
     await publishDraft(draft.id, ownerId);
-    await expect(submitRequest(draft.id, recipient.id)).rejects.toMatchObject({ code: "INVITATION_REQUIRED", statusCode: 403 });
-    const issued = await issueInvitation({ eventId: draft.id, organizationId, actorId: ownerId, recipientEmail: recipient.email });
+    await expect(submitRequest(draft.id, recipient.id)).rejects.toMatchObject({
+      code: "INVITATION_REQUIRED",
+      statusCode: 403
+    });
+    const issued = await issueInvitation({
+      eventId: draft.id,
+      organizationId,
+      actorId: ownerId,
+      recipientEmail: recipient.email
+    });
     await respondToInvitation(issued.token, recipient.id, "ACCEPTED");
-    expect(await myAccess(draft.id, recipient.id)).toMatchObject({ canViewDetails: true, canCheckout: false });
-    const request = await submitRequest(draft.id, recipient.id, "Please approve checkout access.");
-    await decideRequest({ requestId: request.id, eventId: draft.id, organizationId, actorId: ownerId, decision: "APPROVED", reason: "Approved after invitation" });
-    expect(await myAccess(draft.id, recipient.id)).toMatchObject({ canViewDetails: true, canCheckout: true });
+    expect(await myAccess(draft.id, recipient.id)).toMatchObject({
+      canViewDetails: true,
+      canCheckout: false
+    });
+    const request = await submitRequest(
+      draft.id,
+      recipient.id,
+      "Please approve checkout access."
+    );
+    await decideRequest({
+      requestId: request.id,
+      eventId: draft.id,
+      organizationId,
+      actorId: ownerId,
+      decision: "APPROVED",
+      reason: "Approved after invitation"
+    });
+    expect(await myAccess(draft.id, recipient.id)).toMatchObject({
+      canViewDetails: true,
+      canCheckout: true
+    });
   });
 });
