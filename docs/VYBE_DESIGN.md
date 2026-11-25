@@ -362,7 +362,7 @@ No real payment provider should be selected or embedded in Vybe. A test adapter 
 | VYBE-006 | Event-cancellation choice deadline | Explicit customer response window and safe no-response default | Avoids indefinite ambiguity |
 | VYBE-007 | Refund after settlement | Finance-approved recovery model; no automatic negative balance | Determines supplier contracts/exposure |
 | VYBE-008 | Provider approval evidence | **Approved: risk-based, category-scoped review.** Baseline identity/contact, organization authority, service scope, authority to supply inventory, and provider-term acceptance; additional documents only where category risk or law requires them. | Balances onboarding friction and safety |
-| VYBE-009 | External inventory certification | Require atomic hold/reserve, idempotency, callbacks, cancellation and reconciliation | Read-only availability cannot prevent overselling |
+| VYBE-009 | External inventory certification | **Approved: strict certification.** Instant-bookable external inventory must provide fresh availability, atomic hold/reservation, idempotent operations, reliable confirmation/cancellation outcomes, and reconciliation. Read-only availability is never sufficient for instant confirmation. | Read-only availability cannot prevent overselling |
 | VYBE-010 | Vybe hold duration | Proposed 10 minutes, configurable by category/platform limits | Controls inventory contention |
 | VYBE-011 | Booking changes | Define amendment versus cancel/rebook for date/time/party-size changes | Impacts inventory and refund audit |
 | VYBE-012 | Standalone/event-linked discovery | Support both; decide launch prominence | Impacts navigation and event coupling |
@@ -373,4 +373,4 @@ The product owner must approve or amend the proposed directions in Section 15 be
 
 ---
 
-**Document status:** Vybe branding, staged catalogue rollout (VYBE-001), and risk-based category-scoped provider approval (VYBE-008) are approved. The remaining marketplace policies are still under product design and must be resolved before implementation. This document consolidates existing accommodation/hospitality policies under the Vybe brand, preserves independent Payments and Finance boundaries, and distinguishes approved decisions from proposals. No schema, migration, API, or provider implementation is authorized.
+**Document status:** Vybe branding, staged catalogue rollout (VYBE-001), risk-based category-scoped provider approval (VYBE-008), and strict external inventory certification (VYBE-009) are approved. The remaining marketplace policies are still under product design and must be resolved before implementation. This document consolidates existing accommodation/hospitality policies under the Vybe brand, preserves independent Payments and Finance boundaries, and distinguishes approved decisions from proposals. No schema, migration, API, or provider implementation is authorized.
