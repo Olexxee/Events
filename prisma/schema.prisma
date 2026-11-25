@@ -9,18 +9,18 @@ datasource db {
 
 // Shared infrastructure only. Domain models are introduced with their owning modules.
 model OutboxMessage {
-  id            String    @id @default(uuid()) @db.Uuid
-  aggregateType String
-  aggregateId   String
-  eventType     String
-  deduplicationKey String @unique
-  payload       Json
-  occurredAt    DateTime  @default(now()) @db.Timestamptz(6)
-  availableAt   DateTime  @default(now()) @db.Timestamptz(6)
-  attempts      Int       @default(0)
-  processedAt   DateTime? @db.Timestamptz(6)
-  lastError     String?
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  id                String    @id @default(uuid()) @db.Uuid
+  aggregateType     String    @map("aggregate_type")
+  aggregateId       String    @map("aggregate_id")
+  eventType         String    @map("event_type")
+  deduplicationKey  String    @unique @map("deduplication_key")
+  payload            Json
+  occurredAt         DateTime  @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  availableAt        DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  attempts           Int       @default(0)
+  processedAt        DateTime? @map("processed_at") @db.Timestamptz(6)
+  lastError          String?   @map("last_error")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([processedAt, availableAt])
   @@index([aggregateType, aggregateId, occurredAt])
