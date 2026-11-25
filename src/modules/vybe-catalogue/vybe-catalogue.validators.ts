@@ -68,12 +68,12 @@ export const updateVybeOfferingDraftSchema = z.object({
 export const publishVybeOfferingSchema = z.object({
   params: z.object({ id: uuid }),
   query: z.object({}),
-  body: z.object({})
+  body: z.preprocess((value) => value ?? {}, z.object({}))
 });
 export const listVybeCatalogueSchema = z.object({
   params: z.object({}),
   query: z.object({ category: category.optional(), state: z.string().trim().min(2).max(100).optional(), city: z.string().trim().min(2).max(100).optional() }),
-  body: z.object({})
+  body: z.preprocess((value) => value ?? {}, z.object({}))
 });
 export const activateVybeCategorySchema = z.object({
   params: z.object({ category }),
