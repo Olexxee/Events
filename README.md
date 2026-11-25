@@ -231,8 +231,8 @@ Track at least:
 
 - Customer gross payment
 - Ticket face value
-- Customer service fee
-- Organizer commission
+- Any customer-facing charge, where the selected commercial model applies one
+- Any organizer/provider charge or commission, where the selected commercial model applies
 - Processor charges
 - Taxes and statutory deductions where applicable
 - Organizer payable
@@ -245,18 +245,11 @@ Track at least:
 
 Customer payment, organizer proceeds, and platform revenue are different amounts and must be reported separately.
 
-### 7.3 Fee configuration
+### 7.3 Commercial configuration
 
-The pricing engine should support configurable fee rules, potentially including:
+The charging model is deferred to the billing phase. The eventual design may charge per module, grant module access through organizer subscriptions/entitlements, or combine these approaches. No model or rates are approved.
 
-- Percentage and/or fixed fee
-- Minimum and maximum fee
-- Event or ticket category overrides
-- Promotional exemptions
-- Effective dates
-- Fee-rule versioning
-
-Only the existence of a customer fee plus an organizer commission on ticket sales is confirmed. Exact rates and add-on fee treatment remain open.
+The architecture must keep module access/entitlement separate from commercial pricing and transaction accounting. When billing is designed, pricing rules must be configurable and versioned, and each charge must retain an immutable snapshot of the applicable rule. Do not implement fee rules, subscription plans, module prices, or commission calculations in the shared foundation.
 
 ### 7.4 Organizer payouts
 
@@ -273,7 +266,7 @@ Organizers may configure and offer approved hospitality features they own, contr
 - Every verified collection must be recorded once.
 - Every allocation must balance.
 - Refunds must reverse or offset the original financial allocations accurately.
-- Historical fee snapshots must remain immutable.
+- Any applied price/charge snapshots must remain immutable; do not create snapshots for hypothetical or unapplied fees.
 - Payouts must not exceed eligible payable balances.
 - Manual adjustments require a reason, actor, timestamp, and audit trail.
 - Payment-provider webhooks must be authenticated and processed idempotently.
@@ -546,10 +539,10 @@ Potential domains:
 
 ## 17. Proposed delivery phases
 
-1. **Product and policy foundation:** finalize business rules, roles, organizer terms, refund policy, fee rules, settlement policy, and safety requirements.
+1. **Product and policy foundation:** finalize foundational business rules, roles, organizer terms, refund policy, settlement policy, and safety requirements. Commercial pricing remains deferred to the billing phase.
 2. **Platform foundation:** identity, permissions, organizer onboarding, geography, admin workspace.
 3. **Event marketplace:** event lifecycle, discovery, publishing, visibility, access policies.
-4. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, dual-sided ticket fees, ledger.
+4. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, and ledger integration.
 5. **Operational controls:** guest management, check-in, event changes, refunds, reconciliation, settlements.
 6. **Hospitality:** drink catalogue, entitlements, redemption, accommodation inventory and reservations, partner workspace.
 7. **Connect:** opt-in event-specific profiles, mutual introductions, blocking, reporting, and moderation.
@@ -563,17 +556,17 @@ The following items are not yet approved and must be resolved during product dis
 
 ### Commercial and financial
 
-- Exact customer service fee rate and calculation method
-- Exact organizer commission rate and calculation method
-- Whether fee rules vary by event category or organizer
-- Whether add-ons, drinks, and accommodation attract platform fees
+- Whether organizers are charged per enabled module, through subscriptions/entitlements, or through a combination
+- Which modules and capabilities are included in each future commercial package
+- Whether and how customers, organizers, and providers are charged for specific transactions
+- Any fee/commission calculation bases, rates, caps, exemptions, and category variations
 - Processor-fee allocation
 - Tax/accounting treatment
 - Exact organizer settlement milestone percentages, dates, reserve amounts, release conditions, and approval rules within the confirmed milestone-release model
 - Partner settlement timing
 - Who bears refund costs after a supplier/organizer has been paid
 - Chargeback and negative-balance recovery policy
-- Whether complimentary tickets and promotional discounts incur fees
+- Whether complimentary tickets, promotional discounts, and no-charge transactions affect future commercial calculations
 
 ### Ticketing and event operations
 
