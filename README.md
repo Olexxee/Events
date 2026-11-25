@@ -541,13 +541,16 @@ Potential domains:
 ## 17. Delivery phases and implementation tracking
 
 1. **Product and policy foundation:** foundational product boundaries and key business rules have been recorded. Commercial pricing remains deferred to the billing phase.
-2. **Platform foundation and Identity & Access:** the shared Node 22/strict TypeScript/Express 5 scaffold, centralized error/response handling, Prisma/PostgreSQL baseline, transactional outbox, request IDs, Zod validation, append-only audit persistence, and security foundation are merged. Identity & Access is in PR #2: user accounts, scrypt password credentials, opaque revocable sessions, refresh-token rotation/reuse detection, organization memberships, and trusted platform/organization permission resolution. The PR must pass Prisma validation, typecheck, lint, formatting, tests, and build on its exact latest head before merge. Organizer verification/onboarding, geography, and admin workspace remain separate design-gated phases.
-3. **Event marketplace:** event lifecycle, discovery, publishing, visibility, access policies.
-4. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, and ledger integration.
-5. **Operational controls:** guest management, check-in, event changes, refunds, reconciliation, settlements.
-6. **Hospitality:** drink catalogue, entitlements, redemption, accommodation inventory and reservations, partner workspace.
-7. **Connect:** opt-in event-specific profiles, mutual introductions, blocking, reporting, and moderation.
-8. **Hardening and launch:** security, privacy, compliance review, payment-provider approval, operational testing, observability, and launch readiness.
+2. **Platform foundation and Identity & Access:** the shared Node 22/strict TypeScript/Express 5 scaffold, centralized error/response handling, Prisma/PostgreSQL baseline, transactional outbox, request IDs, Zod validation, append-only audit persistence, and security foundation are merged. Identity & Access is merged in [PR #2](https://github.com/Olexxee/Events/pull/2): user accounts, scrypt password credentials, opaque revocable sessions, refresh-token rotation/reuse detection, organization memberships, and trusted platform/organization permission resolution. Its exact PR head passed Prisma validation, typecheck, lint, formatting, all 17 tests, and build before merge.
+3. **Organizer verification and administration:** [Organizer Verification design gate](docs/ORGANIZER_VERIFICATION_DESIGN.md) drafted. Resolve evidence, review, appeal, retention, publishing, and settlement policies before creating verification tables or APIs.
+4. **Event marketplace:** event lifecycle, discovery, publishing, visibility, access policies.
+5. **Ticket commerce:** ticket inventory, checkout, payment verification, ticket issuance, QR validation, and ledger integration.
+6. **Operational controls:** guest management, check-in, event changes, refunds, reconciliation, settlements.
+7. **Hospitality:** drink catalogue, entitlements, redemption, accommodation inventory and reservations, partner workspace.
+8. **Connect:** opt-in event-specific profiles, mutual introductions, blocking, reporting, and moderation.
+9. **Hardening and launch:** security, privacy, compliance review, payment-provider approval, operational testing, observability, and launch readiness.
+
+**Identity production-readiness gaps:** login rate limiting/abuse controls, email and phone verification, password reset/change, MFA/account recovery, user-visible session/device management, and PostgreSQL-backed concurrency tests still require implementation and review. The current identity foundation is not yet a complete production authentication program.
 
 Do not start with every module at once. The financial and inventory foundations must be correct before expanding into hospitality and Connect.
 
