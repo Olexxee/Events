@@ -76,7 +76,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     await disconnectDatabase();
   });
 
-  async function createDraftEvent(slug = "integration-event", accessPolicy: "OPEN" | "APPROVAL_REQUIRED" = "OPEN", visibility: "PUBLIC" | "UNLISTED" | "INVITATION_ONLY" = "PUBLIC") {
+  async function createDraftEvent(slug = "integration-event", accessPolicy: "OPEN" | "APPROVAL_REQUIRED" | "INVITATION_ONLY" = "OPEN", visibility: "PUBLIC" | "UNLISTED" | "INVITATION_ONLY" = "PUBLIC") {
     return createDraft({
       organizationId,
       actorUserId: ownerId,
@@ -273,7 +273,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     const recipient = await prisma.user.create({
       data: { email: `verified-${crypto.randomUUID()}@events.test`, emailVerifiedAt: new Date() }
     });
-    const draft = await createDraftEvent("invitation-only-event", "INVITATION_ONLY" as "OPEN", "INVITATION_ONLY");
+    const draft = await createDraftEvent("invitation-only-event", "INVITATION_ONLY", "INVITATION_ONLY");
     await prisma.organizerApplication.create({
       data: {
         organizationId, applicantUserId: ownerId, status: "APPROVED",
