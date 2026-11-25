@@ -15,7 +15,9 @@ export const submitOrganizerApplicationController: RequestHandler = async (
   next
 ) => {
   try {
-    if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    if (!req.auth) {
+      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    }
     const input = getValidatedRequest<{
       body: {
         organizationId: string;
@@ -68,7 +70,9 @@ export const decideOrganizerApplicationController: RequestHandler = async (
   next
 ) => {
   try {
-    if (!req.auth) throw new Error("Authenticated context is required");
+    if (!req.auth) {
+      throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
+    }
     const { id } = getValidatedRequest<{ params: { id: string } }>(res);
     const input = getValidatedRequest<{
       body: { decision: "APPROVED" | "REJECTED"; reason: string };
