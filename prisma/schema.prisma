@@ -797,7 +797,7 @@ model VybeProviderApproval {
   suspender         User? @relation("VybeApprovalSuspender", fields: [suspendedByUserId], references: [id], onDelete: Restrict)
   revoker           User? @relation("VybeApprovalRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
 
-  @@unique([providerProfileId, category])
+  @@index([providerProfileId, category, status])
   @@index([category, status, expiresAt])
   @@map("vybe_provider_approvals")
 }
