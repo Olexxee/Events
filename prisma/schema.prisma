@@ -218,6 +218,22 @@ enum VybeEvidenceStatus {
   @@map("vybe_evidence_status")
 }
 
+enum VybeOfferingStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+
+  @@map("vybe_offering_status")
+}
+
+enum VybeOfferingVersionStatus {
+  DRAFT
+  PUBLISHED
+
+  @@map("vybe_offering_version_status")
+}
+
 // Shared infrastructure.
 model OutboxMessage {
   id               String    @id @default(uuid()) @db.Uuid
@@ -288,6 +304,9 @@ model User {
   vybeApprovalsGranted VybeProviderApproval[] @relation("VybeApprovalGrantor")
   vybeApprovalsSuspended VybeProviderApproval[] @relation("VybeApprovalSuspender")
   vybeApprovalsRevoked VybeProviderApproval[] @relation("VybeApprovalRevoker")
+  vybeOfferingsCreated VybeOffering[] @relation("VybeOfferingCreator")
+  vybeOfferingVersionsCreated VybeOfferingVersion[] @relation("VybeOfferingVersionCreator")
+  vybeCategoryActivations VybeCategoryActivation[] @relation("VybeCategoryActivationActor")
   eventAccessRequestsDecided EventAccessRequest[] @relation("EventAccessRequestDecider")
   eventAccessGrantsRevoked EventAccessGrant[] @relation("EventAccessGrantRevoker")
 
@@ -697,6 +716,7 @@ model VybeProviderProfile {
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   approvals      VybeProviderApproval[]
+  offerings      VybeOffering[]
 
   @@map("vybe_provider_profiles")
 }
@@ -805,4 +825,54 @@ model VybeProviderApproval {
   @@index([providerProfileId, category, status], map: "vybe_provider_approvals_profile_category_status_idx")
   @@index([category, status, expiresAt], map: "vybe_provider_approvals_category_status_expiry_idx")
   @@map("vybe_provider_approvals")
+}
+
+
+model VybeOffering {
+  id                       String   @id @default(uuid()) @db.Uuid
+  providerProfileId        String   @map("provider_profile_id") @db.Uuid
+  category                 VybeCategory
+  status                   VybeOfferingStatus @default(DRAFT)
+  currentPublishedVersion  Int?     @map("current_published_version")
+  createdByUserId          String   @map("created_by_user_id") @db.Uuid
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile           VybeProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  creator                   User @relation("VybeOfferingCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  versions                  VybeOfferingVersion[]
+
+  @@index([providerProfileId, category, status], map: "vybe_offerings_provider_category_status_idx")
+  @@index([category, status, createdAt], map: "vybe_offerings_category_status_created_idx")
+  @@map("vybe_offerings")
+}
+
+model VybeOfferingVersion {
+  id              String   @id @default(uuid()) @db.Uuid
+  offeringId      String   @map("offering_id") @db.Uuid
+  version         Int
+  status          VybeOfferingVersionStatus @default(DRAFT)
+  content         Json
+  createdByUserId String   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
+  offering        VybeOffering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  creator         User @relation("VybeOfferingVersionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([offeringId, version], map: "vybe_offering_versions_offering_version_key")
+  @@index([offeringId, status, version], map: "vybe_offering_versions_offering_status_version_idx")
+  @@map("vybe_offering_versions")
+}
+
+model VybeCategoryActivation {
+  id                 String   @id @default(uuid()) @db.Uuid
+  category           VybeCategory @unique
+  isActive           Boolean  @default(false) @map("is_active")
+  checklist          Json     @default("[]")
+  reason             String?
+  activatedByUserId  String?  @map("activated_by_user_id") @db.Uuid
+  activatedAt        DateTime? @map("activated_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  activatedBy        User? @relation("VybeCategoryActivationActor", fields: [activatedByUserId], references: [id], onDelete: Restrict)
+
+  @@map("vybe_category_activations")
 }
