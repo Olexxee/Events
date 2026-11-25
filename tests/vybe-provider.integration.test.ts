@@ -97,6 +97,14 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
     expect(application.locations).toHaveLength(1);
     expect(application.evidence).toHaveLength(1);
     expect(
+      await prisma.outboxMessage.findFirst({
+        where: {
+          aggregateId: application.id,
+          eventType: "vybe.provider_application.submitted.v1"
+        }
+      })
+    ).not.toBeNull();
+    expect(
       await prisma.vybeProviderProfile.count({
         where: { organizationId: organization.id }
       })
@@ -179,6 +187,22 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
     });
 
     expect(approved.status).toBe("APPROVED");
+    expect(
+      await prisma.outboxMessage.findFirst({
+        where: {
+          aggregateId: application.id,
+          eventType: "vybe.provider_application.reviewed.v1"
+        }
+      })
+    ).not.toBeNull();
+    expect(
+      await prisma.outboxMessage.findFirst({
+        where: {
+          aggregateType: "vybe_provider_approval",
+          eventType: "vybe.provider_approval.granted.v1"
+        }
+      })
+    ).not.toBeNull();
 
     const profile = await prisma.vybeProviderProfile.findUniqueOrThrow({
       where: { organizationId: organization.id },
