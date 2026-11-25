@@ -210,6 +210,9 @@ model User {
   eventAccessRequests EventAccessRequest[]
   eventAccessGrants EventAccessGrant[]
   eventAccessHoldsCreated EventAccessHold[] @relation("EventAccessHoldActor")
+  eventAccessHoldsReleased EventAccessHold[] @relation("EventAccessHoldReleaser")
+  eventAccessRequestsDecided EventAccessRequest[] @relation("EventAccessRequestDecider")
+  eventAccessGrantsRevoked EventAccessGrant[] @relation("EventAccessGrantRevoker")
 
   @@index([status, createdAt])
   @@map("users")
@@ -471,6 +474,7 @@ model EventAccessRequest {
   event          Event                    @relation(fields: [eventId], references: [id], onDelete: Restrict)
   organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   requester      User                     @relation(fields: [requesterUserId], references: [id], onDelete: Restrict)
+  decider        User?                    @relation("EventAccessRequestDecider", fields: [decidedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, status, createdAt])
   @@index([requesterUserId, createdAt])
@@ -495,6 +499,7 @@ model EventAccessGrant {
   event          Event                   @relation(fields: [eventId], references: [id], onDelete: Restrict)
   organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   user           User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  revoker        User?                   @relation("EventAccessGrantRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, userId, status, expiresAt])
   @@index([organizationId, createdAt])
@@ -511,6 +516,7 @@ model EventAccessHold {
   releasedByUserId String? @map("released_by_user_id") @db.Uuid
   event          Event     @relation(fields: [eventId], references: [id], onDelete: Restrict)
   actor          User      @relation("EventAccessHoldActor", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  releaser       User?     @relation("EventAccessHoldReleaser", fields: [releasedByUserId], references: [id], onDelete: Restrict)
 
   @@index([releasedAt, createdAt])
   @@map("event_access_holds")
