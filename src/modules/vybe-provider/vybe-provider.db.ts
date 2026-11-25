@@ -36,6 +36,14 @@ export async function submitProviderApplication(input: {
     storageReference: string;
   }[];
 }) {
+  if (!input.supplyAuthorityAttested || !input.termsAccepted) {
+    throw new AppError(
+      "VYBE_PROVIDER_ATTESTATION_REQUIRED",
+      "Supply authority and provider terms must be explicitly accepted",
+      400
+    );
+  }
+
   const prisma = getPrismaClient();
 
   try {
