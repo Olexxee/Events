@@ -1,8 +1,6 @@
 import type { RequestHandler } from "express";
 import { AppError } from "../../shared/errors/app-error.js";
-import {
-  getValidatedRequest
-} from "../../shared/middleware/validate-request.js";
+import { getValidatedRequest } from "../../shared/middleware/validate-request.js";
 import { successResponse } from "../../shared/responses/success-response.js";
 import {
   applyToBecomeVybeProvider,
@@ -65,11 +63,7 @@ type ChangeApprovalStatusBody = {
 
 function requireAuth(req: Parameters<RequestHandler>[0]) {
   if (!req.auth) {
-    throw new AppError(
-      "UNAUTHENTICATED",
-      "Authentication is required",
-      401
-    );
+    throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
   }
   return req.auth;
 }
@@ -101,9 +95,7 @@ export const myVybeProviderApplicationsController: RequestHandler = async (
 ) => {
   try {
     const auth = requireAuth(req);
-    const applications = await getMyVybeProviderApplications(
-      auth.subjectId
-    );
+    const applications = await getMyVybeProviderApplications(auth.subjectId);
     return successResponse(res, { applications });
   } catch (error) {
     return next(error);
