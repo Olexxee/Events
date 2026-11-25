@@ -1,4 +1,4 @@
-import { Prisma, type EventStatus } from "@prisma/client";
+import type { EventStatus, Prisma } from "@prisma/client";
 import { AppError } from "../../shared/errors/app-error.js";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 
