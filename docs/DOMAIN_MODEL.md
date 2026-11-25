@@ -32,6 +32,18 @@ The ecosystem ambition does not establish an MVP, release sequence, or implement
 
 Rates, calculation bases, tax treatment, processor-fee allocation, and category-specific rules remain undecided. This commercial model does not authorize payment integration or implementation.
 
+### Product responsibility boundaries
+
+- **Organizer and provider service delivery:** Organizers are responsible for delivering their advertised events. Hospitality providers are responsible for delivering their advertised services and honouring confirmed reservations.
+- **Platform governance:** Events owns marketplace rules, organizer/provider platform access, moderation, trust and safety controls, and dispute coordination. The platform is not automatically the producer or fulfilment operator merely because a transaction is processed through it.
+- **Publishing:** Verified organizers may publish without individual manual approval of every event. Events retains moderation, restriction, suspension, and takedown powers.
+- **Refund authority:** Events retains final authority over refunds governed by platform policy. Organizers and providers may submit evidence and explanations but cannot independently override platform-governed refund decisions. Applicable law and mandatory consumer rights remain controlling.
+- **Customer support:** A centralized support system receives and tracks issues, routes them to the responsible domain or operator, and provides platform-level escalation and oversight.
+- **Financial source of truth:** Events owns the authoritative ledger and settlement records. Gross collections, organizer/provider liabilities, platform-earned revenue, reserves, refunds, adjustments, and payouts must remain separately represented.
+
+These boundaries allocate platform and participant responsibilities; they do not by themselves determine the platform's legal capacity for each transaction or displace mandatory legal obligations.
+
+
 
 ### Initial customer priority
 
@@ -527,6 +539,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 | DM-OPEN-009 | Refund cost/liability after organizer or provider has been settled | Ledger, reserves, recovery, negative balances |
 | DM-OPEN-010 | Initial Osun State town-level rollout priorities and venue/geography reference source | Local supply recruitment, location discovery, and geography data constraints; the initial state is confirmed |
 | DM-OPEN-011 | Final runtime, payment provider, email, media, hosting, and worker choices | Integration and operational design |
+| DM-OPEN-012 | Events' legal commercial capacity by transaction type (e.g. marketplace intermediary, agent, collection facilitator, or merchant of record) | Contracting, payment-provider structure, tax, refunds, chargebacks, and regulatory obligations |
 
 The organizer settlement model is confirmed as milestone releases with a final post-event balance. The exact milestone configuration remains open; settlement timing is not wholly undecided.
 
