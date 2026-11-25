@@ -284,6 +284,7 @@ model User {
   ticketHolds TicketHold[]
   vybeApplicationsSubmitted VybeProviderApplication[] @relation("VybeApplicationApplicant")
   vybeProviderReviews VybeProviderReview[]
+  vybeEvidenceReviewed VybeProviderEvidence[] @relation("VybeEvidenceReviewer")
   vybeApprovalsGranted VybeProviderApproval[] @relation("VybeApprovalGrantor")
   vybeApprovalsSuspended VybeProviderApproval[] @relation("VybeApprovalSuspender")
   vybeApprovalsRevoked VybeProviderApproval[] @relation("VybeApprovalRevoker")
@@ -755,6 +756,7 @@ model VybeProviderEvidence {
   reviewReason     String?  @map("review_reason") @db.VarChar(1000)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   application      VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  reviewer         User? @relation("VybeEvidenceReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
 
   @@index([applicationId, status], map: "vybe_provider_evidence_application_status_idx")
   @@map("vybe_provider_evidence")
