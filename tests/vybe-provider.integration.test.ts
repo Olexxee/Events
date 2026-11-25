@@ -246,8 +246,7 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
           evidenceType: "operating-permit",
           requirementReason:
             "Replacement evidence requested by the review team.",
-          storageReference:
-            "private://vybe/evidence/operating-permit-v2"
+          storageReference: "private://vybe/evidence/operating-permit-v2"
         }
       ]
     });
@@ -304,8 +303,7 @@ describe.skipIf(!enabled)("Vybe provider PostgreSQL integration", () => {
       approvalId: approval.id,
       reviewerUserId: reviewer.id,
       action: "REVOKED",
-      reason:
-        "The provider failed to resolve the documented safety concern."
+      reason: "The provider failed to resolve the documented safety concern."
     });
 
     expect(revoked.status).toBe("REVOKED");
