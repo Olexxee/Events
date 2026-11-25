@@ -232,6 +232,7 @@ model Organization {
   createdBy   User                       @relation("OrganizationCreator", fields: [createdById], references: [id], onDelete: Restrict)
   memberships OrganizationMembership[]
   organizerApplications OrganizerApplication[]
+  events               Event[]
 
   @@index([status, createdAt])
   @@map("organizations")
