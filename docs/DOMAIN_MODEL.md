@@ -20,6 +20,19 @@ These pillars share platform-level identity, organization relationships, commerc
 
 The ecosystem ambition does not establish an MVP, release sequence, or implementation authorization. Those require separate product decisions.
 
+### Initial commercial model
+
+- **Ticketing:** customer service fee plus organizer commission deducted from eligible ticket sales.
+- **Hospitality:** separately disclosed customer booking fee plus provider commission deducted from eligible provider settlement.
+- **Provider commission trigger:** intended to apply to fulfilled reservations; the commissionable value and handling of partial fulfilment, cancellations, refunds, and no-shows remain unresolved.
+- **Organizer access:** core organizer access and plans are free; no paid organizer subscription is included in the initial model. Transaction commissions remain applicable.
+- **Paid promotion:** paid placement and sponsored ranking are deferred and excluded from the initial launch model.
+- **Fee transparency:** customer-facing fees must be disclosed before purchase; provider commission must be contractually disclosed to the provider and must not be concealed as an extra customer charge.
+- **Accounting separation:** customer collections, organizer/provider liabilities, platform-earned fees, refunds, reserves, and payouts are distinct financial facts.
+
+Rates, calculation bases, tax treatment, processor-fee allocation, and category-specific rules remain undecided. This commercial model does not authorize payment integration or implementation.
+
+
 ### Initial customer priority
 
 The initial Osun State launch prioritizes two organizer customer groups:
@@ -510,7 +523,7 @@ This section guides a future schema review; it is not a generated Prisma schema.
 | DM-OPEN-004 | Whether organizer-supplied accommodation follows the same provider approval workflow | Provider ownership and authorization |
 
 | DM-OPEN-007 | Ticket transfer rules after Connect opt-in | Participant eligibility and ownership transitions |
-| DM-OPEN-008 | Fee treatment for accommodation, drinks, and other hospitality items | Fee snapshots and payable allocation |
+| DM-OPEN-008 | Hospitality fee rates and calculation basis: customer booking fee and provider commission structure are confirmed, but amounts, commissionable value, category variations, and cancellation/refund/no-show treatment remain open | Fee snapshots, provider payables, and customer price disclosure |
 | DM-OPEN-009 | Refund cost/liability after organizer or provider has been settled | Ledger, reserves, recovery, negative balances |
 | DM-OPEN-010 | Initial Osun State town-level rollout priorities and venue/geography reference source | Local supply recruitment, location discovery, and geography data constraints; the initial state is confirmed |
 | DM-OPEN-011 | Final runtime, payment provider, email, media, hosting, and worker choices | Integration and operational design |
