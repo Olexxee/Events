@@ -162,7 +162,8 @@ export async function submitProviderApplication(input: {
         aggregateType: "vybe_provider_application",
         aggregateId: application.id,
         eventType: "vybe.provider_application.submitted.v1",
-        deduplicationKey: `vybe.provider_application:${application.id}:submitted`,
+        deduplicationKey:
+          `vybe.provider_application:${application.id}:submitted`,
         payload: {
           applicationId: application.id,
           organizationId: application.organizationId,
