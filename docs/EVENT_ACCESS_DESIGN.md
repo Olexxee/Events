@@ -126,7 +126,7 @@ Recommended defaults to confirm:
 - Event cancellation or a restrictive policy change must not leave old invitation tokens usable.
 - Revocation and expiry do not erase history.
 
-The product owner must decide whether grants survive a change from PUBLIC/UNLISTED to INVITATION_ONLY, and what happens to already approved users when an organizer changes the access policy after requests have been submitted.
+The approved transition behavior for these cases is specified in Section 12. Restrictive invitation-only policy changes invalidate access-request-sourced grants for subsequent access checks; invitation-backed grants remain eligible subject to the current checkout policy.
 
 ## 8. API surface proposal
 
