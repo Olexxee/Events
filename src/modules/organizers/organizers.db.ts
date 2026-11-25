@@ -65,7 +65,7 @@ export async function submitOrganizerApplication(input: {
           "ORGANIZER_APPLICATION_ALREADY_PENDING",
           existing.status === "APPROVED"
             ? "This organization already has organizer approval"
-            : "This organization already has an active or restricted organizer application",
+            : "An active or restricted application already exists for this organization",
           409
         );
       }
@@ -197,7 +197,7 @@ export async function decideOrganizerApplication(input: {
       }
       throw new AppError(
         "ORGANIZER_APPLICATION_NOT_REVIEWABLE",
-        "This application has already received a final decision or is not reviewable",
+        "This application is final or cannot be reviewed",
         409
       );
     }
