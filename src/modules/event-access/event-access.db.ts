@@ -51,8 +51,10 @@ async function createGrant(tx: Prisma.TransactionClient, input: {
   if (existing) {
     const currentEvent = await tx.event.findUniqueOrThrow({ where: { id: input.eventId }, select: { visibility: true, accessPolicy: true } });
     const invitationRequired = currentEvent.visibility === "INVITATION_ONLY" || currentEvent.accessPolicy === "INVITATION_ONLY";
-    if (input.source === "ACCESS_REQUEST" && currentEvent.visibility === "INVITATION_ONLY" && currentEvent.accessPolicy === "APPROVAL_REQUIRED" && existing.source === "INVITATION") {
-      return tx.eventAccessGrant.update({ where: { id: existing.id }, data: { canCheckout: true } });
+    if (input.source === "ACCESS_REQUEST" && currentEvent.accessPolicy === "APPROVAL_REQUIRED" && existing.source === "INVITATION") {
+      const updated = await tx.eventAccessGrant.update({ where: { id: existing.id }, data: { canCheckout: true } });
+      await tx.outboxMessage.create({ data: { aggregateType: "event_access_grant", aggregateId: updated.id, eventType: "EventAccessGrantUpdated", deduplicationKey: `event.access.checkout-enabled:${updated.id}:${input.sourceId}`, payload: { eventId: input.eventId, grantId: updated.id, canCheckout: true, sourceId: input.sourceId } } });
+      return updated;
     }
     if (!invitationRequired || existing.source !== "ACCESS_REQUEST") return existing;
     await tx.eventAccessGrant.update({ where: { id: existing.id }, data: { status: "REVOKED", revokedAt: new Date(), revokeReason: "Access policy changed to invitation-only" } });
