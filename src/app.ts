@@ -9,6 +9,7 @@ import { organizersRouter } from "./modules/organizers/organizers.routes.js";
 import { eventsRouter } from "./modules/events/events.routes.js";
 import { eventAccessRouter } from "./modules/event-access/event-access.routes.js";
 import { ticketingRouter } from "./modules/ticketing/ticketing.routes.js";
+import { vybeProviderRouter } from "./modules/vybe-provider/vybe-provider.routes.js";
 
 export interface AppDependencies {
   databasePing?: () => Promise<void>;
@@ -31,6 +32,7 @@ export function createApp(dependencies: AppDependencies = {}): Express {
   app.use(prefix, eventsRouter);
   app.use(prefix, eventAccessRouter);
   app.use(prefix, ticketingRouter);
+  app.use(prefix, vybeProviderRouter);
 
   app.get(`${prefix}/health/ready`, async (_req, res) => {
     await databasePing();
