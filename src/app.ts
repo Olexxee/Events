@@ -7,6 +7,7 @@ import { requestContext } from "./shared/middleware/request-context.js";
 import { identityRouter } from "./modules/identity/identity.routes.js";
 import { organizersRouter } from "./modules/organizers/organizers.routes.js";
 import { eventsRouter } from "./modules/events/events.routes.js";
+import { eventAccessRouter } from "./modules/event-access/event-access.routes.js";
 
 export interface AppDependencies {
   databasePing?: () => Promise<void>;
@@ -27,6 +28,7 @@ export function createApp(dependencies: AppDependencies = {}): Express {
   app.use(prefix, identityRouter);
   app.use(prefix, organizersRouter);
   app.use(prefix, eventsRouter);
+  app.use(prefix, eventAccessRouter);
 
   app.get(`${prefix}/health/ready`, async (_req, res) => {
     await databasePing();

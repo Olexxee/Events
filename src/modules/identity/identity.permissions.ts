@@ -5,7 +5,8 @@ const ROLE_PERMISSIONS: Record<PlatformRole, readonly string[]> = {
   PLATFORM_ADMIN: [
     "platform:admin:read",
     "platform:moderation:manage",
-    "platform:organizers:review"
+    "platform:organizers:review",
+    "platform:events:access:intervene"
   ],
   FINANCE_ADMIN: ["finance:read", "finance:reconcile"],
   SUPER_ADMIN: [
@@ -16,7 +17,8 @@ const ROLE_PERMISSIONS: Record<PlatformRole, readonly string[]> = {
     "finance:read",
     "finance:reconcile",
     "platform:configuration:manage",
-    "platform:roles:manage"
+    "platform:roles:manage",
+    "platform:events:access:intervene"
   ]
 };
 

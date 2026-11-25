@@ -1,0 +1,12 @@
+import * as db from "./event-access.db.js";
+export const submitRequest = db.submitRequest;
+export const myAccess = db.myAccess;
+export const withdrawRequest = db.withdrawRequest;
+export const listRequests = db.listRequests;
+export const decideRequest = db.decideRequest;
+export const issueInvitation = db.issueInvitation;
+export const respondToInvitation = db.respondToInvitation;
+export const revokeGrant = db.revokeGrant;
+export const setPlatformHold = db.setPlatformHold;
+export const revokeInvitation = db.revokeInvitation;
+export const revokeGrantByPlatform = db.revokeGrantByPlatform;
