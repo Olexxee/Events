@@ -213,6 +213,7 @@ enum VybeEvidenceStatus {
   ACCEPTED
   REJECTED
   EXPIRED
+  SUPERSEDED
 
   @@map("vybe_evidence_status")
 }
@@ -355,6 +356,7 @@ model Organization {
   eventAccessRequests EventAccessRequest[]
   eventAccessGrants EventAccessGrant[]
   vybeProviderProfile VybeProviderProfile?
+  vybeProviderApplications VybeProviderApplication[]
 
   @@index([status, createdAt])
   @@map("organizations")
