@@ -20,11 +20,33 @@ import {
 
 export const identityRouter = Router();
 
-identityRouter.post("/auth/register", validateRequest(registerSchema), registerController);
-identityRouter.post("/auth/login", validateRequest(loginSchema), loginController);
-identityRouter.post("/auth/refresh", validateRequest(refreshSchema), refreshController);
-identityRouter.post("/auth/logout", authenticateRequest, requireAuthenticated, logoutController);
-identityRouter.get("/auth/me", authenticateRequest, requireAuthenticated, currentUserController);
+identityRouter.post(
+  "/auth/register",
+  validateRequest(registerSchema),
+  registerController
+);
+identityRouter.post(
+  "/auth/login",
+  validateRequest(loginSchema),
+  loginController
+);
+identityRouter.post(
+  "/auth/refresh",
+  validateRequest(refreshSchema),
+  refreshController
+);
+identityRouter.post(
+  "/auth/logout",
+  authenticateRequest,
+  requireAuthenticated,
+  logoutController
+);
+identityRouter.get(
+  "/auth/me",
+  authenticateRequest,
+  requireAuthenticated,
+  currentUserController
+);
 
 identityRouter.post(
   "/organizations",
