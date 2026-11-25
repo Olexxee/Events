@@ -36,7 +36,8 @@ CREATE TYPE "vybe_evidence_status" AS ENUM (
   'PENDING',
   'ACCEPTED',
   'REJECTED',
-  'EXPIRED'
+  'EXPIRED',
+  'SUPERSEDED'
 );
 
 CREATE TABLE "vybe_provider_profiles" (
