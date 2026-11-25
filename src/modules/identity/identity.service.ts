@@ -1,6 +1,7 @@
 import { AppError } from "../../shared/errors/app-error.js";
 import {
   createAccount,
+  createOrganizationForUser,
   createSession,
   digestToken,
   findCredentialByEmail,
