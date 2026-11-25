@@ -5,20 +5,20 @@
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
 > **Implementation status:** Shared foundation and Identity & Access are merged (PRs #1 and #2). The lightweight organizer application workflow is merged in [PR #5](https://github.com/Olexxee/Events/pull/5), and the Event marketplace design gate is merged in [PR #6](https://github.com/Olexxee/Events/pull/6). The Event core is implemented in [PR #7](https://github.com/Olexxee/Events/pull/7), and PostgreSQL migration/integration verification is merged in [PR #8](https://github.com/Olexxee/Events/pull/8). The Event Access design gate and implementation are merged in [PR #10](https://github.com/Olexxee/Events/pull/10). Ticketing & Admission design defaults are approved and the first catalog/inventory-holds implementation slice is in [PR #12](https://github.com/Olexxee/Events/pull/12).
 
-The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Hospitality, Connect, and other domain modules.
+The initial backend stack is Node.js 22, TypeScript (strict mode, ESM), Express 5, PostgreSQL, Prisma 6, Zod, and Vitest. The API namespace is /api/v1. The foundation is being implemented before Events, Vybe, Connect, and other domain modules.
 
 This document records decisions made during product discovery. It distinguishes confirmed decisions from recommendations and unresolved questions so implementation does not accidentally turn assumptions into business rules.
 
 ## 1. Product identity and vision
 
-**Product identity:** Events is an integrated event ecosystem connecting organizers, attendees, hospitality providers, and communities through one coordinated platform.
+**Product identity:** Events is an integrated event ecosystem connecting organizers, attendees, experience providers, and communities through one coordinated platform. **Vybe** is the customer-facing brand for the platform's experiences and booking marketplace.
 
 **Product purpose:** Build infrastructure that connects the event industry by coordinating the relationships, services, and transactions involved in discovering, organizing, attending, and participating in events.
 
 The ecosystem has three interconnected pillars:
 
 - **Events:** Event creation, publishing, discovery, ticketing, admission, attendee management, and organizer operations.
-- **Hospitality:** Accommodation, drinks, VIP experiences, tables, lounges, and other reservable event-related services.
+- **Vybe:** Accommodation, dining, drinks, VIP experiences, tables, lounges, and other bookable experiences and services.
 - **Connect:** Event-scoped, opt-in participant discovery, mutual connections, and communication around shared event participation.
 
 These are connected product capabilities, not three unrelated applications. They should share appropriate identity, organization relationships, commerce infrastructure, and platform governance while retaining clear domain ownership.
@@ -332,7 +332,7 @@ The accommodation confirmation flow depends on inventory reliability. Where inve
 
 Accommodation commission/fee treatment, supplier settlement terms, and the exact division of refund liability remain open.
 
-## 10. Hospitality and drinks
+## 10. Vybe catalogue: hospitality, dining and drinks
 
 Organizers may provide hospitality themselves or use approved partners.
 
@@ -444,7 +444,7 @@ Before launch, obtain Nigerian legal and compliance advice on the actual operati
 - Refund requests and event-change workflows
 - Payout/settlement visibility
 
-### Hospitality partner workspace
+### Vybe provider workspace
 
 - Partner profile and approval
 - Assigned inventory or fulfilment orders
@@ -539,9 +539,9 @@ Potential domains:
 3. **Organizer access:** lightweight application schema, migration, submission/status endpoints, admin review, audit events, and permission boundaries implemented and merged in [PR #5](https://github.com/Olexxee/Events/pull/5). Publishing enforcement, applicant notifications, organizer terms, payout verification, and hospitality approval remain separate follow-up work.
 4. **Event marketplace:** [design gate](docs/EVENT_MARKETPLACE_DESIGN.md) approved and Event core implemented in [PR #7](https://github.com/Olexxee/Events/pull/7). PostgreSQL migration execution and five database-backed Event integration tests are merged in [PR #8](https://github.com/Olexxee/Events/pull/8). Ticketing and downstream commerce remain excluded.
 5. **Event Access:** [design gate](docs/EVENT_ACCESS_DESIGN.md) approved and implementation merged in [PR #10](https://github.com/Olexxee/Events/pull/10). Invitation, request, grant, revocation, platform holds, audit/outbox, and PostgreSQL integration coverage are implemented. Ticketing and Connect consumers remain follow-up integrations.
-6. **Ticketing & Admission:** [design gate](docs/TICKETING_ADMISSION_DESIGN.md) approved. The first implementation slice (ticket types, immutable price/benefit versions, NGN catalog, atomic multi-type inventory holds, expiry, and PostgreSQL concurrency tests) is implemented and awaiting final CI verification in [PR #12](https://github.com/Olexxee/Events/pull/12). Ticket issuance, Commerce/Payments integration, transfers, QR admission, entitlements, and refund consequences remain follow-up slices.
-7. **Commerce and Payments:** checkout/order orchestration, payment-provider verification, refunds execution, ledger, and settlement are separate design/implementation gates.
-8. **Hospitality:** drink catalogue, entitlements, redemption, accommodation inventory and reservations, partner workspace.
+6. **Ticketing & Admission:** [design gate](docs/TICKETING_ADMISSION_DESIGN.md) approved. The first implementation slice (ticket types, immutable price/benefit versions, NGN catalog, atomic multi-type inventory holds, and expiry) is merged in [PR #12](https://github.com/Olexxee/Events/pull/12). Ticket issuance, transfers, QR admission, entitlements, and refund consequences remain follow-up slices.
+7. **Vybe design and implementation:** the next product-design priority. Define the complete experiences marketplace, inventory models, reservations, provider operations, fulfilment, cancellation/refund boundaries, and integration contracts before schema or code changes.
+8. **Independent Payments platform:** design and implement Payments as a reusable platform capability with provider adapters, payment intents/attempts, verification, webhooks, refunds, and stable contracts. Events, Ticketing, Vybe, and future modules integrate through those contracts; they do not own payment execution or payment-provider logic. Finance/ledger/settlement remains a separately governed financial domain.
 9. **Connect:** opt-in event-specific profiles, mutual introductions, blocking, reporting, and moderation.
 10. **Hardening and launch:** security, privacy, compliance review, payment-provider approval, operational testing, observability, and launch readiness.
 
@@ -621,5 +621,7 @@ A release should not be considered production-ready unless:
 - Privacy, safety, legal, and payment-provider reviews are completed for the actual launch model.
 
 ---
+
+**Naming decision:** Vybe is the approved customer-facing brand for experiences and bookings. Hospitality remains a descriptive/internal domain term where useful; it is not the product brand. The next gate is a complete Vybe design, not implementation.
 
 **Document status:** Initial product blueprint. Confirmed decisions are recorded in Section 2. Recommendations and unresolved questions are explicitly marked throughout. Update this document as business decisions are made; do not silently convert proposals into approved requirements.
