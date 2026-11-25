@@ -7,11 +7,11 @@ import {
   submitRequestController, myAccessController, withdrawRequestController,
   listRequestsController, decideRequestController, issueInvitationController,
   invitationAcceptController, invitationDeclineController, revokeGrantController,
-  placeHoldController, releaseHoldController
+  placeHoldController, releaseHoldController, revokeInvitationController, platformRevokeGrantController
 } from "./event-access.controller.js";
 import {
   eventIdParams, organizationEventParams, requestCreate, requestIdParams, decisionSchema, invitationSchema,
-  invitationTokenSchema, revokeGrantSchema, holdSchema
+  invitationTokenSchema, revokeGrantSchema, holdSchema, invitationRevokeSchema, platformGrantRevokeSchema
 } from "./event-access.validators.js";
 
 export const eventAccessRouter = Router();
@@ -31,5 +31,7 @@ eventAccessRouter.post("/organizations/:organizationId/events/:eventId/invitatio
 eventAccessRouter.post("/event-invitations/:token/accept", authenticateRequest, requireAuthenticated, validateRequest(invitationTokenSchema), invitationAcceptController);
 eventAccessRouter.post("/event-invitations/:token/decline", authenticateRequest, requireAuthenticated, validateRequest(invitationTokenSchema), invitationDeclineController);
 eventAccessRouter.post("/organizations/:organizationId/events/:eventId/access-grants/:grantId/revoke", authenticateRequest, requireAuthenticated, validateRequest(revokeGrantSchema), revokeGrantController);
+eventAccessRouter.post("/organizations/:organizationId/events/:eventId/invitations/:invitationId/revoke", authenticateRequest, requireAuthenticated, validateRequest(invitationRevokeSchema), revokeInvitationController);
 eventAccessRouter.post("/platform/events/:eventId/access-hold", authenticateRequest, requireAuthenticated, requirePlatformIntervention, validateRequest(holdSchema), placeHoldController);
 eventAccessRouter.delete("/platform/events/:eventId/access-hold", authenticateRequest, requireAuthenticated, requirePlatformIntervention, validateRequest(holdSchema), releaseHoldController);
+eventAccessRouter.post("/platform/events/:eventId/access-grants/:grantId/revoke", authenticateRequest, requireAuthenticated, requirePlatformIntervention, validateRequest(platformGrantRevokeSchema), platformRevokeGrantController);
