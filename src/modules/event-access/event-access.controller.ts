@@ -1,62 +1,59 @@
-import type { RequestHandler } from "express";
+import type { RequestHandler, Response } from "express";
 import { AppError } from "../../shared/errors/app-error.js";
 import { getValidatedRequest } from "../../shared/middleware/validate-request.js";
 import { successResponse } from "../../shared/responses/success-response.js";
 import * as service from "./event-access.service.js";
-const actor = (req: Parameters<RequestHandler>[0]) => {
+
+function actor(req: Parameters<RequestHandler>[0]) {
   if (!req.auth) throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
   return req.auth.subjectId;
-};
-const run = (fn: (req: Parameters<RequestHandler>[0]) => Promise<unknown>): RequestHandler => async (req, res, next) => {
-  try { return successResponse(res, await fn(req)); } catch (error) { return next(error); }
-};
-export const submitRequestController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { eventId: string }; body: { message?: string } }>(req.res!).params;
-  const b = getValidatedRequest<{ body: { message?: string } }>(req.res!).body;
-  return { request: await service.submitRequest(p.eventId, actor(req), b.message) };
+}
+function run(fn: (req: Parameters<RequestHandler>[0], res: Response) => Promise<unknown>): RequestHandler {
+  return async (req, res, next) => {
+    try { return successResponse(res, await fn(req, res)); } catch (error) { return next(error); }
+  };
+}
+export const submitRequestController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { eventId: string }; body: { message?: string } }>(res);
+  return { request: await service.submitRequest(params.eventId, actor(req), body.message) };
 });
-export const myAccessController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { eventId: string } }>(req.res!).params;
-  return { access: await service.myAccess(p.eventId, actor(req)) };
+export const myAccessController = run(async (req, res) => {
+  const { params } = getValidatedRequest<{ params: { eventId: string } }>(res);
+  return { access: await service.myAccess(params.eventId, actor(req)) };
 });
-export const withdrawRequestController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { requestId: string } }>(req.res!).params;
-  return { request: await service.withdrawRequest(p.requestId, actor(req)) };
+export const withdrawRequestController = run(async (req, res) => {
+  const { params } = getValidatedRequest<{ params: { requestId: string } }>(res);
+  return { request: await service.withdrawRequest(params.requestId, actor(req)) };
 });
-export const listRequestsController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { organizationId: string; eventId: string } }>(req.res!).params;
-  return { requests: await service.listRequests(p.eventId, p.organizationId, actor(req)) };
+export const listRequestsController = run(async (req, res) => {
+  const { params } = getValidatedRequest<{ params: { organizationId: string; eventId: string } }>(res);
+  return { requests: await service.listRequests(params.eventId, params.organizationId, actor(req)) };
 });
-export const decideRequestController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { organizationId: string; eventId: string; requestId: string }; body: { decision: "APPROVED" | "REJECTED"; reason: string } }>(req.res!).params;
-  const b = getValidatedRequest<{ body: { decision: "APPROVED" | "REJECTED"; reason: string } }>(req.res!).body;
-  return { decision: await service.decideRequest({ requestId: p.requestId, eventId: p.eventId, organizationId: p.organizationId, actorId: actor(req), ...b }) };
+export const decideRequestController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { organizationId: string; eventId: string; requestId: string }; body: { decision: "APPROVED" | "REJECTED"; reason: string } }>(res);
+  return { decision: await service.decideRequest({ requestId: params.requestId, eventId: params.eventId, organizationId: params.organizationId, actorId: actor(req), ...body }) };
 });
-export const issueInvitationController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { organizationId: string; eventId: string }; body: { recipientEmail: string; expiresInDays?: number } }>(req.res!).params;
-  const b = getValidatedRequest<{ body: { recipientEmail: string; expiresInDays?: number } }>(req.res!).body;
-  return await service.issueInvitation({ eventId: p.eventId, organizationId: p.organizationId, actorId: actor(req), ...b });
+export const issueInvitationController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { organizationId: string; eventId: string }; body: { recipientEmail: string; expiresInDays?: number } }>(res);
+  return await service.issueInvitation({ eventId: params.eventId, organizationId: params.organizationId, actorId: actor(req), ...body });
 });
-export const invitationAcceptController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { token: string } }>(req.res!).params;
-  return { invitation: await service.respondToInvitation(p.token, actor(req), "ACCEPTED") };
+export const invitationAcceptController = run(async (req, res) => {
+  const { params } = getValidatedRequest<{ params: { token: string } }>(res);
+  return { invitation: await service.respondToInvitation(params.token, actor(req), "ACCEPTED") };
 });
-export const invitationDeclineController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { token: string } }>(req.res!).params;
-  return { invitation: await service.respondToInvitation(p.token, actor(req), "DECLINED") };
+export const invitationDeclineController = run(async (req, res) => {
+  const { params } = getValidatedRequest<{ params: { token: string } }>(res);
+  return { invitation: await service.respondToInvitation(params.token, actor(req), "DECLINED") };
 });
-export const revokeGrantController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { organizationId: string; eventId: string; grantId: string }; body: { reason: string } }>(req.res!).params;
-  const b = getValidatedRequest<{ body: { reason: string } }>(req.res!).body;
-  return { grant: await service.revokeGrant({ ...p, actorId: actor(req), ...b }) };
+export const revokeGrantController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { organizationId: string; eventId: string; grantId: string }; body: { reason: string } }>(res);
+  return { grant: await service.revokeGrant({ grantId: params.grantId, eventId: params.eventId, organizationId: params.organizationId, actorId: actor(req), reason: body.reason }) };
 });
-export const placeHoldController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { eventId: string }; body: { reason: string } }>(req.res!).params;
-  const b = getValidatedRequest<{ body: { reason: string } }>(req.res!).body;
-  return { hold: await service.setPlatformHold({ eventId: p.eventId, actorId: actor(req), reason: b.reason, release: false }) };
+export const placeHoldController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { eventId: string }; body: { reason: string } }>(res);
+  return { hold: await service.setPlatformHold({ eventId: params.eventId, actorId: actor(req), reason: body.reason, release: false }) };
 });
-export const releaseHoldController = run(async (req) => {
-  const p = getValidatedRequest<{ params: { eventId: string } }>(req.res!).params;
-  const b = getValidatedRequest<{ body: { reason: string } }>(req.res!).body;
-  return { hold: await service.setPlatformHold({ eventId: p.eventId, actorId: actor(req), reason: b.reason, release: true }) };
+export const releaseHoldController = run(async (req, res) => {
+  const { params, body } = getValidatedRequest<{ params: { eventId: string }; body: { reason: string } }>(res);
+  return { hold: await service.setPlatformHold({ eventId: params.eventId, actorId: actor(req), reason: body.reason, release: true }) };
 });
