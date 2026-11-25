@@ -301,6 +301,23 @@ export async function reviewProviderApplication(input: {
       );
     }
 
+    const reviewerMembership = await tx.organizationMembership.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: application.organizationId,
+          userId: input.reviewerUserId
+        }
+      },
+      select: { id: true }
+    });
+    if (reviewerMembership) {
+      throw new AppError(
+        "VYBE_PROVIDER_CONFLICTED_REVIEWER",
+        "Organization members and former members cannot review this provider application",
+        403
+      );
+    }
+
     if (!OPEN_APPLICATION_STATUSES.includes(application.status)) {
       throw new AppError(
         "VYBE_PROVIDER_APPLICATION_NOT_REVIEWABLE",
@@ -635,6 +652,23 @@ export async function changeProviderApprovalStatus(input: {
       throw new AppError(
         "VYBE_PROVIDER_SELF_REVIEW_FORBIDDEN",
         "Applicants cannot change their own provider approval",
+        403
+      );
+    }
+
+    const reviewerMembership = await tx.organizationMembership.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: approval.application.organizationId,
+          userId: input.reviewerUserId
+        }
+      },
+      select: { id: true }
+    });
+    if (reviewerMembership) {
+      throw new AppError(
+        "VYBE_PROVIDER_CONFLICTED_REVIEWER",
+        "Organization members and former members cannot change provider approval",
         403
       );
     }
