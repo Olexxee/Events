@@ -90,7 +90,9 @@ export const reviewVybeProviderApplicationController: RequestHandler = async (
     if (!req.auth) {
       throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
     }
-    const { id } = getValidatedRequest<{ params: { id: string } }>(res).params;
+    const { id } = getValidatedRequest<{
+      params: { id: string };
+    }>(res).params;
     const input = getValidatedRequest<{
       body: {
         decision:
