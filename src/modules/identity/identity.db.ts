@@ -57,7 +57,14 @@ export async function createAccount(input: {
   passwordHash: string;
   displayName?: string;
   metadata: Omit<NewSessionInput, "userId">;
-}): Promise<{ user: { id: string; email: string; profile: { displayName: string | null } | null }; tokens: CreatedSession }> {
+}): Promise<{
+  user: {
+    id: string;
+    email: string;
+    profile: { displayName: string | null } | null;
+  };
+  tokens: CreatedSession;
+}> {
   const prisma = getPrismaClient();
   const now = new Date();
 
@@ -79,10 +86,7 @@ export async function createAccount(input: {
       }
     });
 
-    const session = sessionData(
-      { userId: user.id, ...input.metadata },
-      now
-    );
+    const session = sessionData({ userId: user.id, ...input.metadata }, now);
     await tx.session.create({ data: session.data });
     await tx.auditLog.create({
       data: {
@@ -151,7 +155,10 @@ export async function touchSession(sessionId: string, at: Date): Promise<void> {
     where: {
       id: sessionId,
       revokedAt: null,
-      OR: [{ lastUsedAt: null }, { lastUsedAt: { lt: new Date(at.getTime() - 5 * 60 * 1000) } }]
+      OR: [
+        { lastUsedAt: null },
+        { lastUsedAt: { lt: new Date(at.getTime() - 5 * 60 * 1000) } }
+      ]
     },
     data: { lastUsedAt: at }
   });
@@ -195,10 +202,7 @@ export async function rotateRefreshSession(
       return { status: "invalid" as const };
     }
 
-    if (
-      previous.refreshExpiresAt <= now ||
-      previous.user.status !== "ACTIVE"
-    ) {
+    if (previous.refreshExpiresAt <= now || previous.user.status !== "ACTIVE") {
       await tx.session.updateMany({
         where: { familyId: previous.familyId, revokedAt: null },
         data: { revokedAt: now, revokeReason: "expired_or_inactive_account" }
@@ -281,10 +285,7 @@ export async function revokeSessionFamily(
   });
 }
 
-export async function createOrganizationForUser(
-  userId: string,
-  name: string
-) {
+export async function createOrganizationForUser(userId: string, name: string) {
   const prisma = getPrismaClient();
   const slugBase =
     name
