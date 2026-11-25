@@ -1,6 +1,6 @@
 # Event Marketplace — Design Gate
 
-**Status:** Proposed MVP policy; review before schema implementation
+**Status:** Approved MVP policy; Event core implementation in progress
 **Owner:** Events
 **Depends on:** Identity & Access and approved organizer applications
 **Adjacent domains:** Event Access, Ticketing & Admission, Hospitality, Finance
@@ -126,6 +126,6 @@ Event Access remains a separate domain for invitations, access requests, grants,
 
 Required tests include unauthorized organization access, unapproved organizer publishing, moderation enforcement, public/private venue serialization, invalid schedules/timezones, revision history, and concurrent publish/restrict behaviour.
 
-## 10. Decisions to confirm
+## 10. Decisions confirmed
 
-The recommended defaults above should be confirmed before Prisma schema and API implementation. The most consequential product choice is the category taxonomy; it should be extensible and should not conflate category with public/private/premium presentation.
+The product owner approved the recommended defaults in this document. Categories use a managed, extensible taxonomy with initial seeded values; category, visibility, access policy, delivery format, and experience positioning remain separate fields. The implementation must preserve the boundaries in this document.
