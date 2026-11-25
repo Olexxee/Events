@@ -1,6 +1,6 @@
 # Organizer Role Applications
 
-**Status:** Initial application workflow implemented in PR (pending CI and merge)
+**Status:** Implemented and merged in [PR #5](https://github.com/Olexxee/Events/pull/5)
 **Owner:** Organizations / Trust
 **Scope:** Permission for an organization to publish events. Hospitality-provider approval and payout verification remain separate.
 
