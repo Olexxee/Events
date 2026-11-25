@@ -68,6 +68,21 @@ export async function submitProviderApplication(input: {
         );
       }
 
+      const providerProfile = await tx.vybeProviderProfile.findUnique({
+        where: { organizationId: input.organizationId },
+        select: { id: true }
+      });
+      if (providerProfile) {
+        await tx.vybeProviderApproval.updateMany({
+          where: {
+            providerProfileId: providerProfile.id,
+            category: input.category,
+            status: "ACTIVE",
+            expiresAt: { lte: new Date() }
+          },
+          data: { status: "EXPIRED" }
+        });
+      }
       const existingApproval = await tx.vybeProviderApproval.findFirst({
         where: {
           providerProfile: { organizationId: input.organizationId },
@@ -289,8 +304,15 @@ export async function reviewProviderApplication(input: {
     }
 
     if (input.decision === "APPROVED") {
+      if (input.expiresAt && new Date(input.expiresAt).getTime() <= Date.now()) {
+        throw new AppError(
+          "VYBE_PROVIDER_APPROVAL_EXPIRY_INVALID",
+          "Approval expiry must be in the future",
+          400
+        );
+      }
       const evidence = await tx.vybeProviderEvidence.findMany({
-        where: { applicationId: application.id },
+        where: { applicationId: application.id, status: { not: "SUPERSEDED" } },
         select: { status: true }
       });
       if (evidence.some((item) => item.status !== "ACCEPTED")) {
@@ -305,39 +327,43 @@ export async function reviewProviderApplication(input: {
         create: { organizationId: application.organizationId },
         update: {}
       });
+      await tx.vybeProviderApproval.updateMany({
+        where: {
+          providerProfileId: profile.id,
+          category: application.category,
+          status: "ACTIVE",
+          expiresAt: { lte: new Date() }
+        },
+        data: { status: "EXPIRED" }
+      });
+      const activeApproval = await tx.vybeProviderApproval.findFirst({
+        where: {
+          providerProfileId: profile.id,
+          category: application.category,
+          status: "ACTIVE"
+        },
+        select: { id: true }
+      });
+      if (activeApproval) {
+        throw new AppError(
+          "VYBE_PROVIDER_CATEGORY_ALREADY_APPROVED",
+          "This organization already has an active approval for this category",
+          409
+        );
+      }
       const locations = application.locations.map(({ city, state, country }) => ({
         city,
         state,
         country
       }));
-      await tx.vybeProviderApproval.upsert({
-        where: {
-          providerProfileId_category: {
-            providerProfileId: profile.id,
-            category: application.category
-          }
-        },
-        create: {
+      await tx.vybeProviderApproval.create({
+        data: {
           providerProfileId: profile.id,
           category: application.category,
           locations: locations as Prisma.InputJsonValue,
           conditions: (input.conditions ?? []) as Prisma.InputJsonValue,
           approvedByUserId: input.reviewerUserId,
           ...(input.expiresAt ? { expiresAt: new Date(input.expiresAt) } : {})
-        },
-        update: {
-          status: "ACTIVE",
-          locations: locations as Prisma.InputJsonValue,
-          conditions: (input.conditions ?? []) as Prisma.InputJsonValue,
-          approvedByUserId: input.reviewerUserId,
-          approvedAt: new Date(),
-          expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-          suspendedAt: null,
-          suspendedByUserId: null,
-          suspensionReason: null,
-          revokedAt: null,
-          revokedByUserId: null,
-          revocationReason: null
         }
       });
     }
