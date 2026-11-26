@@ -22,17 +22,19 @@ describe.skipIf(!enabled)(
     it(
       "rejects overlapping active holds for one exclusive resource and permits adjacent intervals",
       async () => {
-      const suffix = crypto.randomUUID();
-      const user = await prisma.user.create({
-        data: { email: `vybe-time-slot-${suffix}@events.test` }
-      });
-      const organization = await prisma.organization.create({
-        data: {
-          name: "Vybe Time Slot Schema Provider",
-          slug: `vybe-time-slot-${suffix}`,
-          createdById: user.id
+          const suffix = crypto.randomUUID();
+          const user = await prisma.user.create({
+            data: { email: `vybe-time-slot-${suffix}@events.test` }
         }
-      });
+      );
+        const organization = await prisma.organization.create({
+          data: {
+            name: "Vybe Time Slot Schema Provider",
+            slug: `vybe-time-slot-${suffix}`,
+            createdById: user.id
+          }
+      }
+    );
       const profile = await prisma.vybeProviderProfile.create({
         data: { organizationId: organization.id }
       });
