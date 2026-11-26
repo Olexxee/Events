@@ -151,3 +151,42 @@ export type AdjustAccommodationAllocationNightBody = z.infer<
 export type ReleaseAccommodationAllocationBody = z.infer<
   typeof releaseAccommodationAllocationSchema
 >["body"];
+
+export const getAccommodationAvailabilitySchema = z.object({
+  params: z.object({ roomCategoryId: uuid }),
+  query: z
+    .object({
+      checkInDate: dateOnly,
+      checkOutDate: dateOnly,
+      roomQuantity: z.coerce.number().int().min(1).max(20)
+    })
+    .strict(),
+  body: z.object({})
+});
+
+export const createAccommodationHoldSchema = z.object({
+  params: z.object({}),
+  query: z.object({}),
+  body: z
+    .object({
+      roomCategoryId: uuid,
+      checkInDate: dateOnly,
+      checkOutDate: dateOnly,
+      roomQuantity: z.number().int().min(1).max(20),
+      idempotencyKey: z.string().trim().min(8).max(128)
+    })
+    .strict()
+});
+
+export const accommodationHoldIdSchema = z.object({
+  params: z.object({ holdId: uuid }),
+  query: z.object({}),
+  body: z.object({})
+});
+
+export type GetAccommodationAvailabilityQuery = z.infer<
+  typeof getAccommodationAvailabilitySchema
+>["query"];
+export type CreateAccommodationHoldBody = z.infer<
+  typeof createAccommodationHoldSchema
+>["body"];

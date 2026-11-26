@@ -6,6 +6,7 @@ import { AppError } from "../../shared/errors/app-error.js";
 import { enqueueOutboxMessage } from "../../shared/outbox/outbox.repository.js";
 import { assertActiveVerifiedAccount } from "../identity/identity.contracts.js";
 import { assertOrganizationAuthority } from "../organizations/organizations.contracts.js";
+import { expireAccommodationHoldsInTransaction } from "./vybe-accommodation.holds.db.js";
 
 const PROVIDER_TERMS_VERSION = "vybe-provider-v1";
 
@@ -854,6 +855,7 @@ export async function adjustAccommodationAllocationNight(input: {
         WHERE id = ${initial.id}::uuid
         FOR UPDATE`
     );
+    await expireAccommodationHoldsInTransaction(tx, initial.roomCategoryId);
     const current = await tx.vybeAccommodationAllocationNight.findUniqueOrThrow(
       {
         where: { id: initial.id }
@@ -982,6 +984,7 @@ export async function releaseAccommodationAllocation(input: {
         WHERE id = ${allocation.id}::uuid
         FOR UPDATE`
     );
+    await expireAccommodationHoldsInTransaction(tx, allocation.roomCategoryId);
     const updated = await tx.vybeAccommodationAllocation.update({
       where: { id: allocation.id },
       data: { status: "RELEASED" }

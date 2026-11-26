@@ -1,4 +1,10 @@
 import {
+  createAccommodationHold as createHold,
+  getAccommodationAvailability as getAvailability,
+  getMyAccommodationHold,
+  releaseMyAccommodationHold
+} from "./vybe-accommodation.holds.db.js";
+import {
   adjustAccommodationAllocationNight as adjustAllocationNight,
   createAccommodationAllocation as createAllocation,
   createAccommodationProperty as createProperty,
@@ -16,3 +22,8 @@ export const updateVybeAccommodationPhysicalCapacity =
 export const createVybeAccommodationAllocation = createAllocation;
 export const adjustVybeAccommodationAllocationNight = adjustAllocationNight;
 export const releaseVybeAccommodationAllocation = releaseAllocation;
+
+export const getVybeAccommodationAvailability = getAvailability;
+export const createVybeAccommodationHold = createHold;
+export const getMyVybeAccommodationHold = getMyAccommodationHold;
+export const releaseMyVybeAccommodationHold = releaseMyAccommodationHold;
