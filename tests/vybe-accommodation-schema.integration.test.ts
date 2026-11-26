@@ -264,21 +264,51 @@ describe.skipIf(!enabled)(
         })
       ).rejects.toThrow();
 
-      await prisma.vybeAccommodationRoomCategory.update({
-        where: { id: fixture.roomCategory.id },
-        data: { physicalUnitCount: 11 }
-      }).then(() => {
-        throw new Error("Expected physical capacity reduction to be rejected");
-      }).catch((error: unknown) => {
-        if (error instanceof Error && error.message === "Expected physical capacity reduction to be rejected") {
-          throw error;
-        }
-      });
+      await expect(
+        prisma.vybeAccommodationRoomCategory.update({
+          where: { id: fixture.roomCategory.id },
+          data: { physicalUnitCount: 11 }
+        })
+      ).rejects.toThrow();
 
       await prisma.vybeAccommodationRoomCategory.update({
         where: { id: fixture.roomCategory.id },
         data: { physicalUnitCount: 12 }
       });
+    });
+
+    it("serializes concurrent allocation lots against the category physical ceiling", async () => {
+      const fixture = await createFixture();
+      const allocations = await Promise.all([1, 2].map((index) =>
+        prisma.vybeAccommodationAllocation.create({
+          data: {
+            roomCategoryId: fixture.roomCategory.id,
+            startDate: new Date("2027-06-10T00:00:00.000Z"),
+            endDate: new Date("2027-06-12T00:00:00.000Z"),
+            releaseCutoffAt: new Date("2027-06-01T11:00:00.000Z"),
+            releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
+            releaseCutoffTimezone: "Africa/Lagos",
+            agreementReference: `concurrent-agreement:${index}`,
+            termsVersion: "vybe-provider-v1",
+            evidenceReference: `provider-allocation:concurrent:${index}`,
+            createdByUserId: fixture.user.id
+          }
+        })
+      ));
+
+      const results = await Promise.allSettled(allocations.map((allocation) =>
+        prisma.vybeAccommodationAllocationNight.create({
+          data: {
+            allocationId: allocation.id,
+            roomCategoryId: fixture.roomCategory.id,
+            stayDate: new Date("2027-06-10T00:00:00.000Z"),
+            allocatedQuantity: 6
+          }
+        })
+      ));
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
     });
 
     it("rejects allocation when physical room count is unknown", async () => {
