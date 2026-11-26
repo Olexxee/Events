@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   connectDatabase,
   disconnectDatabase,
-  getPrismaClient,
+  getPrismaClient
 } from "../src/infrastructure/database/prisma.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
@@ -135,7 +135,9 @@ describe.skipIf(!enabled)(
       const suffix = crypto.randomUUID();
       const createProvider = async (label: string) => {
         const user = await prisma.user.create({
-          data: { email: `vybe-time-slot-integrity-${label}-${suffix}@events.test` }
+          data: {
+            email: `vybe-time-slot-integrity-${label}-${suffix}@events.test`
+          }
         });
         const organization = await prisma.organization.create({
           data: {
@@ -325,4 +327,3 @@ describe.skipIf(!enabled)(
     });
   }
 );
-
