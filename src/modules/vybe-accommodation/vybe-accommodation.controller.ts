@@ -47,43 +47,39 @@ export const createVybeAccommodationPropertyController: RequestHandler = async (
   }
 };
 
-export const listMyVybeAccommodationPropertiesController: RequestHandler = async (
-  req,
-  res,
-  next
-) => {
-  try {
-    const auth = requireAuth(req);
-    const properties = await listMyVybeAccommodationProperties(auth.subjectId);
-    return successResponse(res, { properties });
-  } catch (error) {
-    return next(error);
-  }
-};
+export const listMyVybeAccommodationPropertiesController: RequestHandler =
+  async (req, res, next) => {
+    try {
+      const auth = requireAuth(req);
+      const properties = await listMyVybeAccommodationProperties(
+        auth.subjectId
+      );
+      return successResponse(res, { properties });
+    } catch (error) {
+      return next(error);
+    }
+  };
 
-export const createVybeAccommodationRoomCategoryController: RequestHandler = async (
-  req,
-  res,
-  next
-) => {
-  try {
-    const auth = requireAuth(req);
-    const { propertyId } = getValidatedRequest<{
-      params: { propertyId: string };
-    }>(res).params;
-    const body = getValidatedRequest<{
-      body: CreateAccommodationRoomCategoryBody;
-    }>(res).body;
-    const roomCategory = await createVybeAccommodationRoomCategory({
-      ...body,
-      propertyId,
-      actorUserId: auth.subjectId
-    });
-    return successResponse(res, { roomCategory }, 201);
-  } catch (error) {
-    return next(error);
-  }
-};
+export const createVybeAccommodationRoomCategoryController: RequestHandler =
+  async (req, res, next) => {
+    try {
+      const auth = requireAuth(req);
+      const { propertyId } = getValidatedRequest<{
+        params: { propertyId: string };
+      }>(res).params;
+      const body = getValidatedRequest<{
+        body: CreateAccommodationRoomCategoryBody;
+      }>(res).body;
+      const roomCategory = await createVybeAccommodationRoomCategory({
+        ...body,
+        propertyId,
+        actorUserId: auth.subjectId
+      });
+      return successResponse(res, { roomCategory }, 201);
+    } catch (error) {
+      return next(error);
+    }
+  };
 
 export const updateVybeAccommodationCapacityController: RequestHandler = async (
   req,
@@ -109,74 +105,65 @@ export const updateVybeAccommodationCapacityController: RequestHandler = async (
   }
 };
 
-export const createVybeAccommodationAllocationController: RequestHandler = async (
-  req,
-  res,
-  next
-) => {
-  try {
-    const auth = requireAuth(req);
-    const { roomCategoryId } = getValidatedRequest<{
-      params: { roomCategoryId: string };
-    }>(res).params;
-    const body = getValidatedRequest<{
-      body: CreateAccommodationAllocationBody;
-    }>(res).body;
-    const allocation = await createVybeAccommodationAllocation({
-      ...body,
-      roomCategoryId,
-      actorUserId: auth.subjectId
-    });
-    return successResponse(res, { allocation }, 201);
-  } catch (error) {
-    return next(error);
-  }
-};
+export const createVybeAccommodationAllocationController: RequestHandler =
+  async (req, res, next) => {
+    try {
+      const auth = requireAuth(req);
+      const { roomCategoryId } = getValidatedRequest<{
+        params: { roomCategoryId: string };
+      }>(res).params;
+      const body = getValidatedRequest<{
+        body: CreateAccommodationAllocationBody;
+      }>(res).body;
+      const allocation = await createVybeAccommodationAllocation({
+        ...body,
+        roomCategoryId,
+        actorUserId: auth.subjectId
+      });
+      return successResponse(res, { allocation }, 201);
+    } catch (error) {
+      return next(error);
+    }
+  };
 
-export const adjustVybeAccommodationAllocationNightController: RequestHandler = async (
-  req,
-  res,
-  next
-) => {
-  try {
-    const auth = requireAuth(req);
-    const { allocationNightId } = getValidatedRequest<{
-      params: { allocationNightId: string };
-    }>(res).params;
-    const body = getValidatedRequest<{
-      body: AdjustAccommodationAllocationNightBody;
-    }>(res).body;
-    const result = await adjustVybeAccommodationAllocationNight({
-      ...body,
-      allocationNightId,
-      actorUserId: auth.subjectId
-    });
-    return successResponse(res, result);
-  } catch (error) {
-    return next(error);
-  }
-};
+export const adjustVybeAccommodationAllocationNightController: RequestHandler =
+  async (req, res, next) => {
+    try {
+      const auth = requireAuth(req);
+      const { allocationNightId } = getValidatedRequest<{
+        params: { allocationNightId: string };
+      }>(res).params;
+      const body = getValidatedRequest<{
+        body: AdjustAccommodationAllocationNightBody;
+      }>(res).body;
+      const result = await adjustVybeAccommodationAllocationNight({
+        ...body,
+        allocationNightId,
+        actorUserId: auth.subjectId
+      });
+      return successResponse(res, result);
+    } catch (error) {
+      return next(error);
+    }
+  };
 
-export const releaseVybeAccommodationAllocationController: RequestHandler = async (
-  req,
-  res,
-  next
-) => {
-  try {
-    const auth = requireAuth(req);
-    const { allocationId } = getValidatedRequest<{
-      params: { allocationId: string };
-    }>(res).params;
-    const body = getValidatedRequest<{
-      body: ReleaseAccommodationAllocationBody;
-    }>(res).body;
-    const allocation = await releaseVybeAccommodationAllocation({
-      ...body,
-      allocationId,
-      actorUserId: auth.subjectId
-    });
-    return successResponse(res, { allocation });
-  } catch (error) {
-    return next(error);
-  }
-};
+export const releaseVybeAccommodationAllocationController: RequestHandler =
+  async (req, res, next) => {
+    try {
+      const auth = requireAuth(req);
+      const { allocationId } = getValidatedRequest<{
+        params: { allocationId: string };
+      }>(res).params;
+      const body = getValidatedRequest<{
+        body: ReleaseAccommodationAllocationBody;
+      }>(res).body;
+      const allocation = await releaseVybeAccommodationAllocation({
+        ...body,
+        allocationId,
+        actorUserId: auth.subjectId
+      });
+      return successResponse(res, { allocation });
+    } catch (error) {
+      return next(error);
+    }
+  };
