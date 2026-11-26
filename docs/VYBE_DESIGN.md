@@ -666,3 +666,22 @@ Occurrence timestamps must be full ISO-8601 instants with an explicit UTC offset
 CAPACITY occurrence creation writes its capacity row in the same transaction. EXCLUSIVE occurrence creation requires an active resource group belonging to the same provider and offering, with a validity window covering the full blocked interval; it does not create a capacity row. Resource membership requires same-provider ownership and rejects overlapping validity windows for one physical resource across different groups.
 
 Each creation requires a supply-evidence reference. The reference is retained in the append-only audit metadata and transactional outbox payload; this is a reference to evidence, not a file upload or evidence-storage implementation. No public availability or hold operation is part of Slice B. Slice C and Slice D remain separate.
+
+
+### 20.9 Slice C capacity-hold implementation contract
+
+Slice C implements customer-facing capacity-session availability and short-lived holds only. It does not implement bookings, checkout, payment, or conversion of holds into commitments.
+
+Endpoints:
+
+- `GET /api/v1/vybe/time-slots/:occurrenceId/availability` — advisory capacity snapshot; never a reservation.
+- `POST /api/v1/vybe/time-slots/holds` — authenticated customer creates a capacity hold using occurrence ID, positive quantity, and an idempotency key.
+- `DELETE /api/v1/vybe/time-slots/holds/:holdId` — owner-only release.
+
+Capacity writes serialize on the occurrence row with PostgreSQL `FOR UPDATE`. Inside the same transaction, the service revalidates offering/provider/category/location eligibility, verifies the occurrence is active and CAPACITY mode, synchronously transitions expired capacity holds, sums active unexpired held quantities, checks `committedQuantity + activeHeldQuantity + requestedQuantity <= capacity`, and creates the hold. The occurrence lock is the serialization point; availability reads are advisory and may become stale immediately.
+
+Hold duration reuses the existing category-level Vybe inventory policy: 600 seconds by default, configurable only within the existing 60–1800 second database constraint. Each hold snapshots the occurrence's service and effective blocked intervals. Idempotency is unique per user/key: same key and same occurrence/quantity returns the original active hold; changed payload or a terminal hold returns a conflict. Unique-key races are converted to an explicit idempotency conflict.
+
+Expiry, creation, and release each write audit and outbox records in the same transaction. Expiry is synchronous on the next allocation attempt; background cleanup is not required for capacity correctness. Release locks the occurrence, re-reads the hold, and performs one terminal transition. Only the owner can release. Customer holds do not require provider organization privileges; provider setup permissions remain limited to organization OWNER/ADMIN.
+
+Slice C excludes EXCLUSIVE occurrences, resource selection, booking/order records, Commerce, checkout, Payments, Finance, refunds, fulfilment, and room-night inventory. No category activation is implied.
