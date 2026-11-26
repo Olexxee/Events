@@ -637,3 +637,6 @@ Unused room-category inventory allocated to Vybe may return to the provider's in
 
 
 **Vybe accommodation capacity invariant (VYBE-015):** each room category records a provider-evidenced physical unit count. PostgreSQL enforces that the sum of all active/paused allocation lots for a category and local stay date cannot exceed that count. Unknown physical capacity cannot be allocated, and capacity cannot be reduced below existing allocation totals. See [Section 24 of the Vybe design](docs/VYBE_DESIGN.md#24-category-level-physical-room-capacity-guard-vybe-015). This schema guard is required before accommodation provider supply workflows.
+
+
+**Vybe accommodation provider supply (VYBE-016):** provider-owned property and room-category setup, evidence-backed physical capacity, category/night allocation lots, append-only adjustments, and cutoff-governed allocation release are implemented in Slice B. Supply setup requires active category-scoped accommodation approval and approved location; global category activation remains a separate booking gate. See [Section 25 of the Vybe design](docs/VYBE_DESIGN.md#25-accommodation-provider-supply-management-vybe-016-slice-b).
