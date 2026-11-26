@@ -79,7 +79,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
       actorUserId: ownerId,
       categoryId,
       title: "Integration Test Live Show",
-      slug,
+      slug: `${slug}-${crypto.randomUUID()}`,
       summary: "A live music event used to verify marketplace persistence.",
       description:
         "This event exists only to exercise PostgreSQL-backed event workflows.",
