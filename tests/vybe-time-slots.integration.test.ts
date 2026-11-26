@@ -19,12 +19,7 @@ describe.skipIf(!enabled)(
       await disconnectDatabase();
     });
 
-    const overlappingHoldTestName = [
-      "rejects overlapping active holds for one exclusive resource",
-      "and permits adjacent intervals"
-    ].join(" ");
-
-    it(overlappingHoldTestName, async () => {
+    it("rejects overlapping exclusive holds but permits adjacent intervals", async () => {
       const suffix = crypto.randomUUID();
       const user = await prisma.user.create({
         data: { email: `vybe-time-slot-${suffix}@events.test` }
@@ -126,12 +121,7 @@ describe.skipIf(!enabled)(
       ).toBe(2);
     });
 
-    const integrityTestName = [
-      "rejects cross-provider and cross-offering links",
-      "and enforces hold and capacity modes"
-    ].join(" ");
-
-    it(integrityTestName, async () => {
+    it("enforces provider, offering, hold, membership and capacity integrity", async () => {
       const suffix = crypto.randomUUID();
       const createProvider = async (label: string) => {
         const user = await prisma.user.create({
