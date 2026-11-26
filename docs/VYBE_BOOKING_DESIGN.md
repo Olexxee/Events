@@ -1,12 +1,12 @@
 # Vybe — Booking Lifecycle Design Gate
 
-**Status:** Proposed; product-owner approval required before schema or API implementation  
+**Status:** Product decisions approved; physical schema and migration plan review required before Slice A  
 **Domain owner:** Vybe  
 **Depends on:** Identity & Access, Organizations, Vybe Provider, Catalogue, Quantity Inventory, Time-slot Occurrences and Holds  
 **Integrates with:** Commerce, independent Payments, Finance, Notifications, Operations & Trust  
 **Scope:** Durable booking commitments created from existing Vybe inventory holds
 
-This document proposes the first booking lifecycle. It is deliberately a design gate: it authorizes no Prisma models, migrations, routes, payment execution, refunds, or fulfilment code. The objective is to define what the platform promises to a customer and provider before persisting that promise.
+The product owner approved the decisions in Section 11 on 2026-11-26. This document is a design gate: it authorizes no Prisma models, migrations, routes, payment execution, refunds, or fulfilment code yet. Slice A may begin only after the physical schema and migration plan are reviewed as a separate step.
 
 ## 1. Non-negotiable invariants
 
@@ -160,16 +160,16 @@ Tests must assert database state and inventory totals after concurrency, not onl
 
 Commerce order orchestration, real Payments integration, Finance, refunds execution, payouts, and accommodation room-night booking remain separate design/implementation gates. Do not begin those workstreams as part of this PR.
 
-## 11. Product-owner decisions required
+## 11. Product-owner decisions — approved 2026-11-26
 
-The following are proposals, not approved policy:
+The product owner explicitly approved the following MVP policies:
 
-1. **Launch confirmation:** approve instant confirmation only for the first Vybe booking release; defer provider-approval/manual-confirmation bookings.
-2. **Paid booking confirmation:** require server-verified payment before a paid booking becomes CONFIRMED; do not capture payment on the assumption that a hold will remain valid.
-3. **Hold conversion:** approve atomic conversion of the hold into committed inventory in the same transaction that creates the booking.
-4. **Cancellation:** approve policy-snapshotted cutoffs, with inventory release only when the cancellation decision is accepted; refund eligibility/execution remains a separate financial decision.
-5. **Rescheduling:** approve replacement-first atomic rescheduling; no release of the original booking until replacement inventory is secured.
-6. **MVP scope:** one booking per hold; no partial cancellation or split booking; accommodation room-night bookings remain excluded.
-7. **Provider continuity:** suspension/unpublishing blocks new transactions but does not automatically cancel existing confirmed bookings.
+1. **Launch confirmation:** instant confirmation only for the first Vybe booking release; provider-approval/manual-confirmation bookings are deferred.
+2. **Paid booking confirmation:** server-verified payment is required before a paid booking becomes CONFIRMED. Payment must not be captured on the assumption that a hold will remain valid.
+3. **Hold conversion:** convert the hold into committed inventory atomically in the same database transaction that creates the booking.
+4. **Cancellation:** snapshot the applicable policy and cutoff at booking time; release inventory only when the cancellation decision is accepted. Refund eligibility and execution remain separate financial decisions.
+5. **Rescheduling:** replacement-first atomic rescheduling; do not release the original booking until replacement inventory is secured.
+6. **MVP scope:** one booking per hold; no partial cancellation or split booking; accommodation room-night bookings remain excluded from this booking slice.
+7. **Provider continuity:** provider suspension/unpublishing blocks new transactions but does not automatically cancel existing confirmed bookings.
 
-Approval of this document authorizes Slice A only after the physical schema and migration plan are reviewed. It does not authorize checkout, Payments, Finance, or production payment collection.
+**What this approval authorizes:** proceed to a physical schema and migration design review (pre-Slice A). It does not yet authorize migrations, application schema implementation, routes, checkout, Payments integration, Finance, refunds execution, or production payment collection.
