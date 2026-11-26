@@ -322,18 +322,18 @@ describe.skipIf(!enabled)(
       const allocations = await Promise.all(
         [1, 2].map((index) =>
           prisma.vybeAccommodationAllocation.create({
-          data: {
-            roomCategoryId: fixture.roomCategory.id,
-            startDate: new Date("2027-06-10T00:00:00.000Z"),
-            endDate: new Date("2027-06-12T00:00:00.000Z"),
-            releaseCutoffAt: new Date("2027-06-01T11:00:00.000Z"),
-            releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
-            releaseCutoffTimezone: "Africa/Lagos",
-            agreementReference: `concurrent-agreement:${index}`,
-            termsVersion: "vybe-provider-v1",
-            evidenceReference: `provider-allocation:concurrent:${index}`,
-            createdByUserId: fixture.user.id
-          }
+            data: {
+              roomCategoryId: fixture.roomCategory.id,
+              startDate: new Date("2027-06-10T00:00:00.000Z"),
+              endDate: new Date("2027-06-12T00:00:00.000Z"),
+              releaseCutoffAt: new Date("2027-06-01T11:00:00.000Z"),
+              releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
+              releaseCutoffTimezone: "Africa/Lagos",
+              agreementReference: `concurrent-agreement:${index}`,
+              termsVersion: "vybe-provider-v1",
+              evidenceReference: `provider-allocation:concurrent:${index}`,
+              createdByUserId: fixture.user.id
+            }
           })
         )
       );
@@ -341,18 +341,22 @@ describe.skipIf(!enabled)(
       const results = await Promise.allSettled(
         allocations.map((allocation) =>
           prisma.vybeAccommodationAllocationNight.create({
-          data: {
-            allocationId: allocation.id,
-            roomCategoryId: fixture.roomCategory.id,
-            stayDate: new Date("2027-06-10T00:00:00.000Z"),
-            allocatedQuantity: 6
-          }
+            data: {
+              allocationId: allocation.id,
+              roomCategoryId: fixture.roomCategory.id,
+              stayDate: new Date("2027-06-10T00:00:00.000Z"),
+              allocatedQuantity: 6
+            }
           })
         )
       );
 
-      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-      expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+      expect(
+        results.filter((result) => result.status === "fulfilled")
+      ).toHaveLength(1);
+      expect(
+        results.filter((result) => result.status === "rejected")
+      ).toHaveLength(1);
     });
 
     it("rejects allocation when physical room count is unknown", async () => {
