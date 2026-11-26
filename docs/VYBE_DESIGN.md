@@ -706,3 +706,91 @@ The hold duration reuses the category-level policy (600 seconds by default, 60�
 PostgreSQL integration coverage includes same-resource concurrent requests, different-occurrence contention within one group, parallel resource selection, adjacent half-open intervals, overlapping service buffers, synchronous expiry, owner-only/concurrent release, and deactivation protection.
 
 Slice D does not create bookings or convert holds into commitments. Commerce, orders/checkout, Payments, Finance, refunds, fulfilment, cancellation, and accommodation room-night inventory remain excluded.
+
+
+## 21. Accommodation room-night inventory design gate (VYBE-013)
+
+### 21.1 Purpose and boundary
+
+Define how providers allocate room-category inventory to Vybe and how Vybe safely reserves stays spanning multiple nights. This is a design gate only. It does not authorize Prisma models, SQL migrations, API implementation, booking records, checkout, or payment integration.
+
+The customer reserves a room category and quantity, not a specific physical room. The provider may assign the physical room later, subject to the category specifications and confirmed occupancy. Room-category attributes, occupancy limits, inclusions, restrictions, and the applicable offering version must be snapshotted for each hold and eventual booking.
+
+### 21.2 Provider allocation and independent hotel sales
+
+- A provider allocates explicit room-category quantities to Vybe for a defined property, category, and stay-date range. The allocated pool is the maximum Vybe may sell; it is not a claim on the hotel's total inventory.
+- The provider remains free to sell unallocated inventory through its own channels. Vybe must never consume that unallocated stock.
+- Every allocation records provider authority/evidence, actor, category, property/location, effective stay dates, quantity, creation time, and any subsequent signed adjustment with reason.
+- **Unused Vybe allocation may be reclaimed by the provider only at a provider-agreed release cutoff recorded on that allocation.** The cutoff is an explicit local date/time plus IANA property timezone and must be agreed before the allocation becomes bookable. No universal cutoff is assumed by this gate.
+- Reclamation is permitted only for inventory not held or committed by Vybe. A reduction that would put remaining allocation below active holds plus confirmed bookings is rejected. The provider cannot reclaim inventory already held by a customer or committed to a confirmed booking.
+- A cutoff change applies prospectively and cannot silently shorten protection for an existing hold or booking. The effective cutoff and timezone are snapshotted on holds/bookings where relevant.
+- If a provider fails to define or agree a release cutoff, that allocation is not made bookable until the terms are resolved. Do not invent a default release window.
+
+### 21.3 Room-night accounting and availability
+
+- Represent a stay as a half-open local-date interval **[check-in date, check-out date)**. A stay of 12–15 June consumes inventory for the nights of 12, 13, and 14 June; the 15 June checkout date is not a consumed night.
+- Each consumed night must have sufficient allocation for the requested room category and quantity. Availability for the stay is the minimum remaining sellable quantity across every night in the interval.
+- Inventory is accounted for per property + room category + local stay date. Property IANA timezone is authoritative for check-in/check-out policy and display; store resolved local dates and timezone identity rather than deriving hotel nights from UTC midnight.
+- Check-in and check-out clock times are property/category policy and must be disclosed. They do not change which local calendar nights are consumed.
+- A room-category allocation cannot exceed the provider-authorized quantity available to allocate to Vybe. If the provider's source cannot support reliable per-night accounting, it must not be represented as instant-bookable inventory.
+
+### 21.4 Atomic multi-night holds and concurrency
+
+- A hold for multiple rooms and nights is all-or-nothing. Either every night in the requested date range is reserved for the requested quantity, or none is.
+- The transaction must lock all affected property/category/night allocation rows in deterministic date order, synchronously expire stale holds for those nights, recompute active holds plus committed quantity, verify every night has sufficient capacity, and create the complete hold atomically.
+- Concurrent requests competing for the last room on any one night must not both succeed. No partial stay holds or partial room quantities are allowed.
+- Holds use the approved 10-minute default, configurable only within the existing platform-bounded policy (60–1800 seconds). Effective expiry is fixed on each hold. Expiry is enforced synchronously when inventory is next allocated; background cleanup is not required for correctness.
+- Idempotency is scoped to customer plus idempotency key. Identical active replays return the original hold; changed property/category/dates/quantity payloads conflict. Expiry, release, and consumption are mutually exclusive terminal transitions.
+- Every successful hold, release, expiry, allocation adjustment, and commitment transition writes audit and transactional outbox records in the same transaction.
+
+### 21.5 Allocation changes and booking protection
+
+- Allocation increases are permitted only after provider authority and supply evidence are revalidated.
+- Allocation reductions are serialized against holds and commitments and rejected if any affected night would fall below active holds plus committed room quantity.
+- A provider may disable future unallocated inventory but may not silently cancel or displace existing holds/confirmed bookings.
+- Confirmed bookings retain the room-category, quantity, stay-date, price, inclusions, occupancy, cancellation terms, and allocation snapshots applicable at confirmation.
+- Physical room assignment is a separate provider fulfilment operation. It must satisfy the booked category and occupancy; it cannot be used to change the customer's purchased category or terms without an agreed customer-resolution flow.
+
+### 21.6 Provider eligibility and inventory source
+
+- New allocations and holds require an active provider organization, current category/location-scoped Vybe approval, active accommodation launch gate, published offering version, and evidence of authority to control the allocated room supply.
+- Provider/category/location suspension blocks new allocations and holds in the affected scope. It does not delete existing holds or confirmed bookings; continuity and customer remedies belong to later booking/operations policy.
+- The initial accommodation model is provider-allocated inventory controlled by Vybe. Certified external integrations and provider-confirmation/manual inventory are excluded from this gate and require separate designs.
+- Stale or unverifiable availability must fail closed; it must not be advertised as guaranteed instant-bookable inventory.
+
+### 21.7 Required physical schema review
+
+Before migrations, the implementation proposal must specify:
+- Property, room-category, offering-version, and provider ownership relationships.
+- Per-night allocation representation and unique property/category/stay-date keys.
+- Whether committed quantity is maintained transactionally or derived from confirmed bookings, with one authoritative accounting method.
+- Multi-night deterministic locking and deadlock/retry behavior.
+- Hold header/detail representation and all-or-nothing transaction semantics.
+- Idempotency uniqueness, payload fingerprinting, expiry, release, and terminal transition constraints.
+- How provider-agreed release cutoff, local time, IANA timezone, and cutoff snapshots are represented.
+- Allocation reduction rules against holds and confirmed bookings.
+- Provider approval/suspension lock ordering and transactional audit/outbox writes.
+- Query/index strategy for date-range availability without treating reads as reservations.
+
+Required PostgreSQL integration tests:
+- Two concurrent requests competing for the final unit on one night: exactly one succeeds.
+- Multi-night holds with one overlapping constrained night: at most one complete hold succeeds.
+- Multi-room/multi-night holds never partially reserve inventory.
+- Expiry racing with a new multi-night hold releases capacity exactly once across all nights.
+- Idempotent replay returns the same hold; changed payload is rejected.
+- Allocation reduction at/above active holds plus commitments succeeds/rejects at the exact boundary.
+- Provider release cutoff cannot reclaim held or committed units.
+- Cutoff/timezone changes do not rewrite existing hold/booking snapshots.
+- Provider suspension racing with allocation/hold creation cannot authorize new inventory after suspension wins.
+- Audit/outbox records commit atomically with allocation and hold transitions.
+
+### 21.8 Decisions and exclusions
+
+Approved by product owner:
+1. Customers reserve a room category and quantity pool; providers may assign physical rooms later.
+2. Hotels may independently sell unallocated inventory.
+3. Unused Vybe allocation is released only at a provider-agreed cutoff recorded per allocation.
+4. Reclamation cannot consume active holds or confirmed bookings.
+5. A missing agreed cutoff blocks bookability; no universal default is invented.
+
+This gate does not authorize booking lifecycle, Commerce, checkout, payment authorization/capture, real Payments, Finance, refunds, fulfilment, cancellation/disputes, external inventory integrations, or category activation. Following approval of this design gate, the next step is a separate physical schema review and implementation plan. Accommodation inventory must pass PostgreSQL concurrency and migration tests before booking/Commerce orchestration is started.

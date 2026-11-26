@@ -623,3 +623,8 @@ A release should not be considered production-ready unless:
 **Naming decision:** Vybe is the approved customer-facing brand for experiences and bookings. Hospitality remains a descriptive/internal term where useful; it is not the product brand. The marketplace design is documented in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md); Vybe branding and staged catalogue rollout are approved, while remaining product decisions require explicit approval before implementation.
 
 **Document status:** Initial product blueprint. Confirmed decisions are recorded in Section 2. Recommendations and unresolved questions are explicitly marked throughout. Update this document as business decisions are made; do not silently convert proposals into approved requirements.
+
+
+## Vybe accommodation inventory decision (VYBE-013)
+
+Unused room-category inventory allocated to Vybe may return to the provider's independent sales channels only at a provider-agreed release cutoff recorded for that allocation. The provider cannot reclaim quantities covered by active holds or confirmed bookings. A missing cutoff means the allocation is not bookable; no universal default is assumed. The full design gate and PostgreSQL verification requirements are in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md), Section 21. This decision authorizes design review only, not schema or implementation.
