@@ -215,66 +215,72 @@ describe.skipIf(!enabled)(
     });
 
     it("does not advertise an accommodation offering before room-night supply is allocated", async () => {
-    const fixture = await createFixture();
-    const previousActivation = await prisma.vybeCategoryActivation.findUnique({
-      where: { category: "ACCOMMODATION" }
-    });
-    await prisma.vybeCategoryActivation.upsert({
-      where: { category: "ACCOMMODATION" },
-      create: {
-        category: "ACCOMMODATION",
-        isActive: true,
-        checklist: [],
-        reason: "Integration test activation",
-        activatedByUserId: fixture.user.id,
-        activatedAt: new Date()
-      },
-      update: {
-        isActive: true,
-        checklist: [],
-        reason: "Integration test activation",
-        activatedByUserId: fixture.user.id,
-        activatedAt: new Date()
-      }
-    });
-
-    try {
-      const { roomCategory } = await createPropertyAndCategory(fixture);
-      const beforeAllocation = await listPublicOfferings({
-        category: "ACCOMMODATION"
-      });
-      expect(
-        beforeAllocation.some((offering) => offering.id === fixture.offering.id)
-      ).toBe(false);
-
-      await createAllocation(fixture, roomCategory.id, [3, 3]);
-      const afterAllocation = await listPublicOfferings({
-        category: "ACCOMMODATION"
-      });
-      expect(
-        afterAllocation.some((offering) => offering.id === fixture.offering.id)
-      ).toBe(true);
-    } finally {
-      if (previousActivation) {
-        await prisma.vybeCategoryActivation.update({
-          where: { category: "ACCOMMODATION" },
-          data: {
-            isActive: previousActivation.isActive,
-            checklist: previousActivation.checklist,
-            reason: previousActivation.reason,
-            activatedByUserId: previousActivation.activatedByUserId,
-            activatedAt: previousActivation.activatedAt
-          }
-        });
-      } else {
-        await prisma.vybeCategoryActivation.delete({
+      const fixture = await createFixture();
+      const previousActivation = await prisma.vybeCategoryActivation.findUnique(
+        {
           where: { category: "ACCOMMODATION" }
-        });
-      }
-    }
-  });
+        }
+      );
+      await prisma.vybeCategoryActivation.upsert({
+        where: { category: "ACCOMMODATION" },
+        create: {
+          category: "ACCOMMODATION",
+          isActive: true,
+          checklist: [],
+          reason: "Integration test activation",
+          activatedByUserId: fixture.user.id,
+          activatedAt: new Date()
+        },
+        update: {
+          isActive: true,
+          checklist: [],
+          reason: "Integration test activation",
+          activatedByUserId: fixture.user.id,
+          activatedAt: new Date()
+        }
+      });
 
-  it("creates complete room-night allocation lots and append-only initial adjustments", async () => {
+      try {
+        const { roomCategory } = await createPropertyAndCategory(fixture);
+        const beforeAllocation = await listPublicOfferings({
+          category: "ACCOMMODATION"
+        });
+        expect(
+          beforeAllocation.some(
+            (offering) => offering.id === fixture.offering.id
+          )
+        ).toBe(false);
+
+        await createAllocation(fixture, roomCategory.id, [3, 3]);
+        const afterAllocation = await listPublicOfferings({
+          category: "ACCOMMODATION"
+        });
+        expect(
+          afterAllocation.some(
+            (offering) => offering.id === fixture.offering.id
+          )
+        ).toBe(true);
+      } finally {
+        if (previousActivation) {
+          await prisma.vybeCategoryActivation.update({
+            where: { category: "ACCOMMODATION" },
+            data: {
+              isActive: previousActivation.isActive,
+              checklist: previousActivation.checklist,
+              reason: previousActivation.reason,
+              activatedByUserId: previousActivation.activatedByUserId,
+              activatedAt: previousActivation.activatedAt
+            }
+          });
+        } else {
+          await prisma.vybeCategoryActivation.delete({
+            where: { category: "ACCOMMODATION" }
+          });
+        }
+      }
+    });
+
+    it("creates complete room-night allocation lots and append-only initial adjustments", async () => {
       const fixture = await createFixture();
       const { roomCategory } = await createPropertyAndCategory(fixture);
       const allocation = await createAllocation(fixture, roomCategory.id);
