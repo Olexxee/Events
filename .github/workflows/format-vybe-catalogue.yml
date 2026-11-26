@@ -1,0 +1,36 @@
+name: Format Vybe catalogue files
+
+on:
+  push:
+    branches:
+      - docs/vybe-inventory-foundation-design
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/vybe-inventory-foundation-design
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund --legacy-peer-deps --ignore-scripts
+      - name: Apply Prettier to the three failing files
+        run: npx prettier --write src/modules/vybe-catalogue/vybe-catalogue.db.ts src/modules/vybe-catalogue/vybe-catalogue.validators.ts tests/vybe-catalogue-validation.test.ts
+      - name: Commit formatting
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/modules/vybe-catalogue/vybe-catalogue.db.ts src/modules/vybe-catalogue/vybe-catalogue.validators.ts tests/vybe-catalogue-validation.test.ts
+          git commit -m "style(vybe): apply Prettier formatting"
+          git push origin HEAD:docs/vybe-inventory-foundation-design
