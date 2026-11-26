@@ -657,6 +657,74 @@ async function expireOccurrenceHolds(
   }
 }
 
+async function assertOfferingAvailabilityAccess(
+  tx: Prisma.TransactionClient,
+  offeringId: string
+) {
+  const offering = await tx.vybeOffering.findUnique({
+    where: { id: offeringId },
+    include: {
+      providerProfile: {
+        include: {
+          organization: { select: { id: true, status: true } },
+          approvals: {
+            where: {
+              status: "ACTIVE",
+              OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }]
+            }
+          }
+        }
+      },
+      versions: {
+        where: { status: "PUBLISHED" },
+        orderBy: { version: "desc" }
+      }
+    }
+  });
+  if (!offering || offering.status !== "PUBLISHED" || !offering.currentPublishedVersion) {
+    fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering is not publicly available", 404);
+  }
+  if (offering.providerProfile.organization.status !== "ACTIVE") {
+    fail("VYBE_PROVIDER_INACTIVE", "Provider is not active", 404);
+  }
+  const approval = offering.providerProfile.approvals.find(
+    (item) => item.category === offering.category
+  );
+  if (!approval) {
+    fail("VYBE_PROVIDER_APPROVAL_REQUIRED", "Provider approval is not active", 404);
+  }
+  const version = offering.versions.find(
+    (item) => item.version === offering.currentPublishedVersion
+  );
+  const content = version?.content as Record<string, unknown> | undefined;
+  const location = content?.location as Record<string, unknown> | undefined;
+  const locations = Array.isArray(approval.locations) ? approval.locations : [];
+  const approved = locations.some((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    const item = entry as Record<string, unknown>;
+    return (
+      String(item.city ?? "").toLowerCase() === String(location?.city ?? "").toLowerCase() &&
+      String(item.state ?? "").toLowerCase() === String(location?.state ?? "").toLowerCase() &&
+      String(item.country ?? "").toLowerCase() === String(location?.country ?? "").toLowerCase()
+    );
+  });
+  if (!approved) {
+    fail("VYBE_PROVIDER_LOCATION_NOT_APPROVED", "Offering location is not approved", 404);
+  }
+  const approvalLock = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM vybe_provider_approvals WHERE id = ${approval.id}::uuid AND status = 'ACTIVE' AND (expires_at IS NULL OR expires_at > now()) FOR SHARE`
+  );
+  const organizationLock = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM organizations WHERE id = ${offering.providerProfile.organization.id}::uuid AND status = 'ACTIVE' FOR SHARE`
+  );
+  const activationLock = await tx.$queryRaw<Array<{ category: string }>>(
+    Prisma.sql`SELECT category FROM vybe_category_activations WHERE category = ${offering.category}::vybe_category AND is_active = true FOR SHARE`
+  );
+  if (!approvalLock.length || !organizationLock.length || !activationLock.length) {
+    fail("VYBE_TIME_SLOT_UNAVAILABLE", "This time slot is not currently available", 404);
+  }
+}
+
 export async function getTimeSlotCapacityAvailability(occurrenceId: string) {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
@@ -667,7 +735,7 @@ export async function getTimeSlotCapacityAvailability(occurrenceId: string) {
     if (!occurrence) {
       fail("VYBE_TIME_SLOT_NOT_FOUND", "Time slot was not found", 404);
     }
-    await assertOfferingSetupAccess(tx, occurrence.offeringId, "");
+    await assertOfferingAvailabilityAccess(tx, occurrence.offeringId);
     if (
       occurrence.inventoryMode !== "CAPACITY" ||
       !occurrence.capacity ||
