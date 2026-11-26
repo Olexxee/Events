@@ -5,6 +5,10 @@ import { validateRequest } from "../../shared/middleware/validate-request.js";
 import {
   adjustVybeAccommodationAllocationNightController,
   createVybeAccommodationAllocationController,
+  createVybeAccommodationHoldController,
+  getMyVybeAccommodationHoldController,
+  getVybeAccommodationAvailabilityController,
+  releaseMyVybeAccommodationHoldController,
   createVybeAccommodationPropertyController,
   createVybeAccommodationRoomCategoryController,
   listMyVybeAccommodationPropertiesController,
@@ -14,6 +18,9 @@ import {
 import {
   adjustAccommodationAllocationNightSchema,
   createAccommodationAllocationSchema,
+  createAccommodationHoldSchema,
+  accommodationHoldIdSchema,
+  getAccommodationAvailabilitySchema,
   createAccommodationPropertySchema,
   createAccommodationRoomCategorySchema,
   releaseAccommodationAllocationSchema,
@@ -75,4 +82,34 @@ vybeAccommodationRouter.post(
   requireAuthenticated,
   validateRequest(releaseAccommodationAllocationSchema),
   releaseVybeAccommodationAllocationController
+);
+
+vybeAccommodationRouter.get(
+  "/vybe/accommodation/room-categories/:roomCategoryId/availability",
+  validateRequest(getAccommodationAvailabilitySchema),
+  getVybeAccommodationAvailabilityController
+);
+
+vybeAccommodationRouter.post(
+  "/vybe/accommodation/holds",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(createAccommodationHoldSchema),
+  createVybeAccommodationHoldController
+);
+
+vybeAccommodationRouter.get(
+  "/vybe/accommodation/holds/:holdId",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(accommodationHoldIdSchema),
+  getMyVybeAccommodationHoldController
+);
+
+vybeAccommodationRouter.delete(
+  "/vybe/accommodation/holds/:holdId",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(accommodationHoldIdSchema),
+  releaseMyVybeAccommodationHoldController
 );
