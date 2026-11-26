@@ -1,0 +1,38 @@
+name: Format PR 23 test file
+
+on:
+  push:
+    branches:
+      - fix/vybe-time-slot-integrity
+    paths:
+      - tests/vybe-time-slots.integration.test.ts
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/vybe-time-slot-integrity
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --global npm@11
+      - run: npm ci --no-audit --no-fund --legacy-peer-deps --ignore-scripts
+      - run: npm rebuild esbuild @prisma/client prisma @prisma/engines
+      - run: npx prettier --write tests/vybe-time-slots.integration.test.ts
+      - name: Commit formatted file
+        run: |
+          if git diff --quiet; then
+            echo "File already formatted"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/vybe-time-slots.integration.test.ts
+          git commit -m "style(vybe): apply Prettier to time-slot tests"
+          git push origin HEAD:fix/vybe-time-slot-integrity
