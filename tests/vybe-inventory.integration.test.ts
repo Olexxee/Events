@@ -64,9 +64,7 @@ describe.skipIf(!enabled)(
           providerProfileId: profile.id,
           category: "DRINKS",
           status: "ACTIVE",
-          locations: [
-            { city: "Lagos", state: "Lagos", country: "Nigeria" }
-          ],
+          locations: [{ city: "Lagos", state: "Lagos", country: "Nigeria" }],
           approvedByUserId: ownerId
         }
       });
