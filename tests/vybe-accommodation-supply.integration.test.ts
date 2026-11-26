@@ -148,7 +148,7 @@ describe.skipIf(!enabled)("Vybe accommodation supply PostgreSQL integration", ()
       roomCategoryId,
       actorUserId: fixture.user.id,
       startDate: dates[0] as string,
-      endDate: "2027-06-12",
+      endDate: quantities.length === 1 ? "2027-06-11" : "2027-06-12",
       releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
       agreementReference: "provider-agreement:vybe-2027-01",
       evidenceReference: "private://provider/allocation-agreement-2027-01",
@@ -281,27 +281,24 @@ describe.skipIf(!enabled)("Vybe accommodation supply PostgreSQL integration", ()
     const { roomCategory } = await createPropertyAndCategory(fixture);
     await createAllocation(fixture, roomCategory.id, [8, 8]);
 
+    const updated = await updateAccommodationPhysicalCapacity({
+      roomCategoryId: roomCategory.id,
+      actorUserId: fixture.user.id,
+      physicalUnitCount: 11,
+      evidenceReference: "private://provider/room-register-11",
+      reason: "The physical room count was reconciled against the current register."
+    });
+    expect(updated.physicalUnitCount).toBe(11);
+
     await expect(
       updateAccommodationPhysicalCapacity({
         roomCategoryId: roomCategory.id,
         actorUserId: fixture.user.id,
         physicalUnitCount: 7,
         evidenceReference: "private://provider/room-register-7",
-        reason: "Physical room count was reconciled after inspection."
+        reason: "Physical room count was reduced after inspection."
       })
     ).rejects.toThrow();
-
-    const updated = await updateAccommodationPhysicalCapacity({
-      roomCategoryId: roomCategory.id,
-      actorUserId: fixture.user.id,
-      physicalUnitCount: 12,
-      evidenceReference: "private://provider/room-register-12-reverified",
-      reason: "The physical room count was reverified against the current register."
-    }).catch((error: unknown) => {
-      if (error instanceof Error) throw error;
-      throw error;
-    });
-    expect(updated.physicalUnitCount).toBe(12);
   });
 
   it("allows adjustments only under the allocation cutoff and releases only uncommitted, unheld lots", async () => {
