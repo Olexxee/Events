@@ -144,6 +144,7 @@ async function recordInventoryEvent(
     resourceType: string;
     resourceId: string;
     aggregateType: string;
+    aggregateId?: string;
     eventType: string;
     key: string;
     payload: Prisma.InputJsonObject;
