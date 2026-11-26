@@ -960,3 +960,17 @@ The database stores local stay dates as PostgreSQL `date`; UTC timestamps must n
 ### Slice A acceptance
 
 The migration and Prisma schema must validate and apply against PostgreSQL 16 in CI. Integration tests cover provider-scope composite keys, date-range enforcement, positive capacity, hold-night cutoff snapshots, allocation capacity protection and immutable adjustment history. The next slice is provider supply management (property/category creation and evidence-backed allocation/adjustment); customer availability and atomic holds remain a separate slice.
+
+
+## 24. Category-level physical room capacity guard (VYBE-015)
+
+A room category's `maxOccupancy` is the number of guests permitted per room; it is not the number of physical rooms. `physicalUnitCount` records the provider-evidenced total number of physical rooms/units in that category at the property.
+
+- The physical count is the authoritative upper bound for the sum of Vybe allocations for a category on any local stay date, across all allocation lots and release cutoffs.
+- The count may be unknown while a category is being configured. A null count is permitted for migration compatibility, but PostgreSQL rejects any allocation-night quantity while the count is unknown. Provider workflows must require a positive, evidence-supported count before allocating inventory.
+- PostgreSQL serializes aggregate allocation checks on the existing category/night lock row. The sum of all active or paused allocation lots for a category/date must not exceed `physicalUnitCount`. Released allocations no longer consume the Vybe allocation ceiling.
+- Updating the physical count is rejected if it would put any existing category/date allocation total above the new count. This is intentionally stricter than checking only current holds and committed quantities: already allocated rooms are a supply commitment and must first be safely reduced/released under the existing cutoff and hold/commit protections.
+- The property/provider remains responsible for the accuracy of the physical count. Provider evidence and actor/reason history must be retained by the Slice B supply workflow. A database constraint prevents arithmetic oversell; it does not independently prove the provider's evidence is truthful.
+- Tests must cover split allocation lots, exact-capacity acceptance, aggregate overflow rejection, unknown-capacity rejection, physical-count reduction rejection, and concurrent allocation attempts for the same category/night.
+
+This guard closes an aggregate oversell path in the accommodation schema before provider allocation workflows are exposed. It does not implement bookings, payment, or room assignment.
