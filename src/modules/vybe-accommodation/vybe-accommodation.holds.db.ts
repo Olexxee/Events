@@ -312,8 +312,7 @@ async function recordAccommodationHoldEvent(
 
 export async function expireAccommodationHoldsInTransaction(
   tx: PrismaClientTypes.TransactionClient,
-  roomCategoryId: string,
-  _now: Date
+  roomCategoryId: string
 ) {
   const now = await getDatabaseNow(tx);
   const expired = await tx.vybeAccommodationHold.findMany({
@@ -533,8 +532,7 @@ export async function createAccommodationHold(input: {
         }
         await expireAccommodationHoldsInTransaction(
           tx,
-          input.roomCategoryId,
-          now
+          input.roomCategoryId
         );
         fail(
           "VYBE_HOLD_NO_LONGER_ACTIVE",
@@ -711,8 +709,7 @@ export async function getMyAccommodationHold(input: {
     await lockCategoryAndNights(tx, initial.roomCategoryId, dates);
     await expireAccommodationHoldsInTransaction(
       tx,
-      initial.roomCategoryId,
-      new Date()
+      initial.roomCategoryId
     );
     return tx.vybeAccommodationHold.findUniqueOrThrow({
       where: { id: initial.id },
