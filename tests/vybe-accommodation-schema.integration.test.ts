@@ -268,7 +268,10 @@ describe.skipIf(!enabled)(
       await expect(
         prisma.vybeAccommodationRoomCategory.update({
           where: { id: fixture.roomCategory.id },
-          data: { physicalUnitCount: 11, physicalUnitCountEvidenceReference: "provider-room-register:11" }
+          data: {
+            physicalUnitCount: 11,
+            physicalUnitCountEvidenceReference: "provider-room-register:11"
+          }
         })
       ).rejects.toThrow();
 
@@ -276,7 +279,8 @@ describe.skipIf(!enabled)(
         where: { id: fixture.roomCategory.id },
         data: {
           physicalUnitCount: 12,
-          physicalUnitCountEvidenceReference: "provider-room-register:12-reverified"
+          physicalUnitCountEvidenceReference:
+            "provider-room-register:12-reverified"
         }
       });
     });
