@@ -960,7 +960,7 @@ model VybeAccommodationProperty {
   status            VybeAccommodationPropertyStatus  @default(ACTIVE)
   createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  providerProfile   VybeProviderProfile              @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  providerProfile   VybeProviderProfile              @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_properties_provider_fkey")
   roomCategories    VybeAccommodationRoomCategory[]
 
   @@unique([providerProfileId, providerPropertyKey], map: "vybe_accommodation_properties_provider_key")
@@ -982,9 +982,9 @@ model VybeAccommodationRoomCategory {
   offeringId        String                                  @unique @map("offering_id") @db.Uuid
   createdAt         DateTime                                @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime                                @updatedAt @map("updated_at") @db.Timestamptz(6)
-  providerProfile   VybeProviderProfile                     @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
-  property          VybeAccommodationProperty               @relation(fields: [propertyId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict)
-  offering          VybeOffering                             @relation(fields: [offeringId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict)
+  providerProfile   VybeProviderProfile                     @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_room_categories_provider_fkey")
+  property          VybeAccommodationProperty               @relation(fields: [propertyId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_property_provider_fkey")
+  offering          VybeOffering                             @relation(fields: [offeringId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_offering_provider_fkey")
   allocations       VybeAccommodationAllocation[]
   nightLocks        VybeAccommodationNightLock[]
   holds             VybeAccommodationHold[]
@@ -1011,8 +1011,8 @@ model VybeAccommodationAllocation {
   createdByUserId       String                               @map("created_by_user_id") @db.Uuid
   createdAt             DateTime                             @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime                             @updatedAt @map("updated_at") @db.Timestamptz(6)
-  roomCategory          VybeAccommodationRoomCategory        @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict)
-  createdBy             User                                 @relation("VybeAccommodationAllocationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  roomCategory          VybeAccommodationRoomCategory        @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_category_fkey")
+  createdBy             User                                 @relation("VybeAccommodationAllocationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_creator_fkey")
   nights                VybeAccommodationAllocationNight[]
 
   @@unique([id, roomCategoryId], map: "vybe_accommodation_allocations_id_category_key")
@@ -1025,7 +1025,7 @@ model VybeAccommodationNightLock {
   roomCategoryId String                              @map("room_category_id") @db.Uuid
   stayDate       DateTime                            @map("stay_date") @db.Date
   createdAt      DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
-  roomCategory   VybeAccommodationRoomCategory       @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict)
+  roomCategory   VybeAccommodationRoomCategory       @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_night_locks_category_fkey")
   allocationNights VybeAccommodationAllocationNight[]
 
   @@unique([roomCategoryId, stayDate], map: "vybe_accommodation_night_locks_category_date_key")
@@ -1041,8 +1041,8 @@ model VybeAccommodationAllocationNight {
   committedQuantity Int                              @default(0) @map("committed_quantity")
   createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  allocation        VybeAccommodationAllocation       @relation(fields: [allocationId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict)
-  nightLock         VybeAccommodationNightLock        @relation(fields: [roomCategoryId, stayDate], references: [roomCategoryId, stayDate], onDelete: Restrict)
+  allocation        VybeAccommodationAllocation       @relation(fields: [allocationId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_allocation_category_fkey")
+  nightLock         VybeAccommodationNightLock        @relation(fields: [roomCategoryId, stayDate], references: [roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_lock_fkey")
   holdNights        VybeAccommodationHoldNight[]
   adjustments       VybeAccommodationAllocationAdjustment[]
 
@@ -1060,8 +1060,8 @@ model VybeAccommodationAllocationAdjustment {
   reason           String                              @db.VarChar(1000)
   evidenceReference String                             @map("evidence_reference") @db.VarChar(1000)
   createdAt        DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
-  allocationNight  VybeAccommodationAllocationNight    @relation(fields: [allocationNightId], references: [id], onDelete: Restrict)
-  actor            User                                @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  allocationNight  VybeAccommodationAllocationNight    @relation(fields: [allocationNightId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_night_fkey")
+  actor            User                                @relation(fields: [actorUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_actor_fkey")
 
   @@index([allocationNightId, createdAt], map: "vybe_accommodation_adjustments_night_created_idx")
   @@index([actorUserId, createdAt], map: "vybe_accommodation_adjustments_actor_created_idx")
@@ -1082,8 +1082,8 @@ model VybeAccommodationHold {
   snapshot       Json
   createdAt      DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  roomCategory   VybeAccommodationRoomCategory   @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict)
-  user           User                            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  roomCategory   VybeAccommodationRoomCategory   @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_category_fkey")
+  user           User                            @relation(fields: [userId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_user_fkey")
   nights         VybeAccommodationHoldNight[]
 
   @@unique([userId, idempotencyKey], map: "vybe_accommodation_holds_user_idempotency_key")
@@ -1104,8 +1104,8 @@ model VybeAccommodationHoldNight {
   releaseCutoffLocalSnapshot String                             @map("release_cutoff_local_snapshot") @db.VarChar(40)
   releaseCutoffTimezoneSnapshot String                          @map("release_cutoff_timezone_snapshot") @db.VarChar(80)
   createdAt                  DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
-  hold                       VybeAccommodationHold               @relation(fields: [holdId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict)
-  allocationNight            VybeAccommodationAllocationNight    @relation(fields: [allocationNightId, roomCategoryId, stayDate], references: [id, roomCategoryId, stayDate], onDelete: Restrict)
+  hold                       VybeAccommodationHold               @relation(fields: [holdId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_hold_nights_hold_category_fkey")
+  allocationNight            VybeAccommodationAllocationNight    @relation(fields: [allocationNightId, roomCategoryId, stayDate], references: [id, roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_hold_nights_allocation_category_date_fkey")
 
   @@unique([holdId, allocationNightId], map: "vybe_accommodation_hold_nights_hold_allocation_key")
   @@index([allocationNightId], map: "vybe_accommodation_hold_nights_allocation_idx")
