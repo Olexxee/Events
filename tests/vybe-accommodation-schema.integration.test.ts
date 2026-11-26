@@ -64,6 +64,7 @@ describe.skipIf(!enabled)(
           name: "Standard room",
           maxOccupancy: 2,
           physicalUnitCount: 12,
+          physicalUnitCountEvidenceReference: "provider-room-register:12",
           specifications: { bed: "queen", bathroom: "private" },
           offeringId: offering.id
         }
@@ -161,6 +162,7 @@ describe.skipIf(!enabled)(
             name: "Foreign category",
             maxOccupancy: 2,
             physicalUnitCount: 12,
+            physicalUnitCountEvidenceReference: "provider-room-register:12",
             offeringId: fixture.offering.id
           }
         })
@@ -266,13 +268,20 @@ describe.skipIf(!enabled)(
       await expect(
         prisma.vybeAccommodationRoomCategory.update({
           where: { id: fixture.roomCategory.id },
-          data: { physicalUnitCount: 11 }
+          data: {
+            physicalUnitCount: 11,
+            physicalUnitCountEvidenceReference: "provider-room-register:11"
+          }
         })
       ).rejects.toThrow();
 
       await prisma.vybeAccommodationRoomCategory.update({
         where: { id: fixture.roomCategory.id },
-        data: { physicalUnitCount: 12 }
+        data: {
+          physicalUnitCount: 12,
+          physicalUnitCountEvidenceReference:
+            "provider-room-register:12-reverified"
+        }
       });
     });
 
@@ -299,6 +308,10 @@ describe.skipIf(!enabled)(
           stayDate: new Date("2027-06-10T00:00:00.000Z"),
           allocatedQuantity: 10
         }
+      });
+      await prisma.vybeAccommodationAllocation.update({
+        where: { id: secondAllocation.id },
+        data: { releaseCutoffAt: new Date(Date.now() - 1000) }
       });
       await prisma.vybeAccommodationAllocation.update({
         where: { id: secondAllocation.id },
