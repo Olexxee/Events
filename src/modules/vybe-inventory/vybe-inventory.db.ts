@@ -47,6 +47,12 @@ async function assertOfferingCanTrade(tx: Prisma.TransactionClient, offeringId: 
   if (!approval) {
     fail("VYBE_PROVIDER_APPROVAL_REQUIRED", "An active category-scoped provider approval is required", 403);
   }
+  await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM vybe_provider_approvals WHERE id = ${approval.id}::uuid AND status = 'ACTIVE' FOR SHARE`
+  );
+  await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM organizations WHERE id = ${offering.providerProfile.organization.id}::uuid AND status = 'ACTIVE' FOR SHARE`
+  );
   const activation = await tx.vybeCategoryActivation.findUnique({
     where: { category: offering.category },
     select: { isActive: true }
@@ -54,6 +60,9 @@ async function assertOfferingCanTrade(tx: Prisma.TransactionClient, offeringId: 
   if (!activation?.isActive) {
     fail("VYBE_CATEGORY_NOT_ACTIVE", "This Vybe category has not passed its launch gates");
   }
+  await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM vybe_category_activations WHERE category = ${offering.category}::vybe_category AND is_active = true FOR SHARE`
+  );
   const version = offering.versions.find((item) => item.version === offering.currentPublishedVersion);
   const content = version?.content as Record<string, unknown> | undefined;
   const location = content?.location as Record<string, unknown> | undefined;
@@ -175,18 +184,22 @@ export async function adjustInventoryAllocation(input: {
 }) {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
-    await lockPool(tx, input.poolId);
-    const pool = await tx.vybeInventoryPool.findUnique({
+    const initialPool = await tx.vybeInventoryPool.findUnique({
       where: { id: input.poolId },
       include: { offering: { include: { providerProfile: true } } }
     });
-    if (!pool) fail("VYBE_INVENTORY_POOL_NOT_FOUND", "Inventory pool was not found", 404);
+    if (!initialPool) fail("VYBE_INVENTORY_POOL_NOT_FOUND", "Inventory pool was not found", 404);
     await assertOrganizationAuthority(tx, {
-      organizationId: pool.offering.providerProfile.organizationId,
+      organizationId: initialPool.offering.providerProfile.organizationId,
       userId: input.actorUserId,
       allowedRoles: ["OWNER", "ADMIN"]
     });
-    await assertOfferingCanTrade(tx, pool.offeringId);
+    await assertOfferingCanTrade(tx, initialPool.offeringId);
+    await lockPool(tx, input.poolId);
+    const pool = await tx.vybeInventoryPool.findUniqueOrThrow({
+      where: { id: input.poolId },
+      include: { offering: { include: { providerProfile: true } } }
+    });
     const now = new Date();
     await expirePoolHolds(tx, pool.id, now);
     const active = await tx.vybeInventoryHold.aggregate({
