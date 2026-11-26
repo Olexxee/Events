@@ -9,6 +9,8 @@ import {
   createVybeTimeSlotResourceController,
   createVybeTimeSlotResourceGroupController,
   getVybeTimeSlotAvailabilityController,
+  getVybeTimeSlotResourceAvailabilityController,
+  createVybeTimeSlotResourceHoldController,
   releaseVybeTimeSlotCapacityHoldController
 } from "./vybe-time-slots.controller.js";
 import {
@@ -18,6 +20,8 @@ import {
   createVybeTimeSlotResourceGroupSchema,
   createVybeTimeSlotResourceSchema,
   getVybeTimeSlotAvailabilitySchema,
+  getVybeTimeSlotResourceAvailabilitySchema,
+  createVybeTimeSlotResourceHoldSchema,
   releaseVybeTimeSlotCapacityHoldSchema
 } from "./vybe-time-slots.validators.js";
 
@@ -27,6 +31,18 @@ vybeTimeSlotsRouter.get(
   "/vybe/time-slots/:occurrenceId/availability",
   validateRequest(getVybeTimeSlotAvailabilitySchema),
   getVybeTimeSlotAvailabilityController
+);
+vybeTimeSlotsRouter.get(
+  "/vybe/time-slots/:occurrenceId/resource-availability",
+  validateRequest(getVybeTimeSlotResourceAvailabilitySchema),
+  getVybeTimeSlotResourceAvailabilityController
+);
+vybeTimeSlotsRouter.post(
+  "/vybe/time-slots/resource-holds",
+  authenticateRequest,
+  requireAuthenticated,
+  validateRequest(createVybeTimeSlotResourceHoldSchema),
+  createVybeTimeSlotResourceHoldController
 );
 vybeTimeSlotsRouter.post(
   "/vybe/time-slots/holds",
