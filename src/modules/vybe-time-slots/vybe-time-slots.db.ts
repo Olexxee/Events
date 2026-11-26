@@ -1162,10 +1162,10 @@ export async function createTimeSlotResourceHold(input: { occurrenceId: string; 
       });
       const candidateIds = [...new Set(candidates.map((item) => item.resourceId))];
       if (!candidateIds.length) fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "No eligible resource is available for this time slot");
-      const locked = await tx.$queryRaw<Array<{ id: string }>>(
-        Prisma.sql`SELECT id FROM vybe_time_slot_resources WHERE id IN (${Prisma.join(candidateIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY id FOR UPDATE`
+      const locked = await tx.$queryRaw<Array<{ id: string; is_active: boolean }>>(
+        Prisma.sql`SELECT id, is_active FROM vybe_time_slot_resources WHERE id IN (${Prisma.join(candidateIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY id FOR UPDATE`
       );
-      const lockedIds = locked.map((item) => item.id);
+      const lockedIds = locked.filter((item) => item.is_active).map((item) => item.id);
       await expireResourceHolds(tx, lockedIds, now);
       const conflicts = await tx.vybeTimeSlotHold.findMany({
         where: {
