@@ -200,17 +200,17 @@ async function assertAccommodationCategoryAvailable(
     );
   }
 
+  const organizationLock = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM organizations
+      WHERE id = ${category.providerProfile.organization.id}::uuid
+        AND status = 'ACTIVE'
+      FOR SHARE`
+  );
   const approvalLock = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM vybe_provider_approvals
       WHERE id = ${approval.id}::uuid
         AND status = 'ACTIVE'
         AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
-      FOR SHARE`
-  );
-  const organizationLock = await tx.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`SELECT id FROM organizations
-      WHERE id = ${category.providerProfile.organization.id}::uuid
-        AND status = 'ACTIVE'
       FOR SHARE`
   );
   const activationLock = await tx.$queryRaw<Array<{ category: string }>>(
@@ -477,16 +477,12 @@ export async function createAccommodationHold(input: {
   try {
     return await prisma.$transaction(async (tx) => {
       await assertActiveVerifiedAccount(tx, input.userId);
-      const categoryLock = await tx.$queryRaw<Array<{ id: string }>>(
-        Prisma.sql`SELECT id FROM vybe_accommodation_room_categories
-          WHERE id = ${input.roomCategoryId}::uuid
-          FOR UPDATE`
-      );
-      if (categoryLock.length === 0) {
-        fail("VYBE_ACCOMMODATION_UNAVAILABLE", "This accommodation is not available", 404);
-      }
-
       const now = new Date();
+      const { category, version } = await assertAccommodationCategoryAvailable(
+        tx,
+        input.roomCategoryId
+      );
+      await lockCategoryAndNights(tx, category.id, dates);
       const existing = await tx.vybeAccommodationHold.findUnique({
         where: {
           userId_idempotencyKey: {
@@ -520,21 +516,8 @@ export async function createAccommodationHold(input: {
         );
       }
 
-      const { category, version } = await assertAccommodationCategoryAvailable(
-        tx,
-        input.roomCategoryId
-      );
       const holdDurationSeconds = await getHoldDurationSeconds(tx);
       const expiresAt = new Date(now.getTime() + holdDurationSeconds * 1000);
-      const propertyLock = await tx.$queryRaw<Array<{ id: string }>>(
-        Prisma.sql`SELECT id FROM vybe_accommodation_properties
-          WHERE id = ${category.propertyId}::uuid
-          FOR SHARE`
-      );
-      if (propertyLock.length === 0) {
-        fail("VYBE_ACCOMMODATION_UNAVAILABLE", "This accommodation is not available", 404);
-      }
-      await lockCategoryAndNights(tx, category.id, dates);
       await expireAccommodationHoldsInTransaction(tx, category.id, now);
 
       const allocationNights = await getAllocationNights(
@@ -709,24 +692,15 @@ export async function releaseMyAccommodationHold(input: {
     if (initial.userId !== input.userId) {
       fail("VYBE_ACCOMMODATION_HOLD_FORBIDDEN", "Only the hold owner may release it", 403);
     }
-    const categoryLock = await tx.$queryRaw<Array<{ id: string }>>(
-      Prisma.sql`SELECT id FROM vybe_accommodation_room_categories
-        WHERE id = ${initial.roomCategoryId}::uuid
-        FOR UPDATE`
-    );
-    if (categoryLock.length === 0) {
-      fail("VYBE_ACCOMMODATION_UNAVAILABLE", "Accommodation category was not found", 404);
+    if (initial.nights.length === 0) {
+      fail("VYBE_ACCOMMODATION_HOLD_INVALID", "Accommodation hold has no reserved room nights", 409);
     }
-    if (initial.nights.length > 0) {
-      const dates = [...new Set(
+    const dates = [
+      ...new Set(
         initial.nights.map((night) => night.stayDate.toISOString().slice(0, 10))
-      )].sort();
-      const start = dates[0];
-      const end = dates[dates.length - 1];
-      if (start && end) {
-        await lockCategoryAndNights(tx, initial.roomCategoryId, dates);
-      }
-    }
+      )
+    ].sort();
+    await lockCategoryAndNights(tx, initial.roomCategoryId, dates);
     await tx.$queryRaw<Array<{ id: string }>>(
       Prisma.sql`SELECT id FROM vybe_accommodation_holds
         WHERE id = ${initial.id}::uuid
