@@ -100,6 +100,7 @@ export async function createInventoryPool(input: {
   actorUserId: string;
   allocatedQuantity: number;
   reason: string;
+  evidenceReference: string;
 }) {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
@@ -120,7 +121,8 @@ export async function createInventoryPool(input: {
           create: {
             actorUserId: input.actorUserId,
             quantityDelta: input.allocatedQuantity,
-            reason: input.reason
+            reason: input.reason,
+            evidenceReference: input.evidenceReference
           }
         }
       }
@@ -144,6 +146,7 @@ export async function adjustInventoryAllocation(input: {
   actorUserId: string;
   quantityDelta: number;
   reason: string;
+  evidenceReference: string;
 }) {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
@@ -178,7 +181,7 @@ export async function adjustInventoryAllocation(input: {
       data: { allocatedQuantity: nextAllocation }
     });
     await tx.vybeInventoryAllocation.create({
-      data: { poolId: pool.id, actorUserId: input.actorUserId, quantityDelta: input.quantityDelta, reason: input.reason }
+      data: { poolId: pool.id, actorUserId: input.actorUserId, quantityDelta: input.quantityDelta, reason: input.reason, evidenceReference: input.evidenceReference }
     });
     await recordInventoryEvent(tx, {
       actorUserId: input.actorUserId,
@@ -188,7 +191,7 @@ export async function adjustInventoryAllocation(input: {
       aggregateType: "vybe_inventory_pool",
       eventType: "vybe.inventory.allocation_adjusted.v1",
       key: `vybe.inventory.pool:${pool.id}:allocation:${randomUUID()}`,
-      payload: { quantityDelta: input.quantityDelta, allocatedQuantity: nextAllocation, reason: input.reason }
+      payload: { quantityDelta: input.quantityDelta, allocatedQuantity: nextAllocation, reason: input.reason, evidenceReference: input.evidenceReference }
     });
     return updated;
   });
