@@ -44,10 +44,6 @@ jobs:
         run: npm run prisma:migrate:deploy
       - run: npm run typecheck
       - run: npm run lint
-      - name: Inspect final Prettier output
-        run: |
-          npx prettier --write src/modules/vybe-catalogue/vybe-catalogue.db.ts tests/vybe-accommodation-schema.integration.test.ts tests/vybe-accommodation-supply.integration.test.ts
-          git diff -- src/modules/vybe-catalogue/vybe-catalogue.db.ts tests/vybe-accommodation-schema.integration.test.ts tests/vybe-accommodation-supply.integration.test.ts
       - run: npm run format:check
       - run: npm test
       - run: npm run build
