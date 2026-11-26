@@ -588,7 +588,6 @@ export async function addTimeSlotResourceGroupMember(input: {
   }
 }
 
-
 async function recordTimeSlotHoldEvent(
   tx: Prisma.TransactionClient,
   input: {
@@ -615,7 +614,9 @@ async function recordTimeSlotHoldEvent(
     aggregateType: "vybe_time_slot_occurrence",
     aggregateId: input.occurrenceId,
     eventType: input.eventType,
-    deduplicationKey: `vybe.time_slot.hold:${input.holdId}:${input.action.split(".").at(-1)}`,
+    deduplicationKey: `vybe.time_slot.hold:${input.holdId}:${
+      input.action.split(".").at(-1)
+    }`,
     payload: input.payload
   });
 }
@@ -665,7 +666,11 @@ async function assertOfferingAvailabilityAccess(
     Prisma.sql`SELECT id FROM vybe_offerings WHERE id = ${offeringId}::uuid AND status = 'PUBLISHED' FOR SHARE`
   );
   if (offeringLock.length === 0) {
-    fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering is not publicly available", 404);
+    fail(
+      "VYBE_OFFERING_NOT_PUBLISHED",
+      "Offering is not publicly available",
+      404
+    );
   }
   const offering = await tx.vybeOffering.findUnique({
     where: { id: offeringId },
@@ -687,7 +692,11 @@ async function assertOfferingAvailabilityAccess(
       }
     }
   });
-  if (!offering || offering.status !== "PUBLISHED" || !offering.currentPublishedVersion) {
+  if (
+    !offering ||
+    offering.status !== "PUBLISHED" ||
+    !offering.currentPublishedVersion
+  ) {
     fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering is not publicly available", 404);
   }
   if (offering.providerProfile.organization.status !== "ACTIVE") {
@@ -697,7 +706,11 @@ async function assertOfferingAvailabilityAccess(
     (item) => item.category === offering.category
   );
   if (!approval) {
-    fail("VYBE_PROVIDER_APPROVAL_REQUIRED", "Provider approval is not active", 404);
+    fail(
+      "VYBE_PROVIDER_APPROVAL_REQUIRED",
+      "Provider approval is not active",
+      404
+    );
   }
   const version = offering.versions.find(
     (item) => item.version === offering.currentPublishedVersion
@@ -706,16 +719,25 @@ async function assertOfferingAvailabilityAccess(
   const location = content?.location as Record<string, unknown> | undefined;
   const locations = Array.isArray(approval.locations) ? approval.locations : [];
   const approved = locations.some((entry) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return false;
+    }
     const item = entry as Record<string, unknown>;
     return (
-      String(item.city ?? "").toLowerCase() === String(location?.city ?? "").toLowerCase() &&
-      String(item.state ?? "").toLowerCase() === String(location?.state ?? "").toLowerCase() &&
-      String(item.country ?? "").toLowerCase() === String(location?.country ?? "").toLowerCase()
+      String(item.city ?? "").toLowerCase() ===
+        String(location?.city ?? "").toLowerCase() &&
+      String(item.state ?? "").toLowerCase() ===
+        String(location?.state ?? "").toLowerCase() &&
+      String(item.country ?? "").toLowerCase() ===
+        String(location?.country ?? "").toLowerCase()
     );
   });
   if (!approved) {
-    fail("VYBE_PROVIDER_LOCATION_NOT_APPROVED", "Offering location is not approved", 404);
+    fail(
+      "VYBE_PROVIDER_LOCATION_NOT_APPROVED",
+      "Offering location is not approved",
+      404
+    );
   }
   const approvalLock = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM vybe_provider_approvals WHERE id = ${approval.id}::uuid AND status = 'ACTIVE' AND (expires_at IS NULL OR expires_at > now()) FOR SHARE`
@@ -726,8 +748,16 @@ async function assertOfferingAvailabilityAccess(
   const activationLock = await tx.$queryRaw<Array<{ category: string }>>(
     Prisma.sql`SELECT category FROM vybe_category_activations WHERE category = ${offering.category}::vybe_category AND is_active = true FOR SHARE`
   );
-  if (!approvalLock.length || !organizationLock.length || !activationLock.length) {
-    fail("VYBE_TIME_SLOT_UNAVAILABLE", "This time slot is not currently available", 404);
+  if (
+    !approvalLock.length ||
+    !organizationLock.length ||
+    !activationLock.length
+  ) {
+    fail(
+      "VYBE_TIME_SLOT_UNAVAILABLE",
+      "This time slot is not currently available",
+      404
+    );
   }
   return offering;
 }
@@ -821,6 +851,7 @@ export async function createTimeSlotCapacityHold(input: {
       });
       if (
         !occurrence ||
+        occurrence.offeringId !== initial.offeringId ||
         occurrence.status !== "ACTIVE" ||
         occurrence.inventoryMode !== "CAPACITY" ||
         !occurrence.capacity
