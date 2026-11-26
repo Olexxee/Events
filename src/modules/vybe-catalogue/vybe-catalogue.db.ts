@@ -484,7 +484,8 @@ export async function listPublicOfferings(input: {
                 }
               }
             },
-            take: 50
+            orderBy: { releaseCutoffAt: "desc" },
+            take: 100
           }
         }
       },
@@ -520,7 +521,12 @@ export async function listPublicOfferings(input: {
       return [];
     if (offering.category === "ACCOMMODATION") {
       const accommodation = offering.accommodationRoomCategory;
-      if (!accommodation || accommodation.property.status !== "ACTIVE") return [];
+      if (
+        !accommodation ||
+        accommodation.status !== "ACTIVE" ||
+        accommodation.property.status !== "ACTIVE"
+      )
+        return [];
       const localToday = localCalendarDate(now, accommodation.property.timezone);
       const hasFutureSupply = accommodation.allocations.some((allocation) =>
         allocation.nights.some(
