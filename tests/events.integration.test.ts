@@ -35,7 +35,6 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
   });
 
   beforeEach(async () => {
-
     const owner = await prisma.user.create({
       data: { email: `owner-${crypto.randomUUID()}@events.test` }
     });
