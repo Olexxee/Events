@@ -59,7 +59,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     });
     organizationId = organization.id;
     const category = await prisma.eventCategory.findUniqueOrThrow({
-      where: { slug: "music" },
+      where: { slug: `music-${crypto.randomUUID()}` },
       select: { id: true }
     });
     categoryId = category.id;
@@ -161,7 +161,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
         actorUserId: memberId,
         categoryId,
         title: "Unauthorized Event",
-        slug: "unauthorized-event",
+        slug: `unauthorized-event-${crypto.randomUUID()}`,
         summary: "A member must not be able to create an event.",
         description:
           "This event creation attempt must be denied by the database service.",
@@ -186,7 +186,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
       actorUserId: ownerId,
       categoryId,
       title: "Unlisted Test Event",
-      slug: "unlisted-hidden",
+      slug: `unlisted-hidden-${crypto.randomUUID()}`,
       summary: "This event must not appear in public discovery.",
       description:
         "Unlisted events are intentionally excluded from public discovery results.",
