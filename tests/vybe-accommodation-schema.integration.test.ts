@@ -231,7 +231,9 @@ describe.skipIf(!enabled)(
       ).rejects.toThrow();
     });
 
-    it("enforces aggregate physical room capacity across allocation lots", async () => {
+    it(
+      "enforces aggregate physical room capacity across allocation lots",
+      async () => {
       const fixture = await createFixture();
       const secondAllocation = await prisma.vybeAccommodationAllocation.create({
         data: {
@@ -276,7 +278,9 @@ describe.skipIf(!enabled)(
       });
     });
 
-    it("rechecks aggregate capacity when a released allocation is reactivated", async () => {
+    it(
+      "rechecks aggregate capacity when a released allocation is reactivated",
+      async () => {
       const fixture = await createFixture();
       const secondAllocation = await prisma.vybeAccommodationAllocation.create({
         data: {
@@ -317,7 +321,9 @@ describe.skipIf(!enabled)(
       ).rejects.toThrow();
     });
 
-    it("serializes concurrent allocation lots against the category physical ceiling", async () => {
+    it(
+      "serializes concurrent allocation lots against the category physical ceiling",
+      async () => {
       const fixture = await createFixture();
       const allocations = await Promise.all(
         [1, 2].map((index) =>
@@ -359,7 +365,9 @@ describe.skipIf(!enabled)(
       ).toHaveLength(1);
     });
 
-    it("rejects allocation when physical room count is unknown", async () => {
+    it(
+      "rejects allocation when physical room count is unknown",
+      async () => {
       const fixture = await createFixture();
       await prisma.vybeAccommodationAllocationNight.delete({
         where: { id: fixture.allocationNight.id }
