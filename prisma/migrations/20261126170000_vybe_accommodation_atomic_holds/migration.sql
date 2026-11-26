@@ -90,9 +90,13 @@ BEGIN
      OR NEW."check_in_date" IS DISTINCT FROM OLD."check_in_date"
      OR NEW."check_out_date" IS DISTINCT FROM OLD."check_out_date"
      OR NEW."room_quantity" IS DISTINCT FROM OLD."room_quantity"
-     OR NEW."expires_at" IS DISTINCT FROM OLD."expires_at"
      OR NEW."snapshot" IS DISTINCT FROM OLD."snapshot" THEN
     RAISE EXCEPTION 'accommodation hold request and snapshot fields are immutable'
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF NEW."expires_at" > OLD."expires_at" THEN
+    RAISE EXCEPTION 'accommodation hold expiry may be shortened but never extended'
       USING ERRCODE = '23514';
   END IF;
 
