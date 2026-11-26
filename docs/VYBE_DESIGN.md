@@ -363,7 +363,7 @@ No real payment provider should be selected or embedded in Vybe. A test adapter 
 | VYBE-007 | Refund after settlement | Finance-approved recovery model; no automatic negative balance | Determines supplier contracts/exposure |
 | VYBE-008 | Provider approval evidence | **Approved: risk-based, category-scoped review.** Baseline identity/contact, organization authority, service scope, authority to supply inventory, and provider-term acceptance; additional documents only where category risk or law requires them. | Balances onboarding friction and safety |
 | VYBE-009 | External inventory certification | **Approved: strict certification.** Instant-bookable external inventory must provide fresh availability, atomic hold/reservation, idempotent operations, reliable confirmation/cancellation outcomes, and reconciliation. Read-only availability is never sufficient for instant confirmation. | Read-only availability cannot prevent overselling |
-| VYBE-010 | Vybe hold duration | Proposed 10 minutes, configurable by category/platform limits | Controls inventory contention |
+| VYBE-010 | Vybe hold duration | **Approved: 10 minutes by default**, configurable by category within platform-defined minimum/maximum limits. Expiry is enforced synchronously during allocation; background workers perform cleanup/reconciliation only. | Controls inventory contention without allowing stale holds to block capacity |
 | VYBE-011 | Booking changes | Define amendment versus cancel/rebook for date/time/party-size changes | Impacts inventory and refund audit |
 | VYBE-012 | Standalone/event-linked discovery | Support both; decide launch prominence | Impacts navigation and event coupling |
 
@@ -385,3 +385,101 @@ Publication requires both an active category-scoped provider approval covering t
 Material edits after publication create a new draft version. Publishing the new version advances the offering's current published version; previous published versions remain immutable so future bookings can snapshot the exact customer-facing terms. The catalogue stores descriptive price and policy terms only; it does not calculate checkout totals, reserve capacity, or guarantee availability.
 
 This implementation slice must not be interpreted as approval to launch a category. A category remains non-bookable until its inventory, capacity, operational, safety, and compliance systems are implemented and verified.
+## 17. Inventory foundation design gate (authorized; design only)
+
+### 17.1 Purpose and scope
+
+The next Vybe slice must turn catalogue supply into capacity that can be safely promised. It covers the inventory domain model and invariants for:
+- Quantity pools for interchangeable units and packages.
+- Time-slot capacity for dining, tables, lounges, and timed experiences.
+- Room-category allocations consumed per individual night for accommodation.
+- Provider-controlled allocations and certified external inventory boundaries.
+- Atomic, idempotent holds, expiry, release, and inventory adjustment.
+
+This is a design gate only. It does not authorize Prisma models, SQL, migrations, endpoints, background workers, or application code. Booking/order orchestration, payment execution, provider-confirmation payment treatment, fulfilment, cancellation/refund execution, and Finance remain separate slices.
+
+### 17.2 Approved hold policy (VYBE-010)
+
+A Vybe inventory hold lasts **10 minutes by default**. The platform may configure a category-specific duration only within platform-defined minimum and maximum bounds. The effective duration and expiry timestamp are fixed when the hold is created; later configuration changes do not silently extend or shorten existing holds. A hold extension, if ever supported, must be an explicit authorized, audited, idempotent operation and must not be assumed in the first implementation.
+
+Expiry must be checked synchronously inside the transaction that attempts to allocate capacity. A scheduled worker may clean up expired records and emit events, but correctness must not depend on that worker running on time.
+
+### 17.3 Supply ownership and allocation
+
+- A provider may list only inventory it owns, controls, or is contractually authorized to sell; this authority is part of the approved provider scope.
+- Vybe can sell only capacity explicitly allocated to it or capacity controlled by a certified integration.
+- For platform-allocated supply, the provider's unallocated stock remains outside Vybe. Vybe cannot consume it, even if the provider's wider system reports it as available.
+- Allocation has a defined provider, offering/resource scope, quantity or capacity, effective interval, acknowledgement/evidence, and operational owner. Changes are auditable and cannot erase existing holds or commitments.
+- Allocation increases may add sellable capacity only after authorization and validation. Allocation reductions must not take capacity below active holds plus confirmed commitments; reductions that would breach this invariant are rejected or require a separately approved resolution process.
+- Inventory is not created by catalogue publication. An offering without valid, secured supply is not instant-bookable.
+
+### 17.4 Inventory archetypes and capacity rules
+
+**Quantity pools**
+- Model a defined sellable quantity for a specific offering/resource and validity window.
+- Available capacity is derived from the authorized allocation less active holds and committed quantity.
+- Atomic allocation must ensure active holds plus committed quantity never exceed the pool's sellable capacity.
+- Holds and commitments are quantity-bounded; release/consumption is idempotent.
+
+**Time-slot capacity**
+- A slot has a resource/service scope, start and end instants, local IANA timezone for customer display, capacity, and any required turnaround/buffer.
+- Overlapping slots must not bypass the underlying resource capacity. Where the same physical table/lounge/resource is exclusive, conflicting intervals must be rejected.
+- Party size or units consume capacity according to the offering's explicit capacity rule; no implicit conversion between seats, tables, and packages.
+
+**Accommodation room-night pools**
+- Default selection remains room category plus quantity, not a specific physical room.
+- Each reservation consumes the requested quantity on every night in the stay; availability must be validated and committed across the complete stay atomically.
+- A single unavailable night rejects the whole allocation attempt. Partial-night allocation is not permitted unless a later product decision explicitly introduces it.
+- Physical room assignment may happen later and must not change the purchased room-category snapshot.
+- Specific-room inventory is a separate exclusive-resource model and must prevent overlapping stays, including checkout/check-in boundary semantics.
+
+The first implementation should support the shared invariants without pretending every catalogue family is ready to launch. Category activation remains independently gated by operational readiness.
+
+### 17.5 Hold lifecycle and concurrency invariants
+
+For controlled inventory, the conceptual flow is AVAILABLE → HELD → PAYMENT_PENDING → CONFIRMED, with EXPIRED, RELEASED, and CANCELLED outcomes. This describes inventory commitment only; Commerce owns checkout/order orchestration and Payments owns verified payment outcomes.
+
+- Creating a hold reserves capacity atomically and returns a stable hold identifier, effective expiry, and exact inventory/quantity snapshot.
+- A repeated request with the same idempotency identity returns the original result; it must not reserve twice.
+- Concurrent requests for the final units must result in no more than the authorized capacity being held or committed.
+- An expired hold is treated as expired by the allocation transaction even if asynchronous cleanup has not run.
+- A hold may be consumed only once and only against the exact inventory scope and quantity it reserved.
+- Release, expiry, and consumption are mutually exclusive terminal outcomes; retries cannot double-release or double-consume.
+- Payment success alone cannot create a booking or restore expired inventory. If payment is verified after capacity has been released, route to a deterministic exception for Commerce/Payments; do not oversell.
+- Confirmed commitments cannot be removed by ordinary inventory edits. Any exceptional resolution requires an explicit policy, actor, reason, audit history, and customer/provider handling.
+- All state transitions and allocation adjustments produce auditable records and transactional outbox events.
+
+### 17.6 Inventory source behavior
+
+- **Platform-allocated/controlled:** instant-bookable only within Vybe's acknowledged allocation; holds and commitments are enforced by Vybe's transactional inventory boundary.
+- **Certified external integration:** instant-bookable only where the integration provides fresh availability and an atomic reservation/hold operation, idempotency, definitive confirmation/cancellation outcomes, and reconciliation. Vybe must retain external references and reconcile uncertain outcomes before promising capacity.
+- **Provider-confirmed/manual:** cannot be represented as instantly available or confirmed. It follows a distinct pending-provider flow and is excluded from this controlled-inventory hold implementation until its payment/acceptance treatment is approved.
+
+Read-only availability, cached counts without atomic reservation, spreadsheets, and manual messages never qualify as controlled instant-bookable inventory.
+
+### 17.7 Required database and test design before implementation
+
+The physical design review must demonstrate enforceable integrity, not rely on application-level read-then-write checks. Before any migration is authorized, the design proposal must specify:
+- Transaction boundaries and locking/constraint strategy for quantity pools.
+- A database-enforced strategy for overlapping exclusive resources and room-night conflicts.
+- Atomic all-night accommodation allocation.
+- Idempotency identity and uniqueness boundaries for create, consume, release, and expiry operations.
+- How effective capacity is derived from allocation, active holds, and commitments.
+- How allocation reductions and provider suspension interact with active holds and confirmed commitments.
+- Transactional outbox behavior for inventory changes and hold transitions.
+- Time handling: UTC instants for comparisons, IANA timezone for local service interpretation/display.
+- Recovery/reconciliation for interrupted transactions, delayed jobs, and uncertain external integration outcomes.
+
+Required PostgreSQL integration tests must include simultaneous requests competing for the last unit; simultaneous multi-unit requests; expiry racing with a new hold; duplicate idempotency requests; duplicate consume/release attempts; allocation reduction against active/confirmed quantities; multi-night accommodation with one unavailable night; overlapping exclusive-resource bookings; timezone/DST boundaries; and outbox publication retry. Tests must assert persisted state and capacity invariants, not merely HTTP status codes.
+
+### 17.8 Explicit exclusions and approval gate
+
+This design gate does not authorize:
+- Booking records and customer booking lifecycle.
+- Commerce carts, orders, or mixed ticket/Vybe checkout.
+- Real Payments integration, payment authorization/capture, refunds, or Finance.
+- Provider-confirmation/manual supplier payment treatment.
+- Fulfilment, check-in, redemption, cancellations, or disputes.
+- External supplier adapters before certification and reconciliation are implemented.
+
+The design PR must update this document and the root README together, state any unresolved decisions, and include a schema/concurrency test plan. Only after explicit product-owner approval of the inventory design may a separate implementation plan and physical schema review begin.
