@@ -311,6 +311,10 @@ describe.skipIf(!enabled)(
       });
       await prisma.vybeAccommodationAllocation.update({
         where: { id: secondAllocation.id },
+        data: { releaseCutoffAt: new Date(Date.now() - 1000) }
+      });
+      await prisma.vybeAccommodationAllocation.update({
+        where: { id: secondAllocation.id },
         data: { status: "RELEASED" }
       });
       await prisma.vybeAccommodationAllocationNight.update({
