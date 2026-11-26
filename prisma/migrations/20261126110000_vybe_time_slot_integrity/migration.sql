@@ -150,11 +150,26 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  IF TG_OP = 'DELETE' OR
-     NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id" OR
-     NEW."resource_id" IS DISTINCT FROM OLD."resource_id" OR
-     NEW."valid_from" IS DISTINCT FROM OLD."valid_from" OR
-     NEW."valid_until" IS DISTINCT FROM OLD."valid_until" THEN
+  IF TG_OP = 'DELETE' THEN
+    IF EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_holds" hold
+        JOIN "vybe_time_slot_occurrences" occurrence
+          ON occurrence."id" = hold."occurrence_id"
+       WHERE hold."resource_id" = OLD."resource_id"
+         AND occurrence."resource_group_id" = OLD."resource_group_id"
+         AND hold."status" = 'ACTIVE'
+    ) THEN
+      RAISE EXCEPTION 'cannot remove resource membership while active holds depend on it'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id"
+     OR NEW."resource_id" IS DISTINCT FROM OLD."resource_id"
+     OR NEW."valid_from" IS DISTINCT FROM OLD."valid_from"
+     OR NEW."valid_until" IS DISTINCT FROM OLD."valid_until" THEN
     IF EXISTS (
       SELECT 1
         FROM "vybe_time_slot_holds" hold
@@ -164,21 +179,17 @@ BEGIN
          AND occurrence."resource_group_id" = OLD."resource_group_id"
          AND hold."status" = 'ACTIVE'
          AND (
-           TG_OP = 'DELETE'
-           OR NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id"
+           NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id"
            OR NEW."resource_id" IS DISTINCT FROM OLD."resource_id"
            OR (NEW."valid_from" IS NOT NULL AND NEW."valid_from" > hold."blocked_starts_at")
            OR (NEW."valid_until" IS NOT NULL AND NEW."valid_until" < hold."blocked_ends_at")
          )
     ) THEN
-      RAISE EXCEPTION 'cannot remove or narrow resource membership while active holds depend on it'
+      RAISE EXCEPTION 'cannot narrow or reassign resource membership while active holds depend on it'
         USING ERRCODE = '23514';
     END IF;
   END IF;
 
-  IF TG_OP = 'DELETE' THEN
-    RETURN OLD;
-  END IF;
   RETURN NEW;
 END;
 $$;
@@ -202,9 +213,17 @@ DECLARE
   capacity_count BIGINT;
 BEGIN
   IF TG_TABLE_NAME = 'vybe_time_slot_occurrences' THEN
-    target_occurrence_id := COALESCE(NEW."id", OLD."id");
+    IF TG_OP = 'DELETE' THEN
+      target_occurrence_id := OLD."id";
+    ELSE
+      target_occurrence_id := NEW."id";
+    END IF;
   ELSE
-    target_occurrence_id := COALESCE(NEW."occurrence_id", OLD."occurrence_id");
+    IF TG_OP = 'DELETE' THEN
+      target_occurrence_id := OLD."occurrence_id";
+    ELSE
+      target_occurrence_id := NEW."occurrence_id";
+    END IF;
   END IF;
 
   SELECT "inventory_mode"
