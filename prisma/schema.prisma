@@ -271,6 +271,36 @@ enum VybeTimeSlotHoldStatus {
   @@map("vybe_time_slot_hold_status")
 }
 
+enum VybeAccommodationPropertyStatus {
+  ACTIVE
+  PAUSED
+
+  @@map("vybe_accommodation_property_status")
+}
+
+enum VybeAccommodationRoomCategoryStatus {
+  ACTIVE
+  PAUSED
+
+  @@map("vybe_accommodation_room_category_status")
+}
+
+enum VybeAccommodationAllocationStatus {
+  ACTIVE
+  PAUSED
+  RELEASED
+
+  @@map("vybe_accommodation_allocation_status")
+}
+
+enum VybeAccommodationHoldStatus {
+  ACTIVE
+  RELEASED
+  EXPIRED
+
+  @@map("vybe_accommodation_hold_status")
+}
+
 // Shared infrastructure.
 model OutboxMessage {
   id               String    @id @default(uuid()) @db.Uuid
@@ -338,6 +368,9 @@ model User {
   vybeInventoryHolds VybeInventoryHold[]
   vybeTimeSlotHolds VybeTimeSlotHold[]
   vybeInventoryAllocations VybeInventoryAllocation[]
+  vybeAccommodationAllocationsCreated VybeAccommodationAllocation[] @relation("VybeAccommodationAllocationCreator")
+  vybeAccommodationAdjustments VybeAccommodationAllocationAdjustment[]
+  vybeAccommodationHolds VybeAccommodationHold[]
   vybeApplicationsSubmitted VybeProviderApplication[] @relation("VybeApplicationApplicant")
   vybeProviderReviews VybeProviderReview[]
   vybeEvidenceReviewed VybeProviderEvidence[] @relation("VybeEvidenceReviewer")
@@ -759,6 +792,8 @@ model VybeProviderProfile {
   offerings      VybeOffering[]
   timeSlotResources VybeTimeSlotResource[]
   timeSlotResourceGroups VybeTimeSlotResourceGroup[]
+  accommodationProperties VybeAccommodationProperty[]
+  accommodationRoomCategories VybeAccommodationRoomCategory[]
 
   @@map("vybe_provider_profiles")
 }
@@ -885,7 +920,9 @@ model VybeOffering {
   inventoryPool             VybeInventoryPool?
   timeSlotOccurrences       VybeTimeSlotOccurrence[]
   timeSlotResourceGroups    VybeTimeSlotResourceGroup[]
+  accommodationRoomCategory VybeAccommodationRoomCategory?
 
+  @@unique([id, providerProfileId], map: "vybe_offerings_id_provider_profile_key")
   @@index([providerProfileId, category, status], map: "vybe_offerings_provider_category_status_idx")
   @@index([category, status, createdAt], map: "vybe_offerings_category_status_created_idx")
   @@map("vybe_offerings")
@@ -906,6 +943,174 @@ model VybeOfferingVersion {
   @@unique([offeringId, version], map: "vybe_offering_versions_offering_version_key")
   @@index([offeringId, status, version], map: "vybe_offering_versions_offering_status_version_idx")
   @@map("vybe_offering_versions")
+}
+
+
+model VybeAccommodationProperty {
+  id                String                           @id @default(uuid()) @db.Uuid
+  providerProfileId String                           @map("provider_profile_id") @db.Uuid
+  providerPropertyKey String                         @map("provider_property_key") @db.VarChar(120)
+  name              String                           @db.VarChar(180)
+  addressLine       String?                          @map("address_line") @db.VarChar(300)
+  city              String                           @db.VarChar(100)
+  state             String                           @db.VarChar(100)
+  country           String                           @db.VarChar(100)
+  postalCode        String?                          @map("postal_code") @db.VarChar(32)
+  timezone          String                           @db.VarChar(80)
+  status            VybeAccommodationPropertyStatus  @default(ACTIVE)
+  createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile   VybeProviderProfile              @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_properties_provider_fkey")
+  roomCategories    VybeAccommodationRoomCategory[]
+
+  @@unique([providerProfileId, providerPropertyKey], map: "vybe_accommodation_properties_provider_key")
+  @@unique([id, providerProfileId], map: "vybe_accommodation_properties_id_provider_key")
+  @@index([providerProfileId, status], map: "vybe_accommodation_properties_provider_status_idx")
+  @@map("vybe_accommodation_properties")
+}
+
+model VybeAccommodationRoomCategory {
+  id                String                                  @id @default(uuid()) @db.Uuid
+  providerProfileId String                                  @map("provider_profile_id") @db.Uuid
+  propertyId        String                                  @map("property_id") @db.Uuid
+  providerCategoryKey String                                @map("provider_category_key") @db.VarChar(120)
+  name              String                                  @db.VarChar(160)
+  description       String?                                 @db.VarChar(1000)
+  maxOccupancy      Int                                     @map("max_occupancy")
+  specifications    Json                                    @default("{}")
+  status            VybeAccommodationRoomCategoryStatus    @default(ACTIVE)
+  offeringId        String                                  @unique @map("offering_id") @db.Uuid
+  createdAt         DateTime                                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile   VybeProviderProfile                     @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_room_categories_provider_fkey")
+  property          VybeAccommodationProperty               @relation(fields: [propertyId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_property_provider_fkey")
+  offering          VybeOffering                             @relation(fields: [offeringId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_offering_provider_fkey")
+  allocations       VybeAccommodationAllocation[]
+  nightLocks        VybeAccommodationNightLock[]
+  holds             VybeAccommodationHold[]
+
+  @@unique([propertyId, providerCategoryKey], map: "vybe_accommodation_room_categories_property_key")
+  @@unique([offeringId, providerProfileId], map: "vybe_accommodation_room_categories_offering_provider_key")
+  @@unique([id, providerProfileId], map: "vybe_accommodation_room_categories_id_provider_key")
+  @@index([providerProfileId, status], map: "vybe_accommodation_room_categories_provider_status_idx")
+  @@map("vybe_accommodation_room_categories")
+}
+
+model VybeAccommodationAllocation {
+  id                    String                               @id @default(uuid()) @db.Uuid
+  roomCategoryId        String                               @map("room_category_id") @db.Uuid
+  startDate             DateTime                             @map("start_date") @db.Date
+  endDate               DateTime                             @map("end_date") @db.Date
+  releaseCutoffAt       DateTime                             @map("release_cutoff_at") @db.Timestamptz(6)
+  releaseCutoffLocal    String                               @map("release_cutoff_local") @db.VarChar(40)
+  releaseCutoffTimezone String                               @map("release_cutoff_timezone") @db.VarChar(80)
+  agreementReference    String                               @map("agreement_reference") @db.VarChar(500)
+  termsVersion          String                               @map("terms_version") @db.VarChar(80)
+  evidenceReference     String                               @map("evidence_reference") @db.VarChar(1000)
+  status                VybeAccommodationAllocationStatus    @default(ACTIVE)
+  createdByUserId       String                               @map("created_by_user_id") @db.Uuid
+  createdAt             DateTime                             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  roomCategory          VybeAccommodationRoomCategory        @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_category_fkey")
+  createdBy             User                                 @relation("VybeAccommodationAllocationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_creator_fkey")
+  nights                VybeAccommodationAllocationNight[]
+
+  @@unique([id, roomCategoryId], map: "vybe_accommodation_allocations_id_category_key")
+  @@index([roomCategoryId, status, releaseCutoffAt], map: "vybe_accommodation_allocations_category_cutoff_idx")
+  @@map("vybe_accommodation_allocations")
+}
+
+model VybeAccommodationNightLock {
+  id             String                              @id @default(uuid()) @db.Uuid
+  roomCategoryId String                              @map("room_category_id") @db.Uuid
+  stayDate       DateTime                            @map("stay_date") @db.Date
+  createdAt      DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
+  roomCategory   VybeAccommodationRoomCategory       @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_night_locks_category_fkey")
+  allocationNights VybeAccommodationAllocationNight[]
+
+  @@unique([roomCategoryId, stayDate], map: "vybe_accommodation_night_locks_category_date_key")
+  @@map("vybe_accommodation_night_locks")
+}
+
+model VybeAccommodationAllocationNight {
+  id                String                           @id @default(uuid()) @db.Uuid
+  allocationId      String                           @map("allocation_id") @db.Uuid
+  roomCategoryId    String                           @map("room_category_id") @db.Uuid
+  stayDate          DateTime                         @map("stay_date") @db.Date
+  allocatedQuantity Int                              @map("allocated_quantity")
+  committedQuantity Int                              @default(0) @map("committed_quantity")
+  createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  allocation        VybeAccommodationAllocation       @relation(fields: [allocationId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_allocation_category_fkey")
+  nightLock         VybeAccommodationNightLock        @relation(fields: [roomCategoryId, stayDate], references: [roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_lock_fkey")
+  holdNights        VybeAccommodationHoldNight[]
+  adjustments       VybeAccommodationAllocationAdjustment[]
+
+  @@unique([allocationId, stayDate], map: "vybe_accommodation_allocation_nights_allocation_date_key")
+  @@unique([id, roomCategoryId, stayDate], map: "vybe_accommodation_allocation_nights_id_category_date_key")
+  @@index([roomCategoryId, stayDate], map: "vybe_accommodation_allocation_nights_category_date_idx")
+  @@map("vybe_accommodation_allocation_nights")
+}
+
+model VybeAccommodationAllocationAdjustment {
+  id               String                              @id @default(uuid()) @db.Uuid
+  allocationNightId String                             @map("allocation_night_id") @db.Uuid
+  actorUserId      String                              @map("actor_user_id") @db.Uuid
+  quantityDelta    Int                                 @map("quantity_delta")
+  reason           String                              @db.VarChar(1000)
+  evidenceReference String                             @map("evidence_reference") @db.VarChar(1000)
+  createdAt        DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
+  allocationNight  VybeAccommodationAllocationNight    @relation(fields: [allocationNightId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_night_fkey")
+  actor            User                                @relation(fields: [actorUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_actor_fkey")
+
+  @@index([allocationNightId, createdAt], map: "vybe_accommodation_adjustments_night_created_idx")
+  @@index([actorUserId, createdAt], map: "vybe_accommodation_adjustments_actor_created_idx")
+  @@map("vybe_accommodation_allocation_adjustments")
+}
+
+model VybeAccommodationHold {
+  id             String                          @id @default(uuid()) @db.Uuid
+  roomCategoryId String                          @map("room_category_id") @db.Uuid
+  userId         String                          @map("user_id") @db.Uuid
+  idempotencyKey String                          @map("idempotency_key") @db.VarChar(128)
+  requestHash    String                          @map("request_hash") @db.Char(64)
+  checkInDate    DateTime                        @map("check_in_date") @db.Date
+  checkOutDate   DateTime                        @map("check_out_date") @db.Date
+  roomQuantity   Int                             @map("room_quantity")
+  status         VybeAccommodationHoldStatus     @default(ACTIVE)
+  expiresAt      DateTime                        @map("expires_at") @db.Timestamptz(6)
+  snapshot       Json
+  createdAt      DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  roomCategory   VybeAccommodationRoomCategory   @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_category_fkey")
+  user           User                            @relation(fields: [userId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_user_fkey")
+  nights         VybeAccommodationHoldNight[]
+
+  @@unique([userId, idempotencyKey], map: "vybe_accommodation_holds_user_idempotency_key")
+  @@unique([id, roomCategoryId], map: "vybe_accommodation_holds_id_category_key")
+  @@index([roomCategoryId, status, expiresAt], map: "vybe_accommodation_holds_category_status_expiry_idx")
+  @@index([userId, status, expiresAt], map: "vybe_accommodation_holds_user_status_expiry_idx")
+  @@map("vybe_accommodation_holds")
+}
+
+model VybeAccommodationHoldNight {
+  id                         String                              @id @default(uuid()) @db.Uuid
+  holdId                     String                              @map("hold_id") @db.Uuid
+  allocationNightId          String                              @map("allocation_night_id") @db.Uuid
+  roomCategoryId             String                              @map("room_category_id") @db.Uuid
+  stayDate                   DateTime                            @map("stay_date") @db.Date
+  quantity                   Int
+  releaseCutoffAtSnapshot    DateTime                            @map("release_cutoff_at_snapshot") @db.Timestamptz(6)
+  releaseCutoffLocalSnapshot String                             @map("release_cutoff_local_snapshot") @db.VarChar(40)
+  releaseCutoffTimezoneSnapshot String                          @map("release_cutoff_timezone_snapshot") @db.VarChar(80)
+  createdAt                  DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
+  hold                       VybeAccommodationHold               @relation(fields: [holdId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_hold_nights_hold_category_fkey")
+  allocationNight            VybeAccommodationAllocationNight    @relation(fields: [allocationNightId, roomCategoryId, stayDate], references: [id, roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_hold_nights_allocation_category_date_fkey")
+
+  @@unique([holdId, allocationNightId], map: "vybe_accommodation_hold_nights_hold_allocation_key")
+  @@index([allocationNightId], map: "vybe_accommodation_hold_nights_allocation_idx")
+  @@index([holdId, stayDate], map: "vybe_accommodation_hold_nights_hold_date_idx")
+  @@map("vybe_accommodation_hold_nights")
 }
 
 model VybeCategoryActivation {
