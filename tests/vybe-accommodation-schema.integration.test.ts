@@ -215,8 +215,6 @@ describe.skipIf(!enabled)(
     it("protects hold-night snapshots and capacity", async () => {
       const fixture = await createFixture();
       const hold = await createHold(fixture);
-
-      const hold = await createHold(fixture);
       const holdNight = await prisma.vybeAccommodationHoldNight.findFirstOrThrow({
         where: { holdId: hold.id }
       });
