@@ -64,6 +64,7 @@ describe.skipIf(!enabled)(
           name: "Standard room",
           maxOccupancy: 2,
           physicalUnitCount: 12,
+          physicalUnitCountEvidenceReference: "provider-room-register:12",
           specifications: { bed: "queen", bathroom: "private" },
           offeringId: offering.id
         }
@@ -161,6 +162,7 @@ describe.skipIf(!enabled)(
             name: "Foreign category",
             maxOccupancy: 2,
             physicalUnitCount: 12,
+            physicalUnitCountEvidenceReference: "provider-room-register:12",
             offeringId: fixture.offering.id
           }
         })
