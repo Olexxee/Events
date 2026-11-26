@@ -14,7 +14,9 @@ import {
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
 
-describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration", () => {
+describe.skipIf(!enabled)(
+  "Vybe time-slot capacity holds PostgreSQL integration",
+  () => {
   beforeAll(async () => {
     await connectDatabase();
   });
@@ -115,7 +117,9 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
     return { userId: user.id, occurrenceId: occurrence.id };
   }
 
-  it("serializes competing final-unit holds so capacity cannot be oversold", async () => {
+  it(
+    "serializes competing final-unit holds so capacity cannot be oversold",
+    async () => {
     const fixture = await createCapacityFixture(1);
     const results = await Promise.allSettled([
       createTimeSlotCapacityHold({
@@ -129,14 +133,22 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
         idempotencyKey: `final-unit-b-${crypto.randomUUID()}`
       })
     ]);
-    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
-    const availability = await getTimeSlotCapacityAvailability(fixture.occurrenceId);
+    expect(
+      results.filter((result) => result.status === "fulfilled")
+    ).toHaveLength(1);
+    expect(
+      results.filter((result) => result.status === "rejected")
+    ).toHaveLength(1);
+    const availability = await getTimeSlotCapacityAvailability(
+      fixture.occurrenceId
+    );
     expect(availability.availableQuantity).toBe(0);
     expect(availability.heldQuantity).toBe(1);
   });
 
-  it("prevents concurrent multi-unit requests from exceeding total capacity", async () => {
+  it(
+    "prevents concurrent multi-unit requests from exceeding total capacity",
+    async () => {
     const fixture = await createCapacityFixture(3);
     const results = await Promise.allSettled([
       createTimeSlotCapacityHold({
@@ -151,10 +163,14 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
       })
     ]);
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-    expect((await getTimeSlotCapacityAvailability(fixture.occurrenceId)).heldQuantity).toBe(2);
+    expect(
+      (await getTimeSlotCapacityAvailability(fixture.occurrenceId)).heldQuantity
+    ).toBe(2);
   });
 
-  it("returns the original hold for an identical idempotent replay", async () => {
+  it(
+    "returns the original hold for an identical idempotent replay",
+    async () => {
     const fixture = await createCapacityFixture(5);
     const input = {
       ...fixture,
@@ -172,13 +188,19 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
   it("rejects reuse of an idempotency key with a changed payload", async () => {
     const fixture = await createCapacityFixture(5);
     const idempotencyKey = `changed-payload-${crypto.randomUUID()}`;
-    await createTimeSlotCapacityHold({ ...fixture, quantity: 1, idempotencyKey });
+    await createTimeSlotCapacityHold({
+      ...fixture,
+      quantity: 1,
+      idempotencyKey
+    });
     await expect(
       createTimeSlotCapacityHold({ ...fixture, quantity: 2, idempotencyKey })
     ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
   });
 
-  it("expires stale holds synchronously before allocating capacity again", async () => {
+  it(
+    "expires stale holds synchronously before allocating capacity again",
+    async () => {
     const fixture = await createCapacityFixture(1);
     const hold = await createTimeSlotCapacityHold({
       ...fixture,
@@ -206,7 +228,9 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
     })).not.toBeNull();
   });
 
-  it("makes concurrent release retries a single terminal transition", async () => {
+  it(
+    "makes concurrent release retries a single terminal transition",
+    async () => {
     const fixture = await createCapacityFixture(2);
     const hold = await createTimeSlotCapacityHold({
       ...fixture,
@@ -222,7 +246,10 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
       where: { resourceId: hold.id, action: "vybe.time_slot_hold.released" }
     })).toBe(1);
     expect(await prisma.outboxMessage.count({
-      where: { aggregateId: fixture.occurrenceId, eventType: "vybe.time_slot_hold.released.v1" }
+      where: {
+        aggregateId: fixture.occurrenceId,
+        eventType: "vybe.time_slot_hold.released.v1"
+      }
     })).toBe(1);
   });
 
@@ -244,6 +271,8 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
       userId: fixture.userId
     });
     expect(released.status).toBe("RELEASED");
-    expect((await getTimeSlotCapacityAvailability(fixture.occurrenceId)).availableQuantity).toBe(2);
+    expect(
+      (await getTimeSlotCapacityAvailability(fixture.occurrenceId)).availableQuantity
+    ).toBe(2);
   });
 });
