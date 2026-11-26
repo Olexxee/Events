@@ -12,6 +12,7 @@ import { ticketingRouter } from "./modules/ticketing/ticketing.routes.js";
 import { vybeProviderRouter } from "./modules/vybe-provider/vybe-provider.routes.js";
 import { vybeCatalogueRouter } from "./modules/vybe-catalogue/vybe-catalogue.routes.js";
 import { vybeInventoryRouter } from "./modules/vybe-inventory/vybe-inventory.routes.js";
+import { vybeTimeSlotsRouter } from "./modules/vybe-time-slots/vybe-time-slots.routes.js";
 
 export interface AppDependencies {
   databasePing?: () => Promise<void>;
@@ -37,6 +38,7 @@ export function createApp(dependencies: AppDependencies = {}): Express {
   app.use(prefix, vybeProviderRouter);
   app.use(prefix, vybeCatalogueRouter);
   app.use(prefix, vybeInventoryRouter);
+  app.use(prefix, vybeTimeSlotsRouter);
 
   app.get(`${prefix}/health/ready`, async (_req, res) => {
     await databasePing();
