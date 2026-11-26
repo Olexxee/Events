@@ -734,7 +734,6 @@ model VybeProviderProfile {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   approvals      VybeProviderApproval[]
   offerings      VybeOffering[]
-  inventoryPools VybeInventoryPool[]
 
   @@map("vybe_provider_profiles")
 }
