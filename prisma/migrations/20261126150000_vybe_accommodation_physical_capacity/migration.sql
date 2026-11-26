@@ -8,9 +8,6 @@ ALTER TABLE "vybe_accommodation_room_categories"
   ADD CONSTRAINT "vybe_accommodation_room_categories_physical_unit_count_check"
   CHECK ("physical_unit_count" IS NULL OR "physical_unit_count" > 0);
 
-CREATE INDEX "vybe_accommodation_allocation_nights_category_date_capacity_idx"
-  ON "vybe_accommodation_allocation_nights" ("room_category_id", "stay_date");
-
 -- Serialize every aggregate allocation change on the same category/night anchor
 -- already used by accommodation holds.
 CREATE FUNCTION vybe_guard_accommodation_aggregate_allocation_capacity()
