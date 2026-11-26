@@ -65,6 +65,8 @@ CREATE TABLE "vybe_accommodation_room_categories" (
     UNIQUE ("property_id", "provider_category_key"),
   CONSTRAINT "vybe_accommodation_room_categories_offering_id_key"
     UNIQUE ("offering_id"),
+  CONSTRAINT "vybe_accommodation_room_categories_offering_provider_key"
+    UNIQUE ("offering_id", "provider_profile_id"),
   CONSTRAINT "vybe_accommodation_room_categories_id_provider_key"
     UNIQUE ("id", "provider_profile_id"),
   CONSTRAINT "vybe_accommodation_room_categories_occupancy_check"
