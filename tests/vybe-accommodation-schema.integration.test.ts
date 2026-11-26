@@ -277,6 +277,47 @@ describe.skipIf(!enabled)(
       });
     });
 
+    it("rechecks aggregate capacity when a released allocation is reactivated", async () => {
+      const fixture = await createFixture();
+      const secondAllocation = await prisma.vybeAccommodationAllocation.create({
+        data: {
+          roomCategoryId: fixture.roomCategory.id,
+          startDate: new Date("2027-06-10T00:00:00.000Z"),
+          endDate: new Date("2027-06-12T00:00:00.000Z"),
+          releaseCutoffAt: new Date("2027-06-01T11:00:00.000Z"),
+          releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
+          releaseCutoffTimezone: "Africa/Lagos",
+          agreementReference: "reactivation-agreement",
+          termsVersion: "vybe-provider-v1",
+          evidenceReference: "provider-allocation:reactivation",
+          createdByUserId: fixture.user.id
+        }
+      });
+      await prisma.vybeAccommodationAllocationNight.create({
+        data: {
+          allocationId: secondAllocation.id,
+          roomCategoryId: fixture.roomCategory.id,
+          stayDate: new Date("2027-06-10T00:00:00.000Z"),
+          allocatedQuantity: 10
+        }
+      });
+      await prisma.vybeAccommodationAllocation.update({
+        where: { id: secondAllocation.id },
+        data: { status: "RELEASED" }
+      });
+      await prisma.vybeAccommodationAllocationNight.update({
+        where: { id: fixture.allocationNight.id },
+        data: { allocatedQuantity: 3 }
+      });
+
+      await expect(
+        prisma.vybeAccommodationAllocation.update({
+          where: { id: secondAllocation.id },
+          data: { status: "ACTIVE" }
+        })
+      ).rejects.toThrow();
+    });
+
     it("serializes concurrent allocation lots against the category physical ceiling", async () => {
       const fixture = await createFixture();
       const allocations = await Promise.all([1, 2].map((index) =>
