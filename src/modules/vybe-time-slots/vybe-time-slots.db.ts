@@ -109,12 +109,6 @@ async function assertOfferingSetupAccess(
   if (offeringLock.length === 0) {
     fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering was not found", 404);
   }
-  const offeringLock = await tx.$queryRaw<Array<{ id: string }>>(
-    Prisma.sql`SELECT id FROM vybe_offerings WHERE id = ${offeringId}::uuid AND status = 'PUBLISHED' FOR SHARE`
-  );
-  if (offeringLock.length === 0) {
-    fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering is not publicly available", 404);
-  }
   const offering = await tx.vybeOffering.findUnique({
     where: { id: offeringId },
     include: {
@@ -667,6 +661,12 @@ async function assertOfferingAvailabilityAccess(
   tx: Prisma.TransactionClient,
   offeringId: string
 ) {
+  const offeringLock = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM vybe_offerings WHERE id = ${offeringId}::uuid AND status = 'PUBLISHED' FOR SHARE`
+  );
+  if (offeringLock.length === 0) {
+    fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering is not publicly available", 404);
+  }
   const offering = await tx.vybeOffering.findUnique({
     where: { id: offeringId },
     include: {
