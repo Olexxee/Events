@@ -663,6 +663,103 @@ describe.skipIf(!enabled)(
     });
   });
 
+
+  it("rejects a hold header without a complete set of room-night details", async () => {
+    const fixture = await createFixture();
+    const { roomCategory } = await createPropertyAndCategory(fixture);
+
+    await expect(
+      prisma.vybeAccommodationHold.create({
+        data: {
+          roomCategoryId: roomCategory.id,
+          userId: fixture.user.id,
+          idempotencyKey: "incomplete-accommodation-hold",
+          requestHash: "b".repeat(64),
+          checkInDate: new Date("2027-06-10T00:00:00.000Z"),
+          checkOutDate: new Date("2027-06-12T00:00:00.000Z"),
+          roomQuantity: 2,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          snapshot: {}
+        }
+      })
+    ).rejects.toThrow();
+  });
+
+  it("keeps hold request and per-night allocation snapshots immutable", async () => {
+    const fixture = await createFixture();
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      await createAllocation(fixture, roomCategory.id, [3, 3]);
+      const hold = await createAccommodationHold({
+        roomCategoryId: roomCategory.id,
+        userId: fixture.user.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 2,
+        idempotencyKey: "immutable-accommodation-hold"
+      });
+      const firstNight = hold.nights[0];
+      if (!firstNight) throw new Error("Expected a hold-night detail");
+
+      await expect(
+        prisma.vybeAccommodationHold.update({
+          where: { id: hold.id },
+          data: { roomQuantity: 1 }
+        })
+      ).rejects.toThrow();
+      await expect(
+        prisma.vybeAccommodationHoldNight.update({
+          where: { id: firstNight.id },
+          data: { quantity: firstNight.quantity + 1 }
+        })
+      ).rejects.toThrow();
+      await expect(
+        prisma.vybeAccommodationHold.update({
+          where: { id: hold.id },
+          data: { expiresAt: new Date(Date.now() + 30 * 60 * 1000) }
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  it("expires stale holds before a provider reduces allocated room quantity", async () => {
+    const fixture = await createFixture();
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      const allocation = await createAllocation(fixture, roomCategory.id, [3]);
+      const hold = await createAccommodationHold({
+        roomCategoryId: roomCategory.id,
+        userId: fixture.user.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-11",
+        roomQuantity: 2,
+        idempotencyKey: "provider-reduction-after-expiry"
+      });
+      await prisma.vybeAccommodationHold.update({
+        where: { id: hold.id },
+        data: { expiresAt: new Date(Date.now() - 1000) }
+      });
+      await prisma.vybeAccommodationAllocation.update({
+        where: { id: allocation.id },
+        data: { releaseCutoffAt: new Date(Date.now() - 1000) }
+      });
+
+      const night = allocation.nights[0];
+      if (!night) throw new Error("Expected an allocation night");
+      const result = await adjustAccommodationAllocationNight({
+        allocationNightId: night.id,
+        actorUserId: fixture.user.id,
+        quantityDelta: -2,
+        reason: "Provider reclaims expired, uncommitted room inventory.",
+        evidenceReference: "private://provider/expired-hold-reduction"
+      });
+      expect(result.allocationNight.allocatedQuantity).toBe(1);
+      const expired = await prisma.vybeAccommodationHold.findUniqueOrThrow({
+        where: { id: hold.id }
+      });
+      expect(expired.status).toBe("EXPIRED");
+    });
+  });
   it("allows adjustments only under the allocation cutoff and releases only uncommitted, unheld lots", async () => {
       const fixture = await createFixture();
       const { roomCategory } = await createPropertyAndCategory(fixture);
