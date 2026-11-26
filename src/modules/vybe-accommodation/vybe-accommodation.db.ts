@@ -857,8 +857,7 @@ export async function adjustAccommodationAllocationNight(input: {
     );
     await expireAccommodationHoldsInTransaction(
       tx,
-      initial.roomCategoryId,
-      new Date()
+      initial.roomCategoryId
     );
     const current = await tx.vybeAccommodationAllocationNight.findUniqueOrThrow(
       {
@@ -990,8 +989,7 @@ export async function releaseAccommodationAllocation(input: {
     );
     await expireAccommodationHoldsInTransaction(
       tx,
-      allocation.roomCategoryId,
-      new Date()
+      allocation.roomCategoryId
     );
     const updated = await tx.vybeAccommodationAllocation.update({
       where: { id: allocation.id },
