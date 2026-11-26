@@ -8,4 +8,5 @@ import {
 export const createVybeTimeSlotOccurrence = createTimeSlotOccurrence;
 export const createVybeTimeSlotResourceGroup = createTimeSlotResourceGroup;
 export const createVybeTimeSlotResource = createTimeSlotResource;
-export const addVybeTimeSlotResourceGroupMember = addTimeSlotResourceGroupMember;
+export const addVybeTimeSlotResourceGroupMember =
+  addTimeSlotResourceGroupMember;

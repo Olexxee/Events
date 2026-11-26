@@ -12,7 +12,11 @@ function fail(code: string, message: string, status = 409): never {
 function parseInstant(value: string, timezone: string): Date {
   const instant = new Date(value);
   if (!Number.isFinite(instant.getTime())) {
-    fail("VYBE_TIME_SLOT_INVALID_INSTANT", "A valid service timestamp is required", 400);
+    fail(
+      "VYBE_TIME_SLOT_INVALID_INSTANT",
+      "A valid service timestamp is required",
+      400
+    );
   }
   let parts: Intl.DateTimeFormatPart[];
   try {
@@ -27,9 +31,15 @@ function parseInstant(value: string, timezone: string): Date {
       hourCycle: "h23"
     }).formatToParts(instant);
   } catch {
-    fail("VYBE_TIME_SLOT_INVALID_TIMEZONE", "A valid IANA timezone is required", 400);
+    fail(
+      "VYBE_TIME_SLOT_INVALID_TIMEZONE",
+      "A valid IANA timezone is required",
+      400
+    );
   }
-  const local = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const local = Object.fromEntries(
+    parts.map((part) => [part.type, part.value])
+  );
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(value);
   if (
     !match ||
@@ -52,7 +62,11 @@ function parseInstant(value: string, timezone: string): Date {
 function parseValidityInstant(value: string): Date {
   const instant = new Date(value);
   if (!Number.isFinite(instant.getTime())) {
-    fail("VYBE_TIME_SLOT_INVALID_VALIDITY_WINDOW", "A valid ISO-8601 validity timestamp is required", 400);
+    fail(
+      "VYBE_TIME_SLOT_INVALID_VALIDITY_WINDOW",
+      "A valid ISO-8601 validity timestamp is required",
+      400
+    );
   }
   return instant;
 }
@@ -77,7 +91,11 @@ async function assertOfferingSetupAccess(
     include: { providerProfile: true }
   });
   if (!initialOffering) {
-    fail("VYBE_OFFERING_NOT_PUBLISHED", "Time-slot setup requires a published offering", 404);
+    fail(
+      "VYBE_OFFERING_NOT_PUBLISHED",
+      "Time-slot setup requires a published offering",
+      404
+    );
   }
   const organizationId = initialOffering.providerProfile.organizationId;
   await assertOrganizationAuthority(tx, {
@@ -123,7 +141,11 @@ async function assertOfferingSetupAccess(
     );
   }
   if (offering.providerProfile.organization.status !== "ACTIVE") {
-    fail("VYBE_PROVIDER_INACTIVE", "The provider organization is not active", 403);
+    fail(
+      "VYBE_PROVIDER_INACTIVE",
+      "The provider organization is not active",
+      403
+    );
   }
   const approval = offering.providerProfile.approvals.find(
     (item) => item.category === offering.category
@@ -139,19 +161,30 @@ async function assertOfferingSetupAccess(
     Prisma.sql`SELECT id FROM vybe_provider_approvals WHERE id = ${approval.id}::uuid AND status = 'ACTIVE' AND (expires_at IS NULL OR expires_at > now()) FOR SHARE`
   );
   if (approvalLock.length === 0) {
-    fail("VYBE_PROVIDER_APPROVAL_REQUIRED", "Provider approval is no longer active", 403);
+    fail(
+      "VYBE_PROVIDER_APPROVAL_REQUIRED",
+      "Provider approval is no longer active",
+      403
+    );
   }
   const organizationLock = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM organizations WHERE id = ${organizationId}::uuid AND status = 'ACTIVE' FOR SHARE`
   );
   if (organizationLock.length === 0) {
-    fail("VYBE_PROVIDER_INACTIVE", "The provider organization is no longer active", 403);
+    fail(
+      "VYBE_PROVIDER_INACTIVE",
+      "The provider organization is no longer active",
+      403
+    );
   }
   const activationLock = await tx.$queryRaw<Array<{ category: string }>>(
     Prisma.sql`SELECT category FROM vybe_category_activations WHERE category = ${offering.category}::vybe_category AND is_active = true FOR SHARE`
   );
   if (activationLock.length === 0) {
-    fail("VYBE_CATEGORY_NOT_ACTIVE", "This Vybe category has not passed its launch gates");
+    fail(
+      "VYBE_CATEGORY_NOT_ACTIVE",
+      "This Vybe category has not passed its launch gates"
+    );
   }
   const version = offering.versions.find(
     (item) => item.version === offering.currentPublishedVersion
@@ -160,12 +193,16 @@ async function assertOfferingSetupAccess(
   const location = content?.location as Record<string, unknown> | undefined;
   const locations = Array.isArray(approval.locations) ? approval.locations : [];
   const approved = locations.some((entry) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry))
+      return false;
     const item = entry as Record<string, unknown>;
     return (
-      String(item.city ?? "").toLowerCase() === String(location?.city ?? "").toLowerCase() &&
-      String(item.state ?? "").toLowerCase() === String(location?.state ?? "").toLowerCase() &&
-      String(item.country ?? "").toLowerCase() === String(location?.country ?? "").toLowerCase()
+      String(item.city ?? "").toLowerCase() ===
+        String(location?.city ?? "").toLowerCase() &&
+      String(item.state ?? "").toLowerCase() ===
+        String(location?.state ?? "").toLowerCase() &&
+      String(item.country ?? "").toLowerCase() ===
+        String(location?.country ?? "").toLowerCase()
     );
   });
   if (!approved) {
@@ -224,19 +261,41 @@ export async function createTimeSlotOccurrence(input: {
 }) {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
-    const offering = await assertOfferingSetupAccess(tx, input.offeringId, input.actorUserId);
-    const offeringVersion = offering.currentPublishedVersion ?? fail("VYBE_OFFERING_NOT_PUBLISHED", "A published offering version is required", 409);
+    const offering = await assertOfferingSetupAccess(
+      tx,
+      input.offeringId,
+      input.actorUserId
+    );
+    const offeringVersion =
+      offering.currentPublishedVersion ??
+      fail(
+        "VYBE_OFFERING_NOT_PUBLISHED",
+        "A published offering version is required",
+        409
+      );
     const serviceStartsAt = parseInstant(input.serviceStartsAt, input.timezone);
     const serviceEndsAt = parseInstant(input.serviceEndsAt, input.timezone);
     if (serviceStartsAt >= serviceEndsAt) {
-      fail("VYBE_TIME_SLOT_INVALID_INTERVAL", "Service end must be after service start", 400);
+      fail(
+        "VYBE_TIME_SLOT_INVALID_INTERVAL",
+        "Service end must be after service start",
+        400
+      );
     }
-    const blockedStartsAt = new Date(serviceStartsAt.getTime() - input.preBufferSeconds * 1000);
-    const blockedEndsAt = new Date(serviceEndsAt.getTime() + input.postBufferSeconds * 1000);
+    const blockedStartsAt = new Date(
+      serviceStartsAt.getTime() - input.preBufferSeconds * 1000
+    );
+    const blockedEndsAt = new Date(
+      serviceEndsAt.getTime() + input.postBufferSeconds * 1000
+    );
     let resourceGroupId: string | undefined;
     if (input.inventoryMode === "EXCLUSIVE") {
       if (!input.resourceGroupId) {
-        fail("VYBE_TIME_SLOT_RESOURCE_GROUP_REQUIRED", "An exclusive occurrence requires a resource group", 400);
+        fail(
+          "VYBE_TIME_SLOT_RESOURCE_GROUP_REQUIRED",
+          "An exclusive occurrence requires a resource group",
+          400
+        );
       }
       const group = await tx.vybeTimeSlotResourceGroup.findFirst({
         where: {
@@ -245,8 +304,12 @@ export async function createTimeSlotOccurrence(input: {
           providerProfileId: offering.providerProfileId,
           isActive: true,
           AND: [
-            { OR: [{ validFrom: null }, { validFrom: { lte: blockedStartsAt } }] },
-            { OR: [{ validUntil: null }, { validUntil: { gte: blockedEndsAt } }] }
+            {
+              OR: [{ validFrom: null }, { validFrom: { lte: blockedStartsAt } }]
+            },
+            {
+              OR: [{ validUntil: null }, { validUntil: { gte: blockedEndsAt } }]
+            }
           ]
         },
         select: { id: true }
@@ -312,9 +375,17 @@ export async function createTimeSlotResourceGroup(input: {
 }) {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
-    const offering = await assertOfferingSetupAccess(tx, input.offeringId, input.actorUserId);
-    const validFrom = input.validFrom ? parseValidityInstant(input.validFrom) : undefined;
-    const validUntil = input.validUntil ? parseValidityInstant(input.validUntil) : undefined;
+    const offering = await assertOfferingSetupAccess(
+      tx,
+      input.offeringId,
+      input.actorUserId
+    );
+    const validFrom = input.validFrom
+      ? parseValidityInstant(input.validFrom)
+      : undefined;
+    const validUntil = input.validUntil
+      ? parseValidityInstant(input.validUntil)
+      : undefined;
     validateWindow(validFrom, validUntil);
     const group = await tx.vybeTimeSlotResourceGroup.create({
       data: {
@@ -353,7 +424,11 @@ export async function createTimeSlotResource(input: {
   const prisma = getPrismaClient();
   try {
     return await prisma.$transaction(async (tx) => {
-      const offering = await assertOfferingSetupAccess(tx, input.offeringId, input.actorUserId);
+      const offering = await assertOfferingSetupAccess(
+        tx,
+        input.offeringId,
+        input.actorUserId
+      );
       const resource = await tx.vybeTimeSlotResource.create({
         data: {
           providerProfileId: offering.providerProfileId,
@@ -378,8 +453,15 @@ export async function createTimeSlotResource(input: {
       return resource;
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      throw new AppError("VYBE_TIME_SLOT_RESOURCE_KEY_EXISTS", "This provider resource key is already in use", 409);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new AppError(
+        "VYBE_TIME_SLOT_RESOURCE_KEY_EXISTS",
+        "This provider resource key is already in use",
+        409
+      );
     }
     throw error;
   }
@@ -400,7 +482,12 @@ export async function addTimeSlotResourceGroupMember(input: {
         where: { id: input.groupId },
         include: { offering: { include: { providerProfile: true } } }
       });
-      if (!group) fail("VYBE_TIME_SLOT_RESOURCE_GROUP_NOT_FOUND", "Resource group was not found", 404);
+      if (!group)
+        fail(
+          "VYBE_TIME_SLOT_RESOURCE_GROUP_NOT_FOUND",
+          "Resource group was not found",
+          404
+        );
       await assertOrganizationAuthority(tx, {
         organizationId: group.offering.providerProfile.organizationId,
         userId: input.actorUserId,
@@ -410,17 +497,34 @@ export async function addTimeSlotResourceGroupMember(input: {
       const resource = await tx.vybeTimeSlotResource.findUnique({
         where: { id: input.resourceId }
       });
-      if (!resource || resource.providerProfileId !== group.providerProfileId || !resource.isActive || !group.isActive) {
-        fail("VYBE_TIME_SLOT_RESOURCE_SCOPE_INVALID", "The resource and active group must belong to the same provider", 400);
+      if (
+        !resource ||
+        resource.providerProfileId !== group.providerProfileId ||
+        !resource.isActive ||
+        !group.isActive
+      ) {
+        fail(
+          "VYBE_TIME_SLOT_RESOURCE_SCOPE_INVALID",
+          "The resource and active group must belong to the same provider",
+          400
+        );
       }
-      const validFrom = input.validFrom ? parseInstant(input.validFrom, "UTC") : undefined;
-      const validUntil = input.validUntil ? parseInstant(input.validUntil, "UTC") : undefined;
+      const validFrom = input.validFrom
+        ? parseInstant(input.validFrom, "UTC")
+        : undefined;
+      const validUntil = input.validUntil
+        ? parseInstant(input.validUntil, "UTC")
+        : undefined;
       validateWindow(validFrom, validUntil);
       if (
         (group.validFrom && (!validFrom || validFrom < group.validFrom)) ||
         (group.validUntil && (!validUntil || validUntil > group.validUntil))
       ) {
-        fail("VYBE_TIME_SLOT_MEMBERSHIP_OUTSIDE_GROUP", "Membership validity must be contained within the resource group's validity window", 400);
+        fail(
+          "VYBE_TIME_SLOT_MEMBERSHIP_OUTSIDE_GROUP",
+          "Membership validity must be contained within the resource group's validity window",
+          400
+        );
       }
       await tx.$queryRaw(
         Prisma.sql`SELECT id FROM vybe_time_slot_resources WHERE id = ${resource.id}::uuid FOR UPDATE`
@@ -431,8 +535,10 @@ export async function addTimeSlotResourceGroupMember(input: {
       const overlaps = memberships.some((membership) => {
         const startA = validFrom?.getTime() ?? Number.NEGATIVE_INFINITY;
         const endA = validUntil?.getTime() ?? Number.POSITIVE_INFINITY;
-        const startB = membership.validFrom?.getTime() ?? Number.NEGATIVE_INFINITY;
-        const endB = membership.validUntil?.getTime() ?? Number.POSITIVE_INFINITY;
+        const startB =
+          membership.validFrom?.getTime() ?? Number.NEGATIVE_INFINITY;
+        const endB =
+          membership.validUntil?.getTime() ?? Number.POSITIVE_INFINITY;
         return startA < endB && startB < endA;
       });
       if (overlaps) {
@@ -468,8 +574,15 @@ export async function addTimeSlotResourceGroupMember(input: {
       return member;
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      throw new AppError("VYBE_TIME_SLOT_MEMBERSHIP_EXISTS", "This resource is already a member of the group", 409);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new AppError(
+        "VYBE_TIME_SLOT_MEMBERSHIP_EXISTS",
+        "This resource is already a member of the group",
+        409
+      );
     }
     throw error;
   }
