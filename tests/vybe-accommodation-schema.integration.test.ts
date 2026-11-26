@@ -56,8 +56,7 @@ describe.skipIf(!enabled)(
           timezone: "Africa/Lagos"
         }
       });
-      const roomCategory =
-        await prisma.vybeAccommodationRoomCategory.create({
+      const roomCategory = await prisma.vybeAccommodationRoomCategory.create({
           data: {
             providerProfileId: profile.id,
             propertyId: property.id,
