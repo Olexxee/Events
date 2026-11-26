@@ -685,3 +685,24 @@ Hold duration reuses the existing category-level Vybe inventory policy: 600 seco
 Expiry, creation, and release each write audit and outbox records in the same transaction. Expiry is synchronous on the next allocation attempt; background cleanup is not required for capacity correctness. Release locks the occurrence, re-reads the hold, and performs one terminal transition. Only the owner can release. Customer holds do not require provider organization privileges; provider setup permissions remain limited to organization OWNER/ADMIN.
 
 Slice C excludes EXCLUSIVE occurrences, resource selection, booking/order records, Commerce, checkout, Payments, Finance, refunds, fulfilment, and room-night inventory. No category activation is implied.
+
+
+### 20.10 Slice D exclusive-resource hold implementation contract
+
+Slice D implements short-lived holds for EXCLUSIVE time-slot occurrences. Every successful hold is bound to one concrete provider resource; a resource-group-only hold is never returned. Capacity-session behavior from Slice C remains unchanged.
+
+Endpoints:
+
+- `GET /api/v1/vybe/time-slots/:occurrenceId/resource-availability` — advisory count of eligible and currently available resources; never a reservation and never exposes private resource identifiers.
+- `POST /api/v1/vybe/time-slots/resource-holds` — authenticated customer creates a hold for an EXCLUSIVE occurrence using an idempotency key. The platform selects the concrete resource.
+- `DELETE /api/v1/vybe/time-slots/holds/:holdId` — owner-only release for either capacity or exclusive-resource holds.
+
+The transaction revalidates the active user, published offering, provider organization, category/location approval, category activation, active occurrence, and active same-provider/same-offering resource group. Eligible group members must be active and their membership validity must cover the full blocked interval. The occurrence is locked first; candidate resource rows are then locked in deterministic UUID order and re-read after locking so a concurrent deactivation cannot slip through.
+
+Expired holds on candidate resources are synchronously transitioned to EXPIRED with audit and outbox records before conflict evaluation. A candidate is eligible only when no ACTIVE hold overlaps its effective blocked interval. The hold stores the concrete resource ID and snapshots service and blocked intervals. The PostgreSQL GiST exclusion constraint remains the final overlap barrier. An exclusion conflict identifies and excludes the selected resource, then retries selection in a new transaction up to five attempts; exhaustion returns a conflict rather than claiming inventory.
+
+The hold duration reuses the category-level policy (600 seconds by default, 60–1800 seconds). Idempotency remains unique per user/key: identical active replay returns the original concrete-resource hold; a changed payload or terminal hold conflicts. Creation, release, and expiry write audit/outbox records atomically. Release locks the concrete resource, re-reads the hold, and performs one terminal transition. Resource and resource-group deactivation are rejected while ACTIVE holds depend on them. Resource membership cannot be narrowed or removed across an active hold.
+
+PostgreSQL integration coverage includes same-resource concurrent requests, different-occurrence contention within one group, parallel resource selection, adjacent half-open intervals, overlapping service buffers, synchronous expiry, owner-only/concurrent release, and deactivation protection.
+
+Slice D does not create bookings or convert holds into commitments. Commerce, orders/checkout, Payments, Finance, refunds, fulfilment, cancellation, and accommodation room-night inventory remain excluded.
