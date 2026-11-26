@@ -63,6 +63,7 @@ describe.skipIf(!enabled)(
           providerCategoryKey: `standard-${suffix}`,
           name: "Standard room",
           maxOccupancy: 2,
+          physicalUnitCount: 12,
           specifications: { bed: "queen", bathroom: "private" },
           offeringId: offering.id
         }
@@ -159,6 +160,7 @@ describe.skipIf(!enabled)(
             providerCategoryKey: "foreign-category",
             name: "Foreign category",
             maxOccupancy: 2,
+            physicalUnitCount: 12,
             offeringId: fixture.offering.id
           }
         })
@@ -224,6 +226,90 @@ describe.skipIf(!enabled)(
             releaseCutoffAtSnapshot: new Date("2027-06-01T11:00:00.000Z"),
             releaseCutoffLocalSnapshot: "2027-06-01T12:00:00+01:00",
             releaseCutoffTimezoneSnapshot: "Africa/Lagos"
+          }
+        })
+      ).rejects.toThrow();
+    });
+
+
+    it("enforces aggregate physical room capacity across allocation lots", async () => {
+      const fixture = await createFixture();
+      const secondAllocation = await prisma.vybeAccommodationAllocation.create({
+        data: {
+          roomCategoryId: fixture.roomCategory.id,
+          startDate: new Date("2027-06-10T00:00:00.000Z"),
+          endDate: new Date("2027-06-12T00:00:00.000Z"),
+          releaseCutoffAt: new Date("2027-06-01T11:00:00.000Z"),
+          releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
+          releaseCutoffTimezone: "Africa/Lagos",
+          agreementReference: "second-allocation-agreement",
+          termsVersion: "vybe-provider-v1",
+          evidenceReference: "provider-allocation:second",
+          createdByUserId: fixture.user.id
+        }
+      });
+      await prisma.vybeAccommodationAllocationNight.create({
+        data: {
+          allocationId: secondAllocation.id,
+          roomCategoryId: fixture.roomCategory.id,
+          stayDate: new Date("2027-06-10T00:00:00.000Z"),
+          allocatedQuantity: 10
+        }
+      });
+
+      await expect(
+        prisma.vybeAccommodationAllocationNight.update({
+          where: { id: fixture.allocationNight.id },
+          data: { allocatedQuantity: 3 }
+        })
+      ).rejects.toThrow();
+
+      await prisma.vybeAccommodationRoomCategory.update({
+        where: { id: fixture.roomCategory.id },
+        data: { physicalUnitCount: 11 }
+      }).then(() => {
+        throw new Error("Expected physical capacity reduction to be rejected");
+      }).catch((error: unknown) => {
+        if (error instanceof Error && error.message === "Expected physical capacity reduction to be rejected") {
+          throw error;
+        }
+      });
+
+      await prisma.vybeAccommodationRoomCategory.update({
+        where: { id: fixture.roomCategory.id },
+        data: { physicalUnitCount: 12 }
+      });
+    });
+
+    it("rejects allocation when physical room count is unknown", async () => {
+      const fixture = await createFixture();
+      await prisma.vybeAccommodationRoomCategory.update({
+        where: { id: fixture.roomCategory.id },
+        data: { physicalUnitCount: null }
+      });
+
+      const secondAllocation = await prisma.vybeAccommodationAllocation.create({
+        data: {
+          roomCategoryId: fixture.roomCategory.id,
+          startDate: new Date("2027-06-10T00:00:00.000Z"),
+          endDate: new Date("2027-06-12T00:00:00.000Z"),
+          releaseCutoffAt: new Date("2027-06-01T11:00:00.000Z"),
+          releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
+          releaseCutoffTimezone: "Africa/Lagos",
+          agreementReference: "unknown-capacity-agreement",
+          termsVersion: "vybe-provider-v1",
+          evidenceReference: "provider-allocation:unknown",
+          createdByUserId: fixture.user.id
+        }
+      });
+
+      await expect(
+        prisma.vybeAccommodationAllocationNight.create({
+          data: {
+            allocationId: secondAllocation.id,
+            roomCategoryId: fixture.roomCategory.id,
+            stayDate: new Date("2027-06-10T00:00:00.000Z"),
+            allocatedQuantity: 1
           }
         })
       ).rejects.toThrow();
