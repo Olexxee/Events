@@ -1,4 +1,5 @@
-import { Prisma, type VybeCategory } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { enqueueOutboxMessage } from "../../shared/outbox/outbox.repository.js";
@@ -186,7 +187,7 @@ export async function adjustInventoryAllocation(input: {
       resourceId: pool.id,
       aggregateType: "vybe_inventory_pool",
       eventType: "vybe.inventory.allocation_adjusted.v1",
-      key: `vybe.inventory.pool:${pool.id}:allocation:${crypto.randomUUID()}`,
+      key: `vybe.inventory.pool:${pool.id}:allocation:${randomUUID()}`,
       payload: { quantityDelta: input.quantityDelta, allocatedQuantity: nextAllocation, reason: input.reason }
     });
     return updated;
