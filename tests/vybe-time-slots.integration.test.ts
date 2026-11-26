@@ -119,6 +119,7 @@ describe.skipIf(!enabled)(
           where: { occurrenceId: occurrence.id, status: "ACTIVE" }
         })
       ).toBe(2);
+    });
 
     it("rejects cross-provider and cross-offering links and enforces hold and capacity modes", async () => {
       const suffix = crypto.randomUUID();
@@ -281,9 +282,10 @@ describe.skipIf(!enabled)(
       ).rejects.toThrow();
 
       await prisma.$transaction(async (transaction) => {
-        const capacityOccurrence = await transaction.vybeTimeSlotOccurrence.create({
-          data: capacityOccurrenceData
-        });
+        const capacityOccurrence =
+          await transaction.vybeTimeSlotOccurrence.create({
+            data: capacityOccurrenceData
+          });
         await transaction.vybeTimeSlotCapacity.create({
           data: {
             occurrenceId: capacityOccurrence.id,
@@ -294,13 +296,14 @@ describe.skipIf(!enabled)(
 
       await expect(
         prisma.$transaction(async (transaction) => {
-          const exclusiveOccurrence = await transaction.vybeTimeSlotOccurrence.create({
-            data: {
-              ...occurrenceData,
-              offeringId: providerA.offering.id,
-              resourceGroupId: groupA.id
-            }
-          });
+          const exclusiveOccurrence =
+            await transaction.vybeTimeSlotOccurrence.create({
+              data: {
+                ...occurrenceData,
+                offeringId: providerA.offering.id,
+                resourceGroupId: groupA.id
+              }
+            });
           await transaction.vybeTimeSlotCapacity.create({
             data: {
               occurrenceId: exclusiveOccurrence.id,
@@ -309,7 +312,6 @@ describe.skipIf(!enabled)(
           });
         })
       ).rejects.toThrow();
-    });
     });
   }
 );
