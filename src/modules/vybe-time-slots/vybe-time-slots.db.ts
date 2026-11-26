@@ -1037,3 +1037,213 @@ export async function releaseTimeSlotCapacityHold(input: {
     return updated;
   });
 }
+
+function isExclusiveOverlapConflict(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const value = error as { code?: string; message?: string; meta?: { code?: string; database_error?: string; message?: string } };
+  const details = [value.code, value.message, value.meta?.code, value.meta?.database_error, value.meta?.message].filter(Boolean).join(" ");
+  return details.includes("23P01") || details.includes("vybe_time_slot_holds_exclusive_resource_no_overlap");
+}
+
+async function expireResourceHolds(tx: Prisma.TransactionClient, resourceIds: string[], now: Date) {
+  if (!resourceIds.length) return;
+  const expired = await tx.vybeTimeSlotHold.findMany({
+    where: { resourceId: { in: resourceIds }, status: "ACTIVE", expiresAt: { lte: now } },
+    select: { id: true, occurrenceId: true, resourceId: true }
+  });
+  if (!expired.length) return;
+  await tx.vybeTimeSlotHold.updateMany({
+    where: { id: { in: expired.map((hold) => hold.id) }, status: "ACTIVE" },
+    data: { status: "EXPIRED" }
+  });
+  for (const hold of expired) {
+    await recordTimeSlotHoldEvent(tx, {
+      actorUserId: null, actorType: "system", action: "vybe.time_slot_hold.expired",
+      holdId: hold.id, occurrenceId: hold.occurrenceId,
+      eventType: "vybe.time_slot_hold.expired.v1",
+      payload: { holdId: hold.id, occurrenceId: hold.occurrenceId, resourceId: hold.resourceId }
+    });
+  }
+}
+
+export async function getTimeSlotResourceAvailability(occurrenceId: string) {
+  const prisma = getPrismaClient();
+  return prisma.$transaction(async (tx) => {
+    const occurrence = await tx.vybeTimeSlotOccurrence.findUnique({
+      where: { id: occurrenceId },
+      select: { id: true, offeringId: true, inventoryMode: true, status: true, resourceGroupId: true, blockedStartsAt: true, blockedEndsAt: true }
+    });
+    if (!occurrence) fail("VYBE_TIME_SLOT_NOT_FOUND", "Time slot was not found", 404);
+    await assertOfferingAvailabilityAccess(tx, occurrence.offeringId);
+    if (occurrence.inventoryMode !== "EXCLUSIVE" || !occurrence.resourceGroupId || occurrence.status !== "ACTIVE") {
+      fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "This time slot does not offer active exclusive-resource inventory");
+    }
+    const now = new Date();
+    const members = await tx.vybeTimeSlotResourceGroupMember.findMany({
+      where: {
+        resourceGroupId: occurrence.resourceGroupId,
+        AND: [
+          { OR: [{ validFrom: null }, { validFrom: { lte: occurrence.blockedStartsAt } }] },
+          { OR: [{ validUntil: null }, { validUntil: { gte: occurrence.blockedEndsAt } }] }
+        ],
+        resource: { isActive: true }
+      },
+      select: { resourceId: true }
+    });
+    const resourceIds = members.map((member) => member.resourceId);
+    const held = resourceIds.length ? await tx.vybeTimeSlotHold.findMany({
+      where: {
+        resourceId: { in: resourceIds }, status: "ACTIVE", expiresAt: { gt: now },
+        blockedStartsAt: { lt: occurrence.blockedEndsAt }, blockedEndsAt: { gt: occurrence.blockedStartsAt }
+      },
+      select: { resourceId: true }, distinct: ["resourceId"]
+    }) : [];
+    return {
+      occurrenceId, inventoryMode: "EXCLUSIVE" as const,
+      eligibleResourceCount: resourceIds.length,
+      availableResourceCount: Math.max(0, resourceIds.length - held.length),
+      asOf: now.toISOString()
+    };
+  });
+}
+
+export async function createTimeSlotResourceHold(input: { occurrenceId: string; userId: string; idempotencyKey: string }) {
+  const prisma = getPrismaClient();
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: input.userId }, select: { status: true } });
+      if (!user || user.status !== "ACTIVE") fail("ACCOUNT_INACTIVE", "An active account is required", 403);
+      const initial = await tx.vybeTimeSlotOccurrence.findUnique({
+        where: { id: input.occurrenceId }, select: { offeringId: true }
+      });
+      if (!initial) fail("VYBE_TIME_SLOT_NOT_FOUND", "Time slot was not found", 404);
+      const offering = await assertOfferingAvailabilityAccess(tx, initial.offeringId);
+      const occurrenceLock = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM vybe_time_slot_occurrences WHERE id = ${input.occurrenceId}::uuid FOR UPDATE`
+      );
+      if (!occurrenceLock.length) fail("VYBE_TIME_SLOT_NOT_FOUND", "Time slot was not found", 404);
+      const occurrence = await tx.vybeTimeSlotOccurrence.findUnique({ where: { id: input.occurrenceId } });
+      if (!occurrence || occurrence.offeringId !== initial.offeringId || occurrence.status !== "ACTIVE" ||
+          occurrence.inventoryMode !== "EXCLUSIVE" || !occurrence.resourceGroupId) {
+        fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "This time slot does not offer active exclusive-resource inventory");
+      }
+      const now = new Date();
+      const existing = await tx.vybeTimeSlotHold.findUnique({
+        where: { userId_idempotencyKey: { userId: input.userId, idempotencyKey: input.idempotencyKey } }
+      });
+      if (existing) {
+        if (existing.occurrenceId !== occurrence.id || existing.capacityQuantity !== null || existing.resourceId === null) {
+          fail("IDEMPOTENCY_KEY_REUSED", "This idempotency key was already used for a different time-slot hold");
+        }
+        if (existing.status === "ACTIVE" && existing.expiresAt > now) return existing;
+        fail("VYBE_HOLD_NO_LONGER_ACTIVE", "This idempotent hold has expired or been released");
+      }
+      const groupLock = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM vybe_time_slot_resource_groups WHERE id = ${occurrence.resourceGroupId}::uuid AND is_active = true FOR SHARE`
+      );
+      if (!groupLock.length) fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "The resource group is not active");
+      const group = await tx.vybeTimeSlotResourceGroup.findUnique({
+        where: { id: occurrence.resourceGroupId },
+        select: { offeringId: true, providerProfileId: true, isActive: true }
+      });
+      if (!group || !group.isActive || group.offeringId !== offering.id || group.providerProfileId !== offering.providerProfileId) {
+        fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "The resource group is not eligible for this offering");
+      }
+      const candidates = await tx.vybeTimeSlotResourceGroupMember.findMany({
+        where: {
+          resourceGroupId: occurrence.resourceGroupId,
+          AND: [
+            { OR: [{ validFrom: null }, { validFrom: { lte: occurrence.blockedStartsAt } }] },
+            { OR: [{ validUntil: null }, { validUntil: { gte: occurrence.blockedEndsAt } }] }
+          ],
+          resource: { isActive: true, providerProfileId: offering.providerProfileId }
+        },
+        orderBy: { resourceId: "asc" }, select: { resourceId: true }
+      });
+      const candidateIds = [...new Set(candidates.map((item) => item.resourceId))];
+      if (!candidateIds.length) fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "No eligible resource is available for this time slot");
+      const locked = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM vybe_time_slot_resources WHERE id IN (${Prisma.join(candidateIds.map((id) => Prisma.sql`${id}::uuid`))}) ORDER BY id FOR UPDATE`
+      );
+      const lockedIds = locked.map((item) => item.id);
+      await expireResourceHolds(tx, lockedIds, now);
+      const conflicts = await tx.vybeTimeSlotHold.findMany({
+        where: {
+          resourceId: { in: lockedIds }, status: "ACTIVE", expiresAt: { gt: now },
+          blockedStartsAt: { lt: occurrence.blockedEndsAt }, blockedEndsAt: { gt: occurrence.blockedStartsAt }
+        },
+        select: { resourceId: true }, distinct: ["resourceId"]
+      });
+      const busy = new Set(conflicts.map((item) => item.resourceId));
+      const resourceId = lockedIds.find((id) => !busy.has(id));
+      if (!resourceId) fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "No eligible resource is available for this time slot");
+      const policy = await tx.vybeInventoryPolicy.findUnique({
+        where: { category: offering.category }, select: { holdDurationSeconds: true }
+      });
+      const hold = await tx.vybeTimeSlotHold.create({
+        data: {
+          occurrenceId: occurrence.id, userId: input.userId, idempotencyKey: input.idempotencyKey,
+          resourceId, expiresAt: new Date(now.getTime() + (policy?.holdDurationSeconds ?? 600) * 1000),
+          serviceStartsAt: occurrence.serviceStartsAt, serviceEndsAt: occurrence.serviceEndsAt,
+          blockedStartsAt: occurrence.blockedStartsAt, blockedEndsAt: occurrence.blockedEndsAt
+        }
+      });
+      await recordTimeSlotHoldEvent(tx, {
+        actorUserId: input.userId, action: "vybe.time_slot_hold.created",
+        holdId: hold.id, occurrenceId: occurrence.id, eventType: "vybe.time_slot_hold.created.v1",
+        payload: {
+          holdId: hold.id, occurrenceId: occurrence.id, offeringId: occurrence.offeringId,
+          resourceId, expiresAt: hold.expiresAt.toISOString()
+        }
+      });
+      return hold;
+    });
+  } catch (error) {
+    if (isExclusiveOverlapConflict(error)) {
+      throw new AppError("VYBE_TIME_SLOT_RESOURCE_RACE", "A resource was claimed concurrently; retry the request", 409);
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new AppError("IDEMPOTENCY_KEY_REUSED", "This idempotency key has already been used", 409);
+    }
+    throw error;
+  }
+}
+
+export async function releaseTimeSlotResourceHold(input: { holdId: string; userId: string }) {
+  const prisma = getPrismaClient();
+  return prisma.$transaction(async (tx) => {
+    const initial = await tx.vybeTimeSlotHold.findUnique({ where: { id: input.holdId } });
+    if (!initial) fail("VYBE_TIME_SLOT_HOLD_NOT_FOUND", "Time-slot hold was not found", 404);
+    if (initial.userId !== input.userId) fail("VYBE_TIME_SLOT_HOLD_FORBIDDEN", "Only the hold owner may release it", 403);
+    if (initial.resourceId === null || initial.capacityQuantity !== null) {
+      fail("VYBE_TIME_SLOT_HOLD_TYPE_INVALID", "This endpoint only releases exclusive-resource holds");
+    }
+    const lock = await tx.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT id FROM vybe_time_slot_resources WHERE id = ${initial.resourceId}::uuid FOR UPDATE`
+    );
+    if (!lock.length) fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "The held resource was not found");
+    const current = await tx.vybeTimeSlotHold.findUniqueOrThrow({ where: { id: initial.id } });
+    if (current.userId !== input.userId) fail("VYBE_TIME_SLOT_HOLD_FORBIDDEN", "Only the hold owner may release it", 403);
+    if (current.status !== "ACTIVE") return current;
+    const status = current.expiresAt <= new Date() ? "EXPIRED" : "RELEASED";
+    const updated = await tx.vybeTimeSlotHold.update({ where: { id: current.id }, data: { status } });
+    await recordTimeSlotHoldEvent(tx, {
+      actorUserId: status === "EXPIRED" ? null : input.userId,
+      actorType: status === "EXPIRED" ? "system" : "user",
+      action: status === "EXPIRED" ? "vybe.time_slot_hold.expired" : "vybe.time_slot_hold.released",
+      holdId: updated.id, occurrenceId: updated.occurrenceId,
+      eventType: status === "EXPIRED" ? "vybe.time_slot_hold.expired.v1" : "vybe.time_slot_hold.released.v1",
+      payload: { holdId: updated.id, occurrenceId: updated.occurrenceId, resourceId: updated.resourceId }
+    });
+    return updated;
+  });
+}
+
+export async function releaseTimeSlotHold(input: { holdId: string; userId: string }) {
+  const prisma = getPrismaClient();
+  const hold = await prisma.vybeTimeSlotHold.findUnique({
+    where: { id: input.holdId }, select: { resourceId: true }
+  });
+  if (!hold) fail("VYBE_TIME_SLOT_HOLD_NOT_FOUND", "Time-slot hold was not found", 404);
+  return hold.resourceId ? releaseTimeSlotResourceHold(input) : releaseTimeSlotCapacityHold(input);
+}
