@@ -296,6 +296,7 @@ async function recordSupplyEvent(
     resourceType: string;
     resourceId: string;
     aggregateType: string;
+    aggregateId?: string;
     eventType: string;
     deduplicationKey: string;
     payload: Prisma.InputJsonObject;
@@ -313,7 +314,7 @@ async function recordSupplyEvent(
   });
   await enqueueOutboxMessage(tx, {
     aggregateType: input.aggregateType,
-    aggregateId: input.resourceId,
+    aggregateId: input.aggregateId ?? input.resourceId,
     eventType: input.eventType,
     deduplicationKey: input.deduplicationKey,
     payload: input.payload
@@ -806,6 +807,7 @@ export async function adjustAccommodationAllocationNight(input: {
       resourceType: "vybe_accommodation_allocation_night",
       resourceId: current.id,
       aggregateType: "vybe_accommodation_allocation",
+      aggregateId: current.allocationId,
       eventType: "vybe.accommodation.allocation_adjusted.v1",
       deduplicationKey: `vybe.accommodation.allocation_adjustment:${adjustment.id}`,
       payload: {
