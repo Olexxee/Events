@@ -61,7 +61,11 @@ async function assertProviderAuthority(
       FOR SHARE`
   );
   if (organizationLock.length === 0) {
-    fail("VYBE_PROVIDER_INACTIVE", "The provider organization is not active", 403);
+    fail(
+      "VYBE_PROVIDER_INACTIVE",
+      "The provider organization is not active",
+      403
+    );
   }
 
   const profile = await tx.vybeProviderProfile.findUnique({
@@ -137,7 +141,11 @@ function assertTimezone(timezone: string) {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
   } catch {
-    fail("VYBE_ACCOMMODATION_TIMEZONE_INVALID", "A valid IANA timezone is required", 400);
+    fail(
+      "VYBE_ACCOMMODATION_TIMEZONE_INVALID",
+      "A valid IANA timezone is required",
+      400
+    );
   }
 }
 
@@ -156,7 +164,11 @@ function parseAgreedCutoff(value: string, timezone: string): Date {
 
   const instant = new Date(value);
   if (Number.isNaN(instant.getTime())) {
-    fail("VYBE_ACCOMMODATION_CUTOFF_INVALID", "The agreed cutoff is not a valid date-time", 400);
+    fail(
+      "VYBE_ACCOMMODATION_CUTOFF_INVALID",
+      "The agreed cutoff is not a valid date-time",
+      400
+    );
   }
 
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -208,7 +220,11 @@ function parseDateOnly(value: string): Date {
     Number.isNaN(date.getTime()) ||
     date.toISOString().slice(0, 10) !== value
   ) {
-    fail("VYBE_ACCOMMODATION_DATE_INVALID", "Dates must be valid YYYY-MM-DD calendar dates", 400);
+    fail(
+      "VYBE_ACCOMMODATION_DATE_INVALID",
+      "Dates must be valid YYYY-MM-DD calendar dates",
+      400
+    );
   }
   return date;
 }
@@ -250,7 +266,11 @@ async function lockPropertyAndCategory(
       FOR SHARE`
   );
   if (property.length === 0) {
-    fail("VYBE_ACCOMMODATION_PROPERTY_NOT_FOUND", "Accommodation property was not found", 404);
+    fail(
+      "VYBE_ACCOMMODATION_PROPERTY_NOT_FOUND",
+      "Accommodation property was not found",
+      404
+    );
   }
   const category = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM vybe_accommodation_room_categories
@@ -258,7 +278,11 @@ async function lockPropertyAndCategory(
       FOR UPDATE`
   );
   if (category.length === 0) {
-    fail("VYBE_ACCOMMODATION_ROOM_CATEGORY_NOT_FOUND", "Room category was not found", 404);
+    fail(
+      "VYBE_ACCOMMODATION_ROOM_CATEGORY_NOT_FOUND",
+      "Room category was not found",
+      404
+    );
   }
 }
 
@@ -400,7 +424,9 @@ export async function listMyAccommodationProperties(actorUserId: string) {
     include: {
       roomCategories: {
         include: {
-          offering: { select: { id: true, status: true, currentPublishedVersion: true } },
+          offering: {
+            select: { id: true, status: true, currentPublishedVersion: true }
+          },
           allocations: {
             include: { nights: { orderBy: { stayDate: "asc" } } },
             orderBy: { createdAt: "desc" }
@@ -430,10 +456,16 @@ export async function createAccommodationRoomCategory(input: {
   return prisma.$transaction(async (tx) => {
     const property = await tx.vybeAccommodationProperty.findUnique({
       where: { id: input.propertyId },
-      include: { providerProfile: { select: { organizationId: true, id: true } } }
+      include: {
+        providerProfile: { select: { organizationId: true, id: true } }
+      }
     });
     if (!property) {
-      fail("VYBE_ACCOMMODATION_PROPERTY_NOT_FOUND", "Accommodation property was not found", 404);
+      fail(
+        "VYBE_ACCOMMODATION_PROPERTY_NOT_FOUND",
+        "Accommodation property was not found",
+        404
+      );
     }
     const providerProfileId = await assertProviderAuthority(tx, {
       organizationId: property.providerProfile.organizationId,
@@ -442,10 +474,18 @@ export async function createAccommodationRoomCategory(input: {
       requireActiveAccommodationApproval: true
     });
     if (providerProfileId !== property.providerProfileId) {
-      fail("VYBE_ACCOMMODATION_FORBIDDEN", "The property is outside the provider's scope", 403);
+      fail(
+        "VYBE_ACCOMMODATION_FORBIDDEN",
+        "The property is outside the provider's scope",
+        403
+      );
     }
     if (property.status !== "ACTIVE") {
-      fail("VYBE_ACCOMMODATION_PROPERTY_INACTIVE", "Room categories cannot be added to an inactive property", 409);
+      fail(
+        "VYBE_ACCOMMODATION_PROPERTY_INACTIVE",
+        "Room categories cannot be added to an inactive property",
+        409
+      );
     }
 
     const offering = await tx.vybeOffering.findUnique({
@@ -474,14 +514,19 @@ export async function createAccommodationRoomCategory(input: {
     const publishedVersion = offering.versions.find(
       (version) => version.version === offering.currentPublishedVersion
     );
-    const content = publishedVersion?.content as Record<string, unknown> | undefined;
-    const offeringLocation = content?.location as Record<string, unknown> | undefined;
-    const attributes = content?.attributes as Record<string, unknown> | undefined;
+    const content = publishedVersion?.content as
+      Record<string, unknown> | undefined;
+    const offeringLocation = content?.location as
+      Record<string, unknown> | undefined;
+    const attributes = content?.attributes as
+      Record<string, unknown> | undefined;
     if (
       !offeringLocation ||
       !attributes ||
       attributes.category !== "ACCOMMODATION" ||
-      String(attributes.roomCategory ?? "").trim().toLowerCase() !== input.name.trim().toLowerCase() ||
+      String(attributes.roomCategory ?? "")
+        .trim()
+        .toLowerCase() !== input.name.trim().toLowerCase() ||
       !Number.isInteger(Number(attributes.maxOccupancy)) ||
       Number(attributes.maxOccupancy) < 1 ||
       Number(attributes.maxOccupancy) > input.maxOccupancy ||
@@ -510,7 +555,8 @@ export async function createAccommodationRoomCategory(input: {
         ...(input.description ? { description: input.description } : {}),
         maxOccupancy: input.maxOccupancy,
         physicalUnitCount: input.physicalUnitCount,
-        physicalUnitCountEvidenceReference: input.physicalUnitCountEvidenceReference,
+        physicalUnitCountEvidenceReference:
+          input.physicalUnitCountEvidenceReference,
         specifications: input.specifications,
         offeringId: offering.id
       }
@@ -528,7 +574,8 @@ export async function createAccommodationRoomCategory(input: {
         roomCategoryId: category.id,
         offeringId: offering.id,
         physicalUnitCount: input.physicalUnitCount,
-        physicalUnitCountEvidenceReference: input.physicalUnitCountEvidenceReference,
+        physicalUnitCountEvidenceReference:
+          input.physicalUnitCountEvidenceReference,
         maxOccupancy: input.maxOccupancy
       }
     });
@@ -547,16 +594,24 @@ export async function updateAccommodationPhysicalCapacity(input: {
   return prisma.$transaction(async (tx) => {
     const category = await tx.vybeAccommodationRoomCategory.findUnique({
       where: { id: input.roomCategoryId },
-      include: { property: true, providerProfile: { select: { organizationId: true } } }
+      include: {
+        property: true,
+        providerProfile: { select: { organizationId: true } }
+      }
     });
     if (!category) {
-      fail("VYBE_ACCOMMODATION_ROOM_CATEGORY_NOT_FOUND", "Room category was not found", 404);
+      fail(
+        "VYBE_ACCOMMODATION_ROOM_CATEGORY_NOT_FOUND",
+        "Room category was not found",
+        404
+      );
     }
     await assertProviderAuthority(tx, {
       organizationId: category.providerProfile.organizationId,
       actorUserId: input.actorUserId,
       location: category.property,
-      requireActiveAccommodationApproval: input.physicalUnitCount > (category.physicalUnitCount ?? 0)
+      requireActiveAccommodationApproval:
+        input.physicalUnitCount > (category.physicalUnitCount ?? 0)
     });
     await lockPropertyAndCategory(tx, category.propertyId, category.id);
     const updated = await tx.vybeAccommodationRoomCategory.update({
@@ -598,7 +653,9 @@ export async function createAccommodationAllocation(input: {
 }) {
   const prisma = getPrismaClient();
   const expectedNights = enumerateNights(input.startDate, input.endDate);
-  const quantities = new Map(input.nights.map((night) => [night.stayDate, night.allocatedQuantity]));
+  const quantities = new Map(
+    input.nights.map((night) => [night.stayDate, night.allocatedQuantity])
+  );
   if (
     quantities.size !== expectedNights.length ||
     expectedNights.some((date) => !quantities.has(date)) ||
@@ -614,10 +671,17 @@ export async function createAccommodationAllocation(input: {
   return prisma.$transaction(async (tx) => {
     const category = await tx.vybeAccommodationRoomCategory.findUnique({
       where: { id: input.roomCategoryId },
-      include: { property: true, providerProfile: { select: { organizationId: true } } }
+      include: {
+        property: true,
+        providerProfile: { select: { organizationId: true } }
+      }
     });
     if (!category) {
-      fail("VYBE_ACCOMMODATION_ROOM_CATEGORY_NOT_FOUND", "Room category was not found", 404);
+      fail(
+        "VYBE_ACCOMMODATION_ROOM_CATEGORY_NOT_FOUND",
+        "Room category was not found",
+        404
+      );
     }
     await assertProviderAuthority(tx, {
       organizationId: category.providerProfile.organizationId,
@@ -626,7 +690,11 @@ export async function createAccommodationAllocation(input: {
       requireActiveAccommodationApproval: true
     });
     if (category.status !== "ACTIVE" || category.property.status !== "ACTIVE") {
-      fail("VYBE_ACCOMMODATION_INACTIVE", "Only active properties and room categories can receive new allocations", 409);
+      fail(
+        "VYBE_ACCOMMODATION_INACTIVE",
+        "Only active properties and room categories can receive new allocations",
+        409
+      );
     }
     if (
       category.physicalUnitCount === null ||
@@ -671,10 +739,12 @@ export async function createAccommodationAllocation(input: {
         allocatedQuantity: quantities.get(stayDate) as number
       }))
     });
-    const allocationNights = await tx.vybeAccommodationAllocationNight.findMany({
-      where: { allocationId: allocation.id },
-      orderBy: { stayDate: "asc" }
-    });
+    const allocationNights = await tx.vybeAccommodationAllocationNight.findMany(
+      {
+        where: { allocationId: allocation.id },
+        orderBy: { stayDate: "asc" }
+      }
+    );
     await tx.vybeAccommodationAllocationAdjustment.createMany({
       data: allocationNights.map((night) => ({
         allocationNightId: night.id,
@@ -744,16 +814,28 @@ export async function adjustAccommodationAllocationNight(input: {
       }
     });
     if (!initial) {
-      fail("VYBE_ACCOMMODATION_ALLOCATION_NIGHT_NOT_FOUND", "Allocation night was not found", 404);
+      fail(
+        "VYBE_ACCOMMODATION_ALLOCATION_NIGHT_NOT_FOUND",
+        "Allocation night was not found",
+        404
+      );
     }
     await assertProviderAuthority(tx, {
-      organizationId: initial.allocation.roomCategory.providerProfile.organizationId,
+      organizationId:
+        initial.allocation.roomCategory.providerProfile.organizationId,
       actorUserId: input.actorUserId,
       location: initial.allocation.roomCategory.property,
       requireActiveAccommodationApproval: input.quantityDelta > 0
     });
-    if (initial.allocation.status !== "ACTIVE" && initial.allocation.status !== "PAUSED") {
-      fail("VYBE_ACCOMMODATION_ALLOCATION_NOT_ADJUSTABLE", "Released allocations cannot be adjusted", 409);
+    if (
+      initial.allocation.status !== "ACTIVE" &&
+      initial.allocation.status !== "PAUSED"
+    ) {
+      fail(
+        "VYBE_ACCOMMODATION_ALLOCATION_NOT_ADJUSTABLE",
+        "Released allocations cannot be adjusted",
+        409
+      );
     }
 
     await lockPropertyAndCategory(
@@ -772,9 +854,11 @@ export async function adjustAccommodationAllocationNight(input: {
         WHERE id = ${initial.id}::uuid
         FOR UPDATE`
     );
-    const current = await tx.vybeAccommodationAllocationNight.findUniqueOrThrow({
-      where: { id: initial.id }
-    });
+    const current = await tx.vybeAccommodationAllocationNight.findUniqueOrThrow(
+      {
+        where: { id: initial.id }
+      }
+    );
     if (
       input.quantityDelta > 0 &&
       initial.allocation.releaseCutoffAt.getTime() <= Date.now()
@@ -843,13 +927,20 @@ export async function releaseAccommodationAllocation(input: {
       where: { id: input.allocationId },
       include: {
         roomCategory: {
-          include: { property: true, providerProfile: { select: { organizationId: true } } }
+          include: {
+            property: true,
+            providerProfile: { select: { organizationId: true } }
+          }
         },
         nights: { orderBy: { stayDate: "asc" } }
       }
     });
     if (!allocation) {
-      fail("VYBE_ACCOMMODATION_ALLOCATION_NOT_FOUND", "Accommodation allocation was not found", 404);
+      fail(
+        "VYBE_ACCOMMODATION_ALLOCATION_NOT_FOUND",
+        "Accommodation allocation was not found",
+        404
+      );
     }
     await assertProviderAuthority(tx, {
       organizationId: allocation.roomCategory.providerProfile.organizationId,
@@ -858,7 +949,11 @@ export async function releaseAccommodationAllocation(input: {
       requireActiveAccommodationApproval: false
     });
     if (allocation.status === "RELEASED") {
-      fail("VYBE_ACCOMMODATION_ALLOCATION_ALREADY_RELEASED", "This allocation has already been released", 409);
+      fail(
+        "VYBE_ACCOMMODATION_ALLOCATION_ALREADY_RELEASED",
+        "This allocation has already been released",
+        409
+      );
     }
 
     await lockPropertyAndCategory(
