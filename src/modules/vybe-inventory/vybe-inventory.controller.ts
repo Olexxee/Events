@@ -18,7 +18,7 @@ function requireAuth(req: Parameters<RequestHandler>[0]) {
 export const createVybeInventoryPoolController: RequestHandler = async (req, res, next) => {
   try {
     const auth = requireAuth(req);
-    const body = getValidatedRequest<{ body: { organizationId: string; offeringId: string; allocatedQuantity: number; reason: string } }>(res).body;
+    const body = getValidatedRequest<{ body: { organizationId: string; offeringId: string; allocatedQuantity: number; reason: string; evidenceReference: string } }>(res).body;
     const pool = await createVybeInventoryPool({ ...body, actorUserId: auth.subjectId });
     return successResponse(res, { pool }, 201);
   } catch (error) { return next(error); }
@@ -28,7 +28,7 @@ export const adjustVybeInventoryAllocationController: RequestHandler = async (re
   try {
     const auth = requireAuth(req);
     const { poolId } = getValidatedRequest<{ params: { poolId: string } }>(res).params;
-    const body = getValidatedRequest<{ body: { quantityDelta: number; reason: string } }>(res).body;
+    const body = getValidatedRequest<{ body: { quantityDelta: number; reason: string; evidenceReference: string } }>(res).body;
     const pool = await adjustVybeInventoryAllocation({ ...body, poolId, actorUserId: auth.subjectId });
     return successResponse(res, { pool });
   } catch (error) { return next(error); }
