@@ -22,6 +22,7 @@ CREATE TABLE "vybe_inventory_allocations" (
   "actor_user_id" UUID NOT NULL,
   "quantity_delta" INTEGER NOT NULL,
   "reason" VARCHAR(1000) NOT NULL,
+  "evidence_reference" VARCHAR(1000) NOT NULL,
   "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "vybe_inventory_allocations_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "vybe_inventory_allocations_nonzero_delta" CHECK ("quantity_delta" <> 0)
