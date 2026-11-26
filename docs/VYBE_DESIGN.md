@@ -985,6 +985,7 @@ Slice B exposes provider-owned property and room-category setup, evidence-backed
 - Only an active, verified account with active OWNER or ADMIN authority in the existing provider Organization may manage its accommodation supply.
 - The Organization must be active and have an unexpired ACTIVE ACCOMMODATION approval covering the property's exact city, state, and country.
 - Property and room-category setup may be completed before global ACCOMMODATION category activation. Category activation remains a booking/discovery gate; it is not a reason to block provider preparation.
+- A published accommodation offering is not publicly advertised until its room category has at least one future local stay night backed by an ACTIVE allocation whose provider-agreed release cutoff has not passed. Public discovery evaluates the stay date using the property timezone.
 - Each room category links to exactly one existing PUBLISHED ACCOMMODATION offering owned by the same provider. The offering's published location and room-category description must match the operational property/category, and its promised maximum occupancy must not exceed the room category's authoritative limit.
 - No property or category can be created under another provider's profile.
 
