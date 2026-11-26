@@ -330,3 +330,24 @@ BEFORE UPDATE OF "provider_profile_id", "offering_id"
 ON "vybe_time_slot_resource_groups"
 FOR EACH ROW
 EXECUTE FUNCTION vybe_guard_time_slot_resource_group_change();
+
+-- A capacity record belongs to one occurrence for its lifetime. Moving it would
+-- otherwise leave the previous CAPACITY occurrence without its required row.
+CREATE OR REPLACE FUNCTION vybe_prevent_time_slot_capacity_reassignment()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW."occurrence_id" IS DISTINCT FROM OLD."occurrence_id" THEN
+    RAISE EXCEPTION 'time-slot capacity cannot be reassigned to another occurrence'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "vybe_time_slot_capacity_reassignment_guard"
+BEFORE UPDATE OF "occurrence_id"
+ON "vybe_time_slot_capacities"
+FOR EACH ROW
+EXECUTE FUNCTION vybe_prevent_time_slot_capacity_reassignment();
