@@ -10,7 +10,8 @@ export const createVybeInventoryPoolSchema = z.object({
     organizationId: uuid,
     offeringId: uuid,
     allocatedQuantity: positiveQuantity,
-    reason: z.string().trim().min(15).max(1000)
+    reason: z.string().trim().min(15).max(1000),
+    evidenceReference: z.string().trim().min(5).max(1000)
   }).strict()
 });
 
