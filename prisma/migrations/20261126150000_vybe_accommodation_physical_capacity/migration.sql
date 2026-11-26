@@ -35,7 +35,8 @@ BEGIN
   SELECT "physical_unit_count"
     INTO physical_count
     FROM "vybe_accommodation_room_categories"
-   WHERE "id" = category_id;
+   WHERE "id" = category_id
+   FOR UPDATE;
 
   IF physical_count IS NULL OR physical_count <= 0 THEN
     RAISE EXCEPTION 'room category requires a positive, provider-evidenced physical unit count before allocation'
@@ -128,3 +129,75 @@ BEFORE UPDATE OF "physical_unit_count"
 ON "vybe_accommodation_room_categories"
 FOR EACH ROW
 EXECUTE FUNCTION vybe_guard_accommodation_physical_capacity_update();
+
+
+-- Reactivating a paused allocation must also fit under the physical ceiling.
+CREATE FUNCTION vybe_guard_accommodation_allocation_status_capacity()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  night_record RECORD;
+  physical_count INTEGER;
+  allocated_total BIGINT;
+BEGIN
+  IF NEW."status" IS DISTINCT FROM OLD."status"
+     AND NEW."status" IN ('ACTIVE', 'PAUSED') THEN
+    SELECT "physical_unit_count"
+      INTO physical_count
+      FROM "vybe_accommodation_room_categories"
+     WHERE "id" = NEW."room_category_id"
+     FOR UPDATE;
+
+    IF physical_count IS NULL OR physical_count <= 0 THEN
+      RAISE EXCEPTION 'room category requires a positive physical unit count before activating allocations'
+        USING ERRCODE = '23514';
+    END IF;
+
+    FOR night_record IN
+      SELECT "stay_date"
+        FROM "vybe_accommodation_allocation_nights"
+       WHERE "allocation_id" = NEW."id"
+         AND "room_category_id" = NEW."room_category_id"
+       ORDER BY "stay_date"
+    LOOP
+      PERFORM 1
+        FROM "vybe_accommodation_night_locks"
+       WHERE "room_category_id" = NEW."room_category_id"
+         AND "stay_date" = night_record."stay_date"
+       FOR UPDATE;
+
+      SELECT COALESCE(SUM(night."allocated_quantity"), 0)
+        INTO allocated_total
+        FROM "vybe_accommodation_allocation_nights" night
+        JOIN "vybe_accommodation_allocations" allocation
+          ON allocation."id" = night."allocation_id"
+         AND allocation."room_category_id" = night."room_category_id"
+       WHERE night."room_category_id" = NEW."room_category_id"
+         AND night."stay_date" = night_record."stay_date"
+         AND allocation."status" IN ('ACTIVE', 'PAUSED');
+
+      IF OLD."status" NOT IN ('ACTIVE', 'PAUSED') THEN
+        SELECT allocated_total + COALESCE(SUM(night."allocated_quantity"), 0)
+          INTO allocated_total
+          FROM "vybe_accommodation_allocation_nights" night
+         WHERE night."allocation_id" = NEW."id"
+           AND night."room_category_id" = NEW."room_category_id"
+           AND night."stay_date" = night_record."stay_date";
+      END IF;
+
+      IF allocated_total > physical_count THEN
+        RAISE EXCEPTION 'reactivated accommodation allocation exceeds physical room-category capacity'
+          USING ERRCODE = '23514';
+      END IF;
+    END LOOP;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "vybe_accommodation_allocation_status_capacity_guard"
+BEFORE UPDATE OF "status"
+ON "vybe_accommodation_allocations"
+FOR EACH ROW
+EXECUTE FUNCTION vybe_guard_accommodation_allocation_status_capacity();
