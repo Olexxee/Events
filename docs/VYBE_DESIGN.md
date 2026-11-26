@@ -931,3 +931,32 @@ Do not add payments, checkout, Commerce, refunds, cancellation, fulfilment, exte
 The proposal intentionally chooses allocation-night lots plus a lock-only room-night anchor. It avoids duplicated aggregate counters and ties each held quantity to the exact provider allocation and release cutoff that supplied it. This is the recommended model for the first accommodation release.
 
 Before adding Prisma models or a migration, the product owner must approve this physical model, especially: one canonical offering per room category for MVP; provider-agreed cutoff as an absolute local date-time with explicit offset and IANA timezone; cutoff-bounded new holds; allocation-lot selection order; and the allocation-night committed-quantity field reserved for the later booking conversion. After approval, implement Slice A and run migration, schema validation, typecheck, lint, formatting, build, and PostgreSQL migration tests before Slice B.
+
+
+## 23. Accommodation room-night schema implementation (VYBE-014, Slice A)
+
+The product owner approved the Section 22 physical model. Slice A adds the PostgreSQL/Prisma persistence foundation only.
+
+### Implemented records
+
+- `VybeAccommodationProperty`: provider-scoped property identity, structured location and IANA timezone.
+- `VybeAccommodationRoomCategory`: provider/property-scoped room category, occupancy/specification data, and one canonical accommodation offering.
+- `VybeAccommodationAllocation`: half-open local-date allocation range, provider-agreed cutoff instant plus local-offset/timezone snapshot, agreement/terms/evidence references, status and creator.
+- `VybeAccommodationNightLock`: unique category/local-night serialization anchor with no duplicated capacity counter.
+- `VybeAccommodationAllocationNight`: authoritative allocated and committed quantities for one allocation/category/local-night.
+- `VybeAccommodationAllocationAdjustment`: append-only quantity adjustment evidence and actor history.
+- `VybeAccommodationHold` and `VybeAccommodationHoldNight`: idempotent hold header and allocation-lot-specific night details with immutable cutoff snapshots.
+
+Composite foreign keys prevent a room category from referencing another provider's property or offering, and prevent hold-night details from crossing room categories or allocation nights. PostgreSQL checks enforce positive quantities, date ranges, request-hash shape, non-negative committed quantity and committed quantity not exceeding allocated quantity. Triggers enforce allocation-night date bounds, hold date/cutoff snapshots, per-allocation-night capacity serialization, cutoff-gated reclamation, protection of active holds/committed quantity, and append-only adjustment history.
+
+### Operational boundary
+
+This slice creates persistence structures and database-level guards. It does not create provider/customer routes, property/category setup workflows, allocation services, availability queries, hold services, booking conversion, room assignment, Commerce, Payments, Finance, cancellation or fulfilment. A hold remains a temporary inventory reservation, never a confirmed booking.
+
+The application layer in later slices must preserve the documented lock order: eligibility locks, property/category, all night anchors ascending by local date, allocation-night lots in deterministic order, then hold headers. The capacity trigger is a final database guard, not a substitute for locking all nights before a multi-night transaction writes any hold detail. All requested nights must still be created or none.
+
+The database stores local stay dates as PostgreSQL `date`; UTC timestamps must not be used to calculate room nights. The allocation cutoff is an absolute instant paired with its provider-agreed local representation and IANA timezone. No cutoff default is introduced. A hold's expiry cannot exceed the exact cutoff snapshot of any allocation lot used by that hold.
+
+### Slice A acceptance
+
+The migration and Prisma schema must validate and apply against PostgreSQL 16 in CI. Integration tests cover provider-scope composite keys, date-range enforcement, positive capacity, hold-night cutoff snapshots, allocation capacity protection and immutable adjustment history. The next slice is provider supply management (property/category creation and evidence-backed allocation/adjustment); customer availability and atomic holds remain a separate slice.
