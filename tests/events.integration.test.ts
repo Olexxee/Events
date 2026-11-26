@@ -35,26 +35,6 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
   });
 
   beforeEach(async () => {
-    await prisma.ticketHoldLine.deleteMany();
-    await prisma.ticketHold.deleteMany();
-    await prisma.ticketTypeVersion.deleteMany();
-    await prisma.ticketType.deleteMany();
-    await prisma.eventAccessHold.deleteMany();
-    await prisma.eventAccessGrant.deleteMany();
-    await prisma.eventAccessRequest.deleteMany();
-    await prisma.eventInvitation.deleteMany();
-    await prisma.eventRevision.deleteMany();
-    await prisma.eventVenue.deleteMany();
-    await prisma.eventSchedule.deleteMany();
-    await prisma.event.deleteMany();
-    await prisma.organizerApplication.deleteMany();
-    await prisma.organizationMembership.deleteMany();
-    await prisma.organization.deleteMany();
-    await prisma.session.deleteMany();
-    await prisma.passwordCredential.deleteMany();
-    await prisma.userProfile.deleteMany();
-    await prisma.user.deleteMany();
-
     const owner = await prisma.user.create({
       data: { email: `owner-${crypto.randomUUID()}@events.test` }
     });
@@ -98,7 +78,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
       actorUserId: ownerId,
       categoryId,
       title: "Integration Test Live Show",
-      slug,
+      slug: `${slug}-${crypto.randomUUID()}`,
       summary: "A live music event used to verify marketplace persistence.",
       description:
         "This event exists only to exercise PostgreSQL-backed event workflows.",
@@ -180,7 +160,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
         actorUserId: memberId,
         categoryId,
         title: "Unauthorized Event",
-        slug: "unauthorized-event",
+        slug: `unauthorized-event-${crypto.randomUUID()}`,
         summary: "A member must not be able to create an event.",
         description:
           "This event creation attempt must be denied by the database service.",
@@ -205,7 +185,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
       actorUserId: ownerId,
       categoryId,
       title: "Unlisted Test Event",
-      slug: "unlisted-hidden",
+      slug: `unlisted-hidden-${crypto.randomUUID()}`,
       summary: "This event must not appear in public discovery.",
       description:
         "Unlisted events are intentionally excluded from public discovery results.",

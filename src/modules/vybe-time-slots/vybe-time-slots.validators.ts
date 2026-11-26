@@ -127,3 +127,20 @@ export const releaseVybeTimeSlotCapacityHoldSchema = z.object({
   query: z.object({}),
   body: z.preprocess((value) => value ?? {}, z.object({}))
 });
+
+export const getVybeTimeSlotResourceAvailabilitySchema = z.object({
+  params: z.object({ occurrenceId: uuid }),
+  query: z.object({}),
+  body: z.preprocess((value) => value ?? {}, z.object({}))
+});
+
+export const createVybeTimeSlotResourceHoldSchema = z.object({
+  params: z.object({}),
+  query: z.object({}),
+  body: z
+    .object({
+      occurrenceId: uuid,
+      idempotencyKey: z.string().trim().min(16).max(128)
+    })
+    .strict()
+});
