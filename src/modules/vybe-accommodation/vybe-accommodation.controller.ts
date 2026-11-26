@@ -174,27 +174,24 @@ export const releaseVybeAccommodationAllocationController: RequestHandler =
     }
   };
 
-export const getVybeAccommodationAvailabilityController: RequestHandler = async (
-  req,
-  res,
-  next
-) => {
-  try {
-    const { roomCategoryId } = getValidatedRequest<{
-      params: { roomCategoryId: string };
-    }>(res).params;
-    const query = getValidatedRequest<{
-      query: GetAccommodationAvailabilityQuery;
-    }>(res).query;
-    const availability = await getVybeAccommodationAvailability({
-      roomCategoryId,
-      ...query
-    });
-    return successResponse(res, { availability });
-  } catch (error) {
-    return next(error);
-  }
-};
+export const getVybeAccommodationAvailabilityController: RequestHandler =
+  async (req, res, next) => {
+    try {
+      const { roomCategoryId } = getValidatedRequest<{
+        params: { roomCategoryId: string };
+      }>(res).params;
+      const query = getValidatedRequest<{
+        query: GetAccommodationAvailabilityQuery;
+      }>(res).query;
+      const availability = await getVybeAccommodationAvailability({
+        roomCategoryId,
+        ...query
+      });
+      return successResponse(res, { availability });
+    } catch (error) {
+      return next(error);
+    }
+  };
 
 export const createVybeAccommodationHoldController: RequestHandler = async (
   req,
