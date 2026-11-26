@@ -794,3 +794,140 @@ Approved by product owner:
 5. A missing agreed cutoff blocks bookability; no universal default is invented.
 
 This gate does not authorize booking lifecycle, Commerce, checkout, payment authorization/capture, real Payments, Finance, refunds, fulfilment, cancellation/disputes, external inventory integrations, or category activation. Following approval of this design gate, the next step is a separate physical schema review and implementation plan. Accommodation inventory must pass PostgreSQL concurrency and migration tests before booking/Commerce orchestration is started.
+
+
+## 22. Accommodation physical schema review and implementation plan (VYBE-014)
+
+### 22.1 Review outcome and scope
+
+This section translates VYBE-013 into a proposed PostgreSQL/Prisma model. It is a physical schema review, not authorization to add models, migrations, endpoints, or booking behavior. The existing catalogue stores location inside versioned offering JSON, while existing quantity and time-slot inventory are attached directly to offerings. Neither is sufficient for accommodation: a property has a stable IANA timezone, a room category can be allocated independently for each local night, and multiple allocations for the same category/night may have different provider-agreed release cutoffs.
+
+The accommodation slice will support provider-controlled, platform-allocated inventory only. It will not reuse the generic quantity pool or time-slot tables. Accommodation is a date-range resource, not a UTC interval or a single quantity counter.
+
+### 22.2 Proposed ownership and relations
+
+Use explicit property and room-category records rather than treating offering JSON as the source of truth:
+
+| Proposed model | Responsibility and key fields |
+|---|---|
+| `VybeAccommodationProperty` | Stable provider-owned property; `providerProfileId`, provider-scoped property key, name, public location fields, IANA `timezone`, status. Unique provider + provider property key. |
+| `VybeAccommodationRoomCategory` | Room category belonging to one property; provider-scoped category key, name, description, maximum occupancy, category attributes/specification snapshot, status, and one canonical `offeringId`. Unique property + provider category key; unique offering link for MVP. |
+| `VybeAccommodationAllocation` | Provider agreement for a category and half-open local-date range; actor, authority evidence reference, agreement reference/terms version, `releaseCutoffAt` (resolved instant), `releaseCutoffLocal` (the agreed local date-time), `releaseCutoffTimezone` (IANA zone), status and timestamps. |
+| `VybeAccommodationNightLock` | One serialization row per room category + local stay date. Unique `(roomCategoryId, stayDate)`. It is a lock anchor, not a second copy of capacity counters. |
+| `VybeAccommodationAllocationNight` | One allocation's quantity for one local night; FK to allocation and night lock, `allocatedQuantity`, `committedQuantity`. Unique `(allocationId, stayDate)`. This is the authoritative per-allocation capacity ledger. |
+| `VybeAccommodationAllocationAdjustment` | Append-only signed adjustment with actor, allocation-night, delta, reason, evidence reference and timestamp. The allocation-night counter is updated in the same transaction. |
+| `VybeAccommodationHold` | Multi-night hold header; customer, idempotency key, canonical request hash, property/category, local check-in/out dates, room quantity, immutable offering/category/price/terms snapshot, status, fixed expiry and timestamps. Unique `(userId, idempotencyKey)`. |
+| `VybeAccommodationHoldNight` | Hold allocation detail; hold, allocation-night, local stay date, quantity, and cutoff/timezone snapshot. A hold may draw from more than one allocation lot on a night; uniqueness is `(holdId, allocationNightId)`. |
+
+The canonical offering link is deliberately one-to-one with a room category for the first accommodation inventory release. This prevents two separately published offerings from advertising and consuming the same category supply without a shared rate-plan model. Multiple rate plans or independently priced variants require a later explicit design for shared inventory consumption; do not solve that by duplicating allocation rows.
+
+Property location and timezone are stable structured data. Offering versions continue to own customer-facing descriptions, inclusions, restrictions, price, cancellation terms and occupancy disclosure snapshots. The category's operational occupancy limit is authoritative; publication validation must ensure the published offering does not promise occupancy beyond it.
+
+### 22.3 Capacity accounting: one authoritative source
+
+For each allocation-night lot:
+
+- `allocatedQuantity` is the maximum quantity assigned to Vybe for that specific allocation and local night.
+- `committedQuantity` is the quantity already committed by confirmed accommodation bookings. It is updated only by the future booking transition in the same transaction as the booking state change.
+- Active holds are derived from unexpired `ACTIVE` hold headers joined to their hold-night details. They are not also stored as a mutable counter.
+- Sellable quantity for a lot is `allocatedQuantity - committedQuantity - activeHeldQuantity`; negative results are an invariant violation and must fail closed.
+
+For a room category/night, sum sellable quantity across eligible allocation lots. A lot is eligible for a new hold only while its provider-agreed release cutoff is in the future and its allocation/property/category/provider scope is active. Prefer lots with the earliest future cutoff first, then stable allocation ID, so the platform does not strand an earlier-expiring allocation while consuming later stock. The selected lot IDs are persisted on hold-night details.
+
+The night-lock row serializes all writes for the same category/date. It stores no duplicate capacity totals. This avoids drift between a category-level counter and allocation-level counters. All allocation-night and hold-night rows are the source of truth.
+
+### 22.4 Date, timezone and release-cutoff representation
+
+- Store check-in, check-out and each consumed stay night as PostgreSQL `date`, not timestamps. Use strict `YYYY-MM-DD` parsing and calendar-date iteration; do not derive stay nights by dividing UTC timestamps by 24 hours.
+- A stay consumes `[checkInDate, checkOutDate)`. Check-out date is not a consumed night.
+- Property IANA timezone is authoritative. Validate it against the runtime timezone database when creating/updating the property and when interpreting provider-agreed local cutoffs.
+- Store both the provider-agreed local cutoff representation and its resolved `timestamptz` instant. The IANA timezone is stored on the allocation as an immutable agreement snapshot, even if the property's timezone later changes.
+- Require a local cutoff with an explicit UTC offset that matches the supplied IANA timezone at that instant. Reject nonexistent or ambiguous local times unless the provider supplies an unambiguous offset. The resolved instant is authoritative for comparisons.
+- A missing cutoff makes the allocation unbookable. Do not infer a cutoff from check-in time, a global policy, or a default number of days.
+- A cutoff update creates a new agreement revision or prospective allocation amendment. It must not rewrite existing holds or bookings. Existing hold-night rows retain the cutoff/timezone snapshot used when the hold was created.
+- New holds must expire no later than the selected allocation cutoff. If that would leave less than the minimum supported hold window, do not use that allocation lot for the new hold. Existing holds remain protected after cutoff until they expire or are explicitly released.
+
+### 22.5 Transaction and lock ordering
+
+All write paths must use one lock order to avoid deadlocks and eligibility races:
+
+1. Lock the provider organization, category/location approval, and category activation in the same order used by existing Vybe inventory paths; verify they remain active.
+2. Lock the property and room category.
+3. Lock the affected `VybeAccommodationNightLock` rows in ascending local `stayDate` order (and stable category ID if a transaction ever spans categories).
+4. Lock allocation-night lots in ascending `stayDate`, then `releaseCutoffAt`, then allocation ID order.
+5. Lock affected hold headers in stable ID order before changing hold status or allocation detail.
+
+For a hold request, inside one PostgreSQL transaction:
+
+1. Validate active customer, offering publication/version, provider authority/approval, category activation, property/category status, occupancy, local date interval, quantity and idempotency request hash.
+2. Create missing night-lock anchors safely, then lock every requested night in ascending date order.
+3. Resolve any existing idempotency key. An exact payload replay returns the same hold; a different request hash conflicts. The unique constraint remains the final race guard.
+4. Expire every stale active hold that touches the locked nights. Expiry changes the single hold header once, thereby releasing all of its hold-night details together. Write audit and outbox events in this transaction.
+5. Lock eligible allocation-night lots in the deterministic order. Recompute active hold details and committed quantities from the authoritative rows.
+6. For every requested night, select enough eligible allocation lots to cover the full requested room quantity. If any night is short, abort without creating a hold or hold-night details.
+7. Create one hold header and all selected hold-night details, with a fixed expiry bounded by the earliest selected cutoff. Write audit and outbox records in the same transaction.
+
+This transaction is all-or-nothing. A request for three rooms across four nights creates a complete set of hold-night details for all four nights or nothing. Do not create a hold header and then populate nights in independent transactions.
+
+For release/expiry, lock the affected night anchors first in date order, then the hold header, re-check `ACTIVE` and expiry/status, and transition the header once. Concurrent release and expiry must be idempotent; only one transition wins. For a booking conversion in a later slice, use the same night/lot locks and atomically move quantity from active hold details into `committedQuantity` while creating the booking; do not expose this transition in the current slice.
+
+For allocation reductions, lock the property/category, night anchors and allocation-night lots in the same order. A negative adjustment is rejected before that allocation's agreed cutoff. At/after cutoff, the new allocation quantity must remain at least `committedQuantity + active held quantity` for every affected night. A provider may reclaim only the unheld, uncommitted remainder. Record every successful adjustment and evidence reference atomically.
+
+Use bounded retries for PostgreSQL serialization failures/deadlocks only when the transaction is safe to replay and the idempotency key is present. Do not retry arbitrary constraint or business-rule failures.
+
+### 22.6 Constraints and indexes
+
+Required database constraints and indexes:
+
+- Unique provider/property key; unique property/category key; unique room-category/offering relation.
+- Unique room-category/local-stay-date night-lock key.
+- Unique allocation/local-stay-date allocation-night key.
+- Check constraints: positive allocation/hold quantities, non-negative committed quantity, valid date range, cutoff timezone/local value present for bookable allocations, and `committedQuantity <= allocatedQuantity`.
+- Unique customer/idempotency key; store a canonical request hash so changed payloads conflict even when the same key is replayed.
+- Unique hold/allocation-night detail to prevent duplicate lines; index hold-night by allocation-night and hold header/status/expiry for capacity and expiry queries.
+- Index allocation-night by room-category/date and allocation/cutoff/status; index active hold headers by status/expiry and hold-night by allocation-night.
+- Foreign keys use restrictive deletes for property, category, allocation, night, hold and user records. Historical allocations, adjustments and holds are not cascade-deleted.
+- Use database constraints for simple row invariants. Cross-row capacity rules remain transactionally enforced under the night-lock row; a CHECK constraint cannot safely enforce sums across hold details.
+
+### 22.7 Provider suspension and authority races
+
+New allocation, adjustment and hold operations must lock and verify the provider organization, active category/location-scoped approval, category activation, property and room category before taking night locks. Suspension/revocation paths must take the same eligibility locks before changing approval status. Therefore either the hold transaction wins and creates a valid hold before suspension, or suspension wins and the hold is rejected. A suspension never deletes existing holds or committed bookings. The later booking/operations slice must define continuity and customer remedies.
+
+The property and room category are provider-owned. Only OWNER/ADMIN members of the owning organization may create or adjust supply. Every allocation and adjustment requires a durable evidence reference and reason. The platform does not accept inventory quantities based solely on an unverified provider assertion in a public customer request.
+
+### 22.8 PostgreSQL acceptance tests
+
+The implementation PR must include real PostgreSQL integration tests for:
+
+1. Two concurrent requests competing for the last unit on one night: exactly one complete hold succeeds.
+2. Two multi-night requests sharing one constrained night: no partial hold is written and at most one request succeeds when capacity permits only one.
+3. Multi-room, multi-night hold creates all expected details or zero details.
+4. A hold spanning multiple allocation lots is fully represented and each night has exactly the requested quantity.
+5. Expiry racing with a new hold releases every line exactly once and does not overstate availability.
+6. Exact idempotent replay returns the original hold; changed property/category/date/quantity payload conflicts.
+7. Release racing expiry results in one terminal state and one set of audit/outbox events.
+8. Allocation reduction before cutoff is rejected; at/after cutoff it succeeds only down to committed plus active held quantity, including exact boundary cases.
+9. A provider cannot reclaim quantities reserved by a hold or committed booking, even when the cutoff has passed.
+10. A cutoff/timezone amendment does not alter existing hold snapshots.
+11. Provider suspension racing with hold/allocation creation has a deterministic winner and cannot authorize new inventory after suspension commits.
+12. DST transition dates preserve local-night counting; check-in/check-out consume the correct date interval.
+13. Audit/outbox records commit with each successful hold, expiry, release and allocation adjustment, and roll back with a failed multi-night hold.
+
+Tests must assert database rows and quantities after concurrent operations, not only HTTP response codes.
+
+### 22.9 Delivery slices and exclusions
+
+Implementation should be split into reviewable PRs:
+
+- **A — accommodation schema and migration:** property, room category, allocation agreements, night-lock anchors, allocation-night lots, adjustment history, hold header/details, indexes and database constraints. No routes.
+- **B — provider supply management:** property/category setup, evidence-backed allocation and adjustment, release-cutoff validation, authority checks and audit/outbox.
+- **C — customer availability and atomic holds:** date-range availability, idempotent all-or-nothing multi-night holds, expiry and release, PostgreSQL concurrency tests.
+- **D — booking conversion:** explicitly separate future design/implementation. It introduces committed bookings and is not included in A–C.
+
+Do not add payments, checkout, Commerce, refunds, cancellation, fulfilment, external inventory adapters, rate plans, room assignment, or category activation to A–C. The current implementation must not expose a hold as a confirmed booking.
+
+### 22.10 Approval gate
+
+The proposal intentionally chooses allocation-night lots plus a lock-only room-night anchor. It avoids duplicated aggregate counters and ties each held quantity to the exact provider allocation and release cutoff that supplied it. This is the recommended model for the first accommodation release.
+
+Before adding Prisma models or a migration, the product owner must approve this physical model, especially: one canonical offering per room category for MVP; provider-agreed cutoff as an absolute local date-time with explicit offset and IANA timezone; cutoff-bounded new holds; allocation-lot selection order; and the allocation-night committed-quantity field reserved for the later booking conversion. After approval, implement Slice A and run migration, schema validation, typecheck, lint, formatting, build, and PostgreSQL migration tests before Slice B.
