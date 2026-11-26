@@ -919,6 +919,7 @@ model VybeInventoryAllocation {
   actorUserId String            @map("actor_user_id") @db.Uuid
   quantityDelta Int             @map("quantity_delta")
   reason      String            @db.VarChar(1000)
+  evidenceReference String      @map("evidence_reference") @db.VarChar(1000)
   createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   pool        VybeInventoryPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
   actor       User              @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
