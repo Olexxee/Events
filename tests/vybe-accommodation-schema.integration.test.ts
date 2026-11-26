@@ -231,7 +231,6 @@ describe.skipIf(!enabled)(
       ).rejects.toThrow();
     });
 
-
     it("enforces aggregate physical room capacity across allocation lots", async () => {
       const fixture = await createFixture();
       const secondAllocation = await prisma.vybeAccommodationAllocation.create({
@@ -320,8 +319,9 @@ describe.skipIf(!enabled)(
 
     it("serializes concurrent allocation lots against the category physical ceiling", async () => {
       const fixture = await createFixture();
-      const allocations = await Promise.all([1, 2].map((index) =>
-        prisma.vybeAccommodationAllocation.create({
+      const allocations = await Promise.all(
+        [1, 2].map((index) =>
+          prisma.vybeAccommodationAllocation.create({
           data: {
             roomCategoryId: fixture.roomCategory.id,
             startDate: new Date("2027-06-10T00:00:00.000Z"),
@@ -334,19 +334,22 @@ describe.skipIf(!enabled)(
             evidenceReference: `provider-allocation:concurrent:${index}`,
             createdByUserId: fixture.user.id
           }
-        })
-      ));
+          })
+        )
+      );
 
-      const results = await Promise.allSettled(allocations.map((allocation) =>
-        prisma.vybeAccommodationAllocationNight.create({
+      const results = await Promise.allSettled(
+        allocations.map((allocation) =>
+          prisma.vybeAccommodationAllocationNight.create({
           data: {
             allocationId: allocation.id,
             roomCategoryId: fixture.roomCategory.id,
             stayDate: new Date("2027-06-10T00:00:00.000Z"),
             allocatedQuantity: 6
           }
-        })
-      ));
+          })
+        )
+      );
 
       expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
       expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
