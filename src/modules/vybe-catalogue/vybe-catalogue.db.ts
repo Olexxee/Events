@@ -527,7 +527,10 @@ export async function listPublicOfferings(input: {
         accommodation.property.status !== "ACTIVE"
       )
         return [];
-      const localToday = localCalendarDate(now, accommodation.property.timezone);
+      const localToday = localCalendarDate(
+        now,
+        accommodation.property.timezone
+      );
       const hasFutureSupply = accommodation.allocations.some((allocation) =>
         allocation.nights.some(
           (night) =>
