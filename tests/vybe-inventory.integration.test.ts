@@ -26,7 +26,6 @@ describe.skipIf(!enabled)(
     });
 
     beforeEach(async () => {
-
       const owner = await prisma.user.create({
         data: { email: `vybe-inventory-${crypto.randomUUID()}@events.test` }
       });
@@ -65,7 +64,9 @@ describe.skipIf(!enabled)(
           providerProfileId: profile.id,
           category: "DRINKS",
           status: "ACTIVE",
-          locations: [{ city: "Lagos", state: "Lagos", country: "Nigeria" }],
+          locations: [
+            { city: "Lagos", state: "Lagos", country: "Nigeria" }
+          ],
           approvedByUserId: ownerId
         }
       });
@@ -96,7 +97,11 @@ describe.skipIf(!enabled)(
               status: "PUBLISHED",
               content: {
                 title: "Drinks package",
-                location: { city: "Lagos", state: "Lagos", country: "Nigeria" },
+                location: {
+                  city: "Lagos",
+                  state: "Lagos",
+                  country: "Nigeria"
+                },
                 attributes: { category: "DRINKS" }
               },
               createdByUserId: ownerId,
