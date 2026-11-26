@@ -296,17 +296,19 @@ DECLARE
   check_in DATE;
   check_out DATE;
   hold_expiry TIMESTAMPTZ(6);
+  hold_status "vybe_accommodation_hold_status";
   allocation_cutoff TIMESTAMPTZ(6);
   allocation_cutoff_local VARCHAR(40);
   allocation_cutoff_timezone VARCHAR(80);
   allocation_status "vybe_accommodation_allocation_status";
 BEGIN
-  SELECT "check_in_date", "check_out_date", "expires_at"
-    INTO check_in, check_out, hold_expiry
+  SELECT "check_in_date", "check_out_date", "expires_at", "status"
+    INTO check_in, check_out, hold_expiry, hold_status
     FROM "vybe_accommodation_holds"
    WHERE "id" = NEW."hold_id"
      AND "room_category_id" = NEW."room_category_id";
-  IF NOT FOUND OR NEW."stay_date" < check_in OR NEW."stay_date" >= check_out THEN
+  IF NOT FOUND OR hold_status <> 'ACTIVE' OR hold_expiry <= CURRENT_TIMESTAMP
+     OR NEW."stay_date" < check_in OR NEW."stay_date" >= check_out THEN
     RAISE EXCEPTION 'hold night must be inside the hold stay interval'
       USING ERRCODE = '23514';
   END IF;
@@ -418,12 +420,6 @@ BEGIN
       RAISE EXCEPTION 'accommodation allocation cannot be reclaimed before its agreed cutoff'
         USING ERRCODE = '23514';
     END IF;
-
-    PERFORM 1
-      FROM "vybe_accommodation_night_locks"
-     WHERE "room_category_id" = NEW."room_category_id"
-       AND "stay_date" = NEW."stay_date"
-     FOR UPDATE;
 
     SELECT COALESCE(SUM(detail."quantity"), 0)
       INTO active_held
