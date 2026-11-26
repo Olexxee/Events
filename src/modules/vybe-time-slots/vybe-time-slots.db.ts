@@ -49,7 +49,15 @@ function parseInstant(value: string, timezone: string): Date {
   return instant;
 }
 
-function parseValidityInstant(value: string): Date {\n  const instant = new Date(value);\n  if (!Number.isFinite(instant.getTime())) {\n    fail("VYBE_TIME_SLOT_INVALID_VALIDITY_WINDOW", "A valid ISO-8601 validity timestamp is required", 400);\n  }\n  return instant;\n}\n\nfunction validateWindow(validFrom?: Date, validUntil?: Date) {
+function parseValidityInstant(value: string): Date {
+  const instant = new Date(value);
+  if (!Number.isFinite(instant.getTime())) {
+    fail("VYBE_TIME_SLOT_INVALID_VALIDITY_WINDOW", "A valid ISO-8601 validity timestamp is required", 400);
+  }
+  return instant;
+}
+
+function validateWindow(validFrom?: Date, validUntil?: Date) {
   if (validFrom && validUntil && validFrom >= validUntil) {
     fail(
       "VYBE_TIME_SLOT_INVALID_VALIDITY_WINDOW",
