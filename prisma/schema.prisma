@@ -249,6 +249,28 @@ enum VybeInventoryHoldStatus {
   @@map("vybe_inventory_hold_status")
 }
 
+enum VybeTimeSlotInventoryMode {
+  CAPACITY
+  EXCLUSIVE
+
+  @@map("vybe_time_slot_inventory_mode")
+}
+
+enum VybeTimeSlotOccurrenceStatus {
+  ACTIVE
+  PAUSED
+
+  @@map("vybe_time_slot_occurrence_status")
+}
+
+enum VybeTimeSlotHoldStatus {
+  ACTIVE
+  RELEASED
+  EXPIRED
+
+  @@map("vybe_time_slot_hold_status")
+}
+
 // Shared infrastructure.
 model OutboxMessage {
   id               String    @id @default(uuid()) @db.Uuid
@@ -314,6 +336,7 @@ model User {
   ticketTypesCreated TicketType[] @relation("TicketTypeCreator")
   ticketHolds TicketHold[]
   vybeInventoryHolds VybeInventoryHold[]
+  vybeTimeSlotHolds VybeTimeSlotHold[]
   vybeInventoryAllocations VybeInventoryAllocation[]
   vybeApplicationsSubmitted VybeProviderApplication[] @relation("VybeApplicationApplicant")
   vybeProviderReviews VybeProviderReview[]
@@ -734,6 +757,8 @@ model VybeProviderProfile {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   approvals      VybeProviderApproval[]
   offerings      VybeOffering[]
+  timeSlotResources VybeTimeSlotResource[]
+  timeSlotResourceGroups VybeTimeSlotResourceGroup[]
 
   @@map("vybe_provider_profiles")
 }
@@ -858,6 +883,8 @@ model VybeOffering {
   creator                   User @relation("VybeOfferingCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   versions                  VybeOfferingVersion[]
   inventoryPool             VybeInventoryPool?
+  timeSlotOccurrences       VybeTimeSlotOccurrence[]
+  timeSlotResourceGroups    VybeTimeSlotResourceGroup[]
 
   @@index([providerProfileId, category, status], map: "vybe_offerings_provider_category_status_idx")
   @@index([category, status, createdAt], map: "vybe_offerings_category_status_created_idx")
@@ -953,4 +980,119 @@ model VybeInventoryPolicy {
   updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("vybe_inventory_policies")
+}
+
+model VybeTimeSlotOccurrence {
+  id                 String                       @id @default(uuid()) @db.Uuid
+  offeringId         String                       @map("offering_id") @db.Uuid
+  offeringVersion    Int                          @map("offering_version")
+  inventoryMode      VybeTimeSlotInventoryMode    @map("inventory_mode")
+  timezone           String                       @db.VarChar(80)
+  serviceStartsAt    DateTime                     @map("service_starts_at") @db.Timestamptz(6)
+  serviceEndsAt      DateTime                     @map("service_ends_at") @db.Timestamptz(6)
+  preBufferSeconds   Int                          @default(0) @map("pre_buffer_seconds")
+  postBufferSeconds  Int                          @default(0) @map("post_buffer_seconds")
+  blockedStartsAt    DateTime                     @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt      DateTime                     @map("blocked_ends_at") @db.Timestamptz(6)
+  status             VybeTimeSlotOccurrenceStatus @default(ACTIVE)
+  resourceGroupId    String?                      @map("resource_group_id") @db.Uuid
+  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  offering           VybeOffering                 @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  resourceGroup      VybeTimeSlotResourceGroup?   @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
+  capacity           VybeTimeSlotCapacity?
+  holds              VybeTimeSlotHold[]
+
+  @@index([offeringId, status, serviceStartsAt], map: "vybe_time_slot_occurrences_offering_status_start_idx")
+  @@index([resourceGroupId, status, serviceStartsAt], map: "vybe_time_slot_occurrences_group_status_start_idx")
+  @@map("vybe_time_slot_occurrences")
+}
+
+model VybeTimeSlotCapacity {
+  id                String                  @id @default(uuid()) @db.Uuid
+  occurrenceId      String                  @unique @map("occurrence_id") @db.Uuid
+  capacity          Int
+  committedQuantity Int                     @default(0) @map("committed_quantity")
+  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  occurrence        VybeTimeSlotOccurrence  @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
+
+  @@map("vybe_time_slot_capacities")
+}
+
+model VybeTimeSlotResourceGroup {
+  id                String                    @id @default(uuid()) @db.Uuid
+  providerProfileId String                    @map("provider_profile_id") @db.Uuid
+  offeringId        String                    @map("offering_id") @db.Uuid
+  name              String                    @db.VarChar(120)
+  isActive          Boolean                   @default(true) @map("is_active")
+  validFrom         DateTime?                 @map("valid_from") @db.Timestamptz(6)
+  validUntil        DateTime?                 @map("valid_until") @db.Timestamptz(6)
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile   VybeProviderProfile       @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  offering          VybeOffering              @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  members           VybeTimeSlotResourceGroupMember[]
+  occurrences       VybeTimeSlotOccurrence[]
+
+  @@unique([offeringId, name], map: "vybe_time_slot_resource_groups_offering_name_key")
+  @@index([providerProfileId, isActive], map: "vybe_time_slot_resource_groups_provider_active_idx")
+  @@map("vybe_time_slot_resource_groups")
+}
+
+model VybeTimeSlotResource {
+  id                String                           @id @default(uuid()) @db.Uuid
+  providerProfileId String                           @map("provider_profile_id") @db.Uuid
+  providerResourceKey String                         @map("provider_resource_key") @db.VarChar(120)
+  name              String                           @db.VarChar(160)
+  isActive          Boolean                          @default(true) @map("is_active")
+  createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile   VybeProviderProfile              @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  groups            VybeTimeSlotResourceGroupMember[]
+  holds             VybeTimeSlotHold[]
+
+  @@unique([providerProfileId, providerResourceKey], map: "vybe_time_slot_resources_provider_key")
+  @@index([providerProfileId, isActive], map: "vybe_time_slot_resources_provider_active_idx")
+  @@map("vybe_time_slot_resources")
+}
+
+model VybeTimeSlotResourceGroupMember {
+  id             String                    @id @default(uuid()) @db.Uuid
+  resourceGroupId String                   @map("resource_group_id") @db.Uuid
+  resourceId     String                    @map("resource_id") @db.Uuid
+  validFrom      DateTime?                 @map("valid_from") @db.Timestamptz(6)
+  validUntil     DateTime?                 @map("valid_until") @db.Timestamptz(6)
+  createdAt      DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  resourceGroup  VybeTimeSlotResourceGroup @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
+  resource       VybeTimeSlotResource      @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@unique([resourceGroupId, resourceId], map: "vybe_time_slot_resource_group_members_group_resource_key")
+  @@index([resourceId, validFrom, validUntil], map: "vybe_time_slot_resource_group_members_resource_validity_idx")
+  @@map("vybe_time_slot_resource_group_members")
+}
+
+model VybeTimeSlotHold {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  occurrenceId       String                  @map("occurrence_id") @db.Uuid
+  userId             String                  @map("user_id") @db.Uuid
+  idempotencyKey     String                  @map("idempotency_key") @db.VarChar(128)
+  capacityQuantity   Int?                    @map("capacity_quantity")
+  resourceId         String?                 @map("resource_id") @db.Uuid
+  status             VybeTimeSlotHoldStatus  @default(ACTIVE)
+  expiresAt          DateTime                @map("expires_at") @db.Timestamptz(6)
+  serviceStartsAt    DateTime                @map("service_starts_at") @db.Timestamptz(6)
+  serviceEndsAt      DateTime                @map("service_ends_at") @db.Timestamptz(6)
+  blockedStartsAt    DateTime                @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt      DateTime                @map("blocked_ends_at") @db.Timestamptz(6)
+  createdAt          DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  occurrence         VybeTimeSlotOccurrence  @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  resource           VybeTimeSlotResource?   @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, idempotencyKey], map: "vybe_time_slot_holds_user_idempotency_key")
+  @@index([occurrenceId, status, expiresAt], map: "vybe_time_slot_holds_occurrence_status_expiry_idx")
+  @@index([resourceId, status, blockedStartsAt], map: "vybe_time_slot_holds_resource_status_start_idx")
+  @@map("vybe_time_slot_holds")
 }
