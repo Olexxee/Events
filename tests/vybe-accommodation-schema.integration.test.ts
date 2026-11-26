@@ -134,7 +134,9 @@ describe.skipIf(!enabled)(
       });
     }
 
-    it("enforces provider ownership across property, room category and offering", async () => {
+    it(
+      "enforces provider ownership across property, room category and offering",
+      async () => {
       const fixture = await createFixture();
       const otherUser = await prisma.user.create({
         data: {
@@ -166,7 +168,9 @@ describe.skipIf(!enabled)(
       ).rejects.toThrow();
     });
 
-    it("enforces allocation date boundaries and positive capacity", async () => {
+    it(
+      "enforces allocation date boundaries and positive capacity",
+      async () => {
       const fixture = await createFixture();
       await prisma.vybeAccommodationNightLock.create({
         data: {
@@ -194,7 +198,9 @@ describe.skipIf(!enabled)(
       ).rejects.toThrow();
     });
 
-    it("binds hold-night details to the hold date range and exact allocation cutoff snapshot", async () => {
+    it(
+      "binds hold-night details to the hold date range and exact allocation cutoff snapshot",
+      async () => {
       const fixture = await createFixture();
       const hold = await createHold(fixture);
 
