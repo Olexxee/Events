@@ -999,3 +999,27 @@ Slice B exposes provider-owned property and room-category setup, evidence-backed
 - A quantity adjustment is append-only and must retain actor, reason, evidence reference, and signed delta. Reductions are allowed only at/after that allocation's provider-agreed cutoff and cannot consume active holds or committed bookings.
 - An entire allocation may be released only at/after its agreed cutoff and only when every allocation night has zero committed quantity and no ACTIVE hold details. Release preserves allocation and night history; it does not delete stock records.
 - Property/category/allocation changes write audit and transactional outbox records. This slice does not expose customer availability, holds, bookings, room assignment, Commerce, Payments, Finance, cancellation, or fulfilment.
+
+
+## 26. Accommodation availability and atomic holds (VYBE-017, Slice C)
+
+Slice C exposes customer availability, idempotent temporary holds, owner read/release, and synchronous expiry. It does not confirm bookings or collect payment.
+
+- Availability is calculated for the property's local half-open stay-date range `[checkInDate, checkOutDate)`. Per-night availability is the sum across ACTIVE allocation lots of allocated quantity minus committed quantity and unexpired ACTIVE holds. The stay's available room quantity is the minimum across every requested night.
+- A lot is eligible for a new hold only when its release cutoff is later than the full hold expiry. The property's IANA timezone remains the source of local stay dates; each hold-night stores the exact cutoff instant, local representation, and timezone snapshot.
+- Hold duration comes from the accommodation inventory policy, defaults to 600 seconds, and must remain within 60–1800 seconds. Providers cannot choose the hold duration.
+- A multi-night hold is all-or-nothing. It may draw from multiple allocation lots on each night, preferring the earliest eligible release cutoff, but the sum held on every night must equal the requested room quantity.
+- Category row and all requested category/night anchors are locked in ascending stay-date order. Hold creation rechecks availability under those locks; PostgreSQL capacity triggers remain the final guard against over-allocation.
+- Idempotency is scoped to the user and key. The request hash covers category, check-in, check-out, and room quantity. Reusing a key with different request data is rejected; replaying a still-active identical request returns the original hold.
+- Expired ACTIVE holds are synchronously transitioned to EXPIRED before new holds, provider reductions, or provider allocation release. Availability reads ignore expired holds even if cleanup has not yet run. A background worker may clean up and reconcile, but is not the correctness mechanism.
+- PostgreSQL deferred constraints require a hold to reserve exactly the requested room quantity for every local stay night. Hold request/snapshot fields are immutable; hold-night allocation snapshots are append-only. Only ACTIVE holds may transition to RELEASED or EXPIRED.
+- Only the hold owner can read or release a hold. Releasing a hold frees inventory; it does not create a booking, payment, refund, or customer entitlement.
+- No stale availability response guarantees a hold. Hold creation always rechecks and may reject a quantity that another customer has just held.
+
+Customer API:
+- `GET /api/v1/vybe/accommodation/room-categories/:roomCategoryId/availability?checkInDate=YYYY-MM-DD&checkOutDate=YYYY-MM-DD&roomQuantity=N`
+- `POST /api/v1/vybe/accommodation/holds`
+- `GET /api/v1/vybe/accommodation/holds/:holdId`
+- `DELETE /api/v1/vybe/accommodation/holds/:holdId`
+
+The hold is a short-lived inventory reservation only. Booking lifecycle, checkout, Commerce, Payments, Finance, provider confirmation, cancellation, and fulfilment remain separate future slices.
