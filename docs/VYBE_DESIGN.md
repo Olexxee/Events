@@ -974,3 +974,27 @@ A room category's `maxOccupancy` is the number of guests permitted per room; it 
 - Tests must cover split allocation lots, exact-capacity acceptance, aggregate overflow rejection, unknown-capacity rejection, physical-count reduction rejection, and concurrent allocation attempts for the same category/night.
 
 This guard closes an aggregate oversell path in the accommodation schema before provider allocation workflows are exposed. It does not implement bookings, payment, or room assignment.
+
+
+## 25. Accommodation provider supply management (VYBE-016, Slice B)
+
+Slice B exposes provider-owned property and room-category setup, evidence-backed physical capacity, category/night allocation lots, auditable per-night adjustments, and allocation release.
+
+### Provider and offering gates
+
+- Only an active, verified account with active OWNER or ADMIN authority in the existing provider Organization may manage its accommodation supply.
+- The Organization must be active and have an unexpired ACTIVE ACCOMMODATION approval covering the property's exact city, state, and country.
+- Property and room-category setup may be completed before global ACCOMMODATION category activation. Category activation remains a booking/discovery gate; it is not a reason to block provider preparation.
+- Each room category links to exactly one existing PUBLISHED ACCOMMODATION offering owned by the same provider. The offering's published location and room-category description must match the operational property/category, and its promised maximum occupancy must not exceed the room category's authoritative limit.
+- No property or category can be created under another provider's profile.
+
+### Capacity evidence and allocation
+
+- A room category's positive physical unit count must be accompanied by a non-empty provider evidence reference. PostgreSQL enforces the pairing. Changing the count requires a new evidence reference; the audit log retains actor, old/new count, reason, and evidence reference.
+- An allocation is one provider-agreed supply lot for one room category and half-open local-date range. The provider supplies exactly one positive quantity for every stay night in that range; gaps and duplicate dates are rejected.
+- The property's IANA timezone is authoritative. The provider-agreed release cutoff must include an explicit UTC offset, resolve to a real local time in that timezone, and be in the future when the allocation is created. No global or inferred cutoff is used.
+- Allocation terms version is server-assigned. Agreement and evidence references are retained on the allocation; initial per-night quantities are also recorded as append-only allocation adjustments.
+- Every allocation-night write locks the category and all affected night anchors in ascending date order. PostgreSQL remains the final aggregate-capacity guard across all active/paused allocation lots.
+- A quantity adjustment is append-only and must retain actor, reason, evidence reference, and signed delta. Reductions are allowed only at/after that allocation's provider-agreed cutoff and cannot consume active holds or committed bookings.
+- An entire allocation may be released only at/after its agreed cutoff and only when every allocation night has zero committed quantity and no ACTIVE hold details. Release preserves allocation and night history; it does not delete stock records.
+- Property/category/allocation changes write audit and transactional outbox records. This slice does not expose customer availability, holds, bookings, room assignment, Commerce, Payments, Finance, cancellation, or fulfilment.
