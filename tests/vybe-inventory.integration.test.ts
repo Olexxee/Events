@@ -129,6 +129,7 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
     });
     expect(pool.allocatedQuantity).toBe(8);
     expect(await prisma.vybeInventoryAllocation.count({ where: { poolId: pool.id } })).toBe(1);
+    expect((await prisma.vybeInventoryAllocation.findFirstOrThrow({ where: { poolId: pool.id } })).evidenceReference).toBe("provider-inventory-register:initial-8");
   });
 
   it("prevents concurrent holds from exceeding the allocated quantity", async () => {
@@ -162,6 +163,8 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
     const first = await createInventoryHold({ offeringId, userId: ownerId, quantity: 1, idempotencyKey });
     const retry = await createInventoryHold({ offeringId, userId: ownerId, quantity: 1, idempotencyKey });
     expect(retry.id).toBe(first.id);
+    expect(first.expiresAt.getTime()).toBeGreaterThanOrEqual(Date.now() + 9 * 60 * 1000);
+    expect(first.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 11 * 60 * 1000);
     await expect(createInventoryHold({ offeringId, userId: ownerId, quantity: 2, idempotencyKey })).rejects.toMatchObject({
       code: "IDEMPOTENCY_KEY_REUSED"
     });
