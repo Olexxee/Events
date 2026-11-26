@@ -149,42 +149,31 @@ CREATE OR REPLACE FUNCTION vybe_protect_time_slot_active_membership()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
-DECLARE
-  target_group_id UUID;
-  target_resource_id UUID;
-  target_valid_from TIMESTAMPTZ(6);
-  target_valid_until TIMESTAMPTZ(6);
 BEGIN
-  IF TG_OP = 'DELETE' THEN
-    target_group_id := OLD."resource_group_id";
-    target_resource_id := OLD."resource_id";
-    target_valid_from := NULL;
-    target_valid_until := NULL;
-  ELSE
-    target_group_id := NEW."resource_group_id";
-    target_resource_id := NEW."resource_id";
-    target_valid_from := NEW."valid_from";
-    target_valid_until := NEW."valid_until";
-  END IF;
-
-  IF EXISTS (
-    SELECT 1
-      FROM "vybe_time_slot_holds" hold
-      JOIN "vybe_time_slot_occurrences" occurrence
-        ON occurrence."id" = hold."occurrence_id"
-     WHERE hold."resource_id" = target_resource_id
-       AND occurrence."resource_group_id" = target_group_id
-       AND hold."status" = 'ACTIVE'
-       AND (
-         TG_OP = 'DELETE'
-         OR (target_valid_from IS NOT NULL AND target_valid_from > hold."blocked_starts_at")
-         OR (target_valid_until IS NOT NULL AND target_valid_until < hold."blocked_ends_at")
-         OR (target_valid_from IS NULL AND OLD."valid_from" IS NOT NULL)
-         OR (target_valid_until IS NULL AND OLD."valid_until" IS NOT NULL)
-       )
-  ) THEN
-    RAISE EXCEPTION 'cannot remove or narrow resource membership while active holds depend on it'
-      USING ERRCODE = '23514';
+  IF TG_OP = 'DELETE' OR
+     NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id" OR
+     NEW."resource_id" IS DISTINCT FROM OLD."resource_id" OR
+     NEW."valid_from" IS DISTINCT FROM OLD."valid_from" OR
+     NEW."valid_until" IS DISTINCT FROM OLD."valid_until" THEN
+    IF EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_holds" hold
+        JOIN "vybe_time_slot_occurrences" occurrence
+          ON occurrence."id" = hold."occurrence_id"
+       WHERE hold."resource_id" = OLD."resource_id"
+         AND occurrence."resource_group_id" = OLD."resource_group_id"
+         AND hold."status" = 'ACTIVE'
+         AND (
+           TG_OP = 'DELETE'
+           OR NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id"
+           OR NEW."resource_id" IS DISTINCT FROM OLD."resource_id"
+           OR (NEW."valid_from" IS NOT NULL AND NEW."valid_from" > hold."blocked_starts_at")
+           OR (NEW."valid_until" IS NOT NULL AND NEW."valid_until" < hold."blocked_ends_at")
+         )
+    ) THEN
+      RAISE EXCEPTION 'cannot remove or narrow resource membership while active holds depend on it'
+        USING ERRCODE = '23514';
+    END IF;
   END IF;
 
   IF TG_OP = 'DELETE' THEN
@@ -255,3 +244,89 @@ ON "vybe_time_slot_capacities"
 DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW
 EXECUTE FUNCTION vybe_assert_time_slot_capacity_mode();
+
+-- Changes to the parent ownership keys must not invalidate already-linked children.
+CREATE OR REPLACE FUNCTION vybe_guard_time_slot_offering_provider_change()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW."provider_profile_id" IS DISTINCT FROM OLD."provider_profile_id"
+     AND EXISTS (
+       SELECT 1 FROM "vybe_time_slot_resource_groups" resource_group
+        WHERE resource_group."offering_id" = NEW."id"
+          AND resource_group."provider_profile_id" <> NEW."provider_profile_id"
+     ) THEN
+    RAISE EXCEPTION 'offering provider change would invalidate time-slot resource groups'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "vybe_time_slot_offering_provider_change_guard"
+BEFORE UPDATE OF "provider_profile_id"
+ON "vybe_offerings"
+FOR EACH ROW
+EXECUTE FUNCTION vybe_guard_time_slot_offering_provider_change();
+
+CREATE OR REPLACE FUNCTION vybe_guard_time_slot_resource_provider_change()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW."provider_profile_id" IS DISTINCT FROM OLD."provider_profile_id"
+     AND EXISTS (
+       SELECT 1
+         FROM "vybe_time_slot_resource_group_members" member
+         JOIN "vybe_time_slot_resource_groups" resource_group
+           ON resource_group."id" = member."resource_group_id"
+        WHERE member."resource_id" = NEW."id"
+          AND resource_group."provider_profile_id" <> NEW."provider_profile_id"
+     ) THEN
+    RAISE EXCEPTION 'resource provider change would invalidate time-slot group membership'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "vybe_time_slot_resource_provider_change_guard"
+BEFORE UPDATE OF "provider_profile_id"
+ON "vybe_time_slot_resources"
+FOR EACH ROW
+EXECUTE FUNCTION vybe_guard_time_slot_resource_provider_change();
+
+CREATE OR REPLACE FUNCTION vybe_guard_time_slot_resource_group_change()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF (NEW."provider_profile_id" IS DISTINCT FROM OLD."provider_profile_id"
+      OR NEW."offering_id" IS DISTINCT FROM OLD."offering_id") THEN
+    IF EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_resource_group_members" member
+        JOIN "vybe_time_slot_resources" resource
+          ON resource."id" = member."resource_id"
+       WHERE member."resource_group_id" = NEW."id"
+         AND resource."provider_profile_id" <> NEW."provider_profile_id"
+    ) OR EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_occurrences" occurrence
+       WHERE occurrence."resource_group_id" = NEW."id"
+         AND occurrence."offering_id" <> NEW."offering_id"
+    ) THEN
+      RAISE EXCEPTION 'resource group change would invalidate linked inventory'
+        USING ERRCODE = '23514';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "vybe_time_slot_resource_group_change_guard"
+BEFORE UPDATE OF "provider_profile_id", "offering_id"
+ON "vybe_time_slot_resource_groups"
+FOR EACH ROW
+EXECUTE FUNCTION vybe_guard_time_slot_resource_group_change();
