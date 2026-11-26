@@ -26,21 +26,6 @@ describe.skipIf(!enabled)(
     });
 
     beforeEach(async () => {
-      await prisma.vybeInventoryHold.deleteMany();
-      await prisma.vybeInventoryAllocation.deleteMany();
-      await prisma.vybeInventoryPool.deleteMany();
-      await prisma.vybeOfferingVersion.deleteMany();
-      await prisma.vybeOffering.deleteMany();
-      await prisma.vybeProviderApproval.deleteMany();
-      await prisma.vybeProviderApplicationLocation.deleteMany();
-      await prisma.vybeProviderReview.deleteMany();
-      await prisma.vybeProviderEvidence.deleteMany();
-      await prisma.vybeProviderApplication.deleteMany();
-      await prisma.vybeProviderProfile.deleteMany();
-      await prisma.vybeCategoryActivation.deleteMany();
-      await prisma.organizationMembership.deleteMany();
-      await prisma.organization.deleteMany();
-      await prisma.user.deleteMany();
 
       const owner = await prisma.user.create({
         data: { email: `vybe-inventory-${crypto.randomUUID()}@events.test` }
@@ -84,9 +69,15 @@ describe.skipIf(!enabled)(
           approvedByUserId: ownerId
         }
       });
-      await prisma.vybeCategoryActivation.create({
-        data: {
+      await prisma.vybeCategoryActivation.upsert({
+        where: { category: "DRINKS" },
+        create: {
           category: "DRINKS",
+          isActive: true,
+          checklist: [],
+          reason: "Integration fixture"
+        },
+        update: {
           isActive: true,
           checklist: [],
           reason: "Integration fixture"
