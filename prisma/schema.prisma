@@ -978,6 +978,7 @@ model VybeAccommodationRoomCategory {
   description       String?                                 @db.VarChar(1000)
   maxOccupancy      Int                                     @map("max_occupancy")
   physicalUnitCount Int?                                    @map("physical_unit_count")
+  physicalUnitCountEvidenceReference String?                 @map("physical_unit_count_evidence_reference") @db.VarChar(1000)
   specifications    Json                                    @default("{}")
   status            VybeAccommodationRoomCategoryStatus    @default(ACTIVE)
   offeringId        String                                  @unique @map("offering_id") @db.Uuid
