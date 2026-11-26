@@ -20,7 +20,11 @@ function dateOnly(value: string): Date {
     Number.isNaN(date.getTime()) ||
     date.toISOString().slice(0, 10) !== value
   ) {
-    fail("VYBE_ACCOMMODATION_DATE_INVALID", "Dates must be valid YYYY-MM-DD calendar dates", 400);
+    fail(
+      "VYBE_ACCOMMODATION_DATE_INVALID",
+      "Dates must be valid YYYY-MM-DD calendar dates",
+      400
+    );
   }
   return date;
 }
@@ -85,9 +89,7 @@ async function getDatabaseNow(tx: PrismaClientTypes.TransactionClient) {
   return result[0]?.now ?? new Date();
 }
 
-async function getHoldDurationSeconds(
-  tx: PrismaClientTypes.TransactionClient
-) {
+async function getHoldDurationSeconds(tx: PrismaClientTypes.TransactionClient) {
   const policy = await tx.vybeInventoryPolicy.findUnique({
     where: { category: "ACCOMMODATION" },
     select: { holdDurationSeconds: true }
@@ -168,7 +170,11 @@ async function assertAccommodationCategoryAvailable(
     );
   }
   if (category.providerProfile.organization.status !== "ACTIVE") {
-    fail("VYBE_PROVIDER_INACTIVE", "The accommodation provider is not active", 404);
+    fail(
+      "VYBE_PROVIDER_INACTIVE",
+      "The accommodation provider is not active",
+      404
+    );
   }
   const approval = category.providerProfile.approvals.find(
     (item) => item.category === "ACCOMMODATION"
@@ -259,7 +265,11 @@ async function lockCategoryAndNights(
       FOR UPDATE`
   );
   if (propertyLock.length === 0 || categoryLock.length === 0) {
-    fail("VYBE_ACCOMMODATION_UNAVAILABLE", "This accommodation is not available", 404);
+    fail(
+      "VYBE_ACCOMMODATION_UNAVAILABLE",
+      "This accommodation is not available",
+      404
+    );
   }
 
   await tx.vybeAccommodationNightLock.createMany({
@@ -273,7 +283,9 @@ async function lockCategoryAndNights(
     Prisma.sql`SELECT id FROM vybe_accommodation_night_locks
       WHERE room_category_id = ${roomCategoryId}::uuid
         AND stay_date >= ${dates[0]}::date
-        AND stay_date < ${dateOnly(dates[dates.length - 1] as string).toISOString().slice(0, 10)}::date + INTERVAL '1 day'
+        AND stay_date < ${dateOnly(dates[dates.length - 1] as string)
+          .toISOString()
+          .slice(0, 10)}::date + INTERVAL '1 day'
       ORDER BY stay_date
       FOR UPDATE`
   );
@@ -384,13 +396,11 @@ async function getAllocationNights(
   });
 }
 
-function getAvailableQuantity(
-  night: {
-    allocatedQuantity: number;
-    committedQuantity: number;
-    holdNights: { quantity: number }[];
-  }
-) {
+function getAvailableQuantity(night: {
+  allocatedQuantity: number;
+  committedQuantity: number;
+  holdNights: { quantity: number }[];
+}) {
   return Math.max(
     0,
     night.allocatedQuantity -
@@ -530,10 +540,7 @@ export async function createAccommodationHold(input: {
         if (existing.status === "ACTIVE" && existing.expiresAt > now) {
           return existing;
         }
-        await expireAccommodationHoldsInTransaction(
-          tx,
-          input.roomCategoryId
-        );
+        await expireAccommodationHoldsInTransaction(tx, input.roomCategoryId);
         fail(
           "VYBE_HOLD_NO_LONGER_ACTIVE",
           "This idempotent accommodation hold has expired or been released"
@@ -562,7 +569,9 @@ export async function createAccommodationHold(input: {
 
       for (const stayDate of dates) {
         const lots = allocationNights
-          .filter((night) => night.stayDate.toISOString().slice(0, 10) === stayDate)
+          .filter(
+            (night) => night.stayDate.toISOString().slice(0, 10) === stayDate
+          )
           .sort(
             (left, right) =>
               left.allocation.releaseCutoffAt.getTime() -
@@ -693,13 +702,25 @@ export async function getMyAccommodationHold(input: {
       include: { nights: { orderBy: { stayDate: "asc" } } }
     });
     if (!initial) {
-      fail("VYBE_ACCOMMODATION_HOLD_NOT_FOUND", "Accommodation hold was not found", 404);
+      fail(
+        "VYBE_ACCOMMODATION_HOLD_NOT_FOUND",
+        "Accommodation hold was not found",
+        404
+      );
     }
     if (initial.userId !== input.userId) {
-      fail("VYBE_ACCOMMODATION_HOLD_FORBIDDEN", "Only the hold owner may view it", 403);
+      fail(
+        "VYBE_ACCOMMODATION_HOLD_FORBIDDEN",
+        "Only the hold owner may view it",
+        403
+      );
     }
     if (initial.nights.length === 0) {
-      fail("VYBE_ACCOMMODATION_HOLD_INVALID", "Accommodation hold has no reserved room nights", 409);
+      fail(
+        "VYBE_ACCOMMODATION_HOLD_INVALID",
+        "Accommodation hold has no reserved room nights",
+        409
+      );
     }
     const dates = [
       ...new Set(
@@ -707,10 +728,7 @@ export async function getMyAccommodationHold(input: {
       )
     ].sort();
     await lockCategoryAndNights(tx, initial.roomCategoryId, dates);
-    await expireAccommodationHoldsInTransaction(
-      tx,
-      initial.roomCategoryId
-    );
+    await expireAccommodationHoldsInTransaction(tx, initial.roomCategoryId);
     return tx.vybeAccommodationHold.findUniqueOrThrow({
       where: { id: initial.id },
       include: { nights: { orderBy: { stayDate: "asc" } } }
@@ -729,13 +747,25 @@ export async function releaseMyAccommodationHold(input: {
       include: { nights: { orderBy: { stayDate: "asc" } } }
     });
     if (!initial) {
-      fail("VYBE_ACCOMMODATION_HOLD_NOT_FOUND", "Accommodation hold was not found", 404);
+      fail(
+        "VYBE_ACCOMMODATION_HOLD_NOT_FOUND",
+        "Accommodation hold was not found",
+        404
+      );
     }
     if (initial.userId !== input.userId) {
-      fail("VYBE_ACCOMMODATION_HOLD_FORBIDDEN", "Only the hold owner may release it", 403);
+      fail(
+        "VYBE_ACCOMMODATION_HOLD_FORBIDDEN",
+        "Only the hold owner may release it",
+        403
+      );
     }
     if (initial.nights.length === 0) {
-      fail("VYBE_ACCOMMODATION_HOLD_INVALID", "Accommodation hold has no reserved room nights", 409);
+      fail(
+        "VYBE_ACCOMMODATION_HOLD_INVALID",
+        "Accommodation hold has no reserved room nights",
+        409
+      );
     }
     const dates = [
       ...new Set(
@@ -748,10 +778,7 @@ export async function releaseMyAccommodationHold(input: {
         WHERE id = ${initial.id}::uuid
         FOR UPDATE`
     );
-    await expireAccommodationHoldsInTransaction(
-      tx,
-      initial.roomCategoryId
-    );
+    await expireAccommodationHoldsInTransaction(tx, initial.roomCategoryId);
     const now = await getDatabaseNow(tx);
     const current = await tx.vybeAccommodationHold.findUniqueOrThrow({
       where: { id: initial.id }
