@@ -426,6 +426,20 @@ export async function activateCategory(input: {
   });
 }
 
+function localCalendarDate(date: Date, timezone: string) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    })
+      .formatToParts(date)
+      .map((part) => [part.type, part.value])
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 export async function listPublicOfferings(input: {
   category?: VybeCategory;
   city?: string;
@@ -440,17 +454,47 @@ export async function listPublicOfferings(input: {
     .map((item) => item.category)
     .filter((category) => !input.category || category === input.category);
   if (activeCategories.length === 0) return [];
+  const now = new Date();
+  const earliestRelevantNight = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1)
+  );
   const offerings = await prisma.vybeOffering.findMany({
     where: { status: "PUBLISHED", category: { in: activeCategories } },
     include: {
       versions: true,
+      accommodationRoomCategory: {
+        include: {
+          property: { select: { status: true, timezone: true } },
+          allocations: {
+            where: {
+              status: "ACTIVE",
+              releaseCutoffAt: { gt: now },
+              nights: {
+                some: {
+                  stayDate: { gte: earliestRelevantNight },
+                  allocatedQuantity: { gt: 0 }
+                }
+              }
+            },
+            include: {
+              nights: {
+                where: {
+                  stayDate: { gte: earliestRelevantNight },
+                  allocatedQuantity: { gt: 0 }
+                }
+              }
+            },
+            take: 50
+          }
+        }
+      },
       providerProfile: {
         select: {
           organization: { select: { name: true, status: true } },
           approvals: {
             where: {
               status: "ACTIVE",
-              OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }]
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }]
             },
             select: { category: true }
           }
@@ -474,6 +518,19 @@ export async function listPublicOfferings(input: {
       )
     )
       return [];
+    if (offering.category === "ACCOMMODATION") {
+      const accommodation = offering.accommodationRoomCategory;
+      if (!accommodation || accommodation.property.status !== "ACTIVE") return [];
+      const localToday = localCalendarDate(now, accommodation.property.timezone);
+      const hasFutureSupply = accommodation.allocations.some((allocation) =>
+        allocation.nights.some(
+          (night) =>
+            night.allocatedQuantity > 0 &&
+            night.stayDate.toISOString().slice(0, 10) >= localToday
+        )
+      );
+      if (!hasFutureSupply) return [];
+    }
     const content = version.content as Record<string, unknown>;
     const loc = content.location as Record<string, unknown> | undefined;
     if (
