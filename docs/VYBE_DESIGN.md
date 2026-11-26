@@ -496,3 +496,96 @@ Customer holds are serialized by locking the pool row in PostgreSQL. The transac
 This slice exposes pool creation, evidence-backed allocation adjustment, availability, hold creation, and owner release. Availability is informational and may change immediately; only the transactional hold operation reserves capacity. The implementation does not create bookings, convert holds into confirmed commitments, collect or refund money, or claim provider-confirmed/manual or external inventory as instantly bookable. Time-slot resources, room-night allocations, workers, booking orchestration, Commerce, Payments, Finance, fulfilment, and cancellation remain separate slices.
 
 PostgreSQL integration coverage must assert persisted capacity under simultaneous final-unit requests, synchronous expiry, idempotent retries and payload mismatch, and allocation reduction against active holds. The implementation must pass migration apply, Prisma validation/generation, typecheck, lint, formatting, integration tests, and build before merge.
+
+
+## 19. Time-slot inventory design gate (VYBE-011)
+
+### 19.1 Purpose and launch boundary
+
+Quantity pools (Section 18) represent a number of interchangeable units. They do not by themselves model a resource that is bookable only during a defined time interval. This slice defines controlled time-slot inventory for dining sessions, tables/lounges, and scheduled experiences. It is an inventory capability, not a booking or checkout implementation.
+
+The first time-slot implementation may support:
+- **Capacity sessions:** a defined service/experience interval with a finite number of seats, places, or service units.
+- **Exclusive resources:** a named table, lounge, room-like venue resource, or other individually controlled asset that cannot be allocated to overlapping intervals.
+- **Resource groups:** a provider-defined group of interchangeable exclusive resources, where allocation must still select and lock one actual resource before a hold is successful.
+
+The initial scope is provider-allocated inventory controlled by Vybe. Certified external inventory and provider-confirmation/manual inventory remain excluded. Dining, tables/lounges, and scheduled experiences may use these primitives, but category activation remains gated by its own operational checklist. This design does not activate any category.
+
+### 19.2 Time representation and timezone rules
+
+- Persist interval boundaries as UTC instants and compare/lock using those instants. Intervals are half-open: **[start, end)**. A reservation ending exactly when another begins does not overlap unless a configured buffer makes it overlap.
+- Every schedule/offer must retain an IANA timezone (for example, `Africa/Lagos`) as the authority for local service hours, customer display, and recurrence interpretation. A numeric UTC offset is not a substitute for an IANA timezone.
+- A generated occurrence stores its resolved UTC start/end and the originating timezone plus local schedule identity. Changing a provider timezone must not silently move already published or held occurrences.
+- Recurring schedules are rules for generating concrete occurrences, not inventory by themselves. Generate/materialize occurrences over a bounded booking horizon; edits create or supersede future occurrences explicitly and must not mutate existing holds or commitments.
+- Reject nonexistent local times during daylight-saving transitions. If a local time is ambiguous because clocks move backward, require an explicit offset/fold choice at schedule creation. Store the resolved instant so later timezone database updates cannot reinterpret an existing reservation.
+- Validate start < end, maximum duration, booking horizon, and minimum notice. These limits are platform policy, configurable by category within bounded values; no universal category values are approved by this design gate.
+
+### 19.3 Duration, buffers, and availability
+
+- Each occurrence has a customer-facing service interval and an effective blocked interval. The blocked interval is calculated as service start minus pre-buffer through service end plus post-buffer.
+- Buffers represent setup, cleaning, table turnaround, or provider preparation. They are inventory constraints, not extra customer-facing booking time. A change to buffer policy applies only to unheld future availability; it cannot invalidate active holds or confirmed commitments.
+- Capacity sessions have an integer capacity and committed/held quantities. A hold must fit within remaining capacity for the entire occurrence.
+- Exclusive resources use actual resource identity. A resource group may offer alternatives, but a successful hold must atomically bind one concrete resource; a group-level count alone is insufficient to prevent overlap.
+- Availability is informational. It may be stale immediately after read. Only the successful transactional hold operation reserves the occurrence/resource.
+- The availability response must identify the occurrence, service interval, timezone, capacity or resource selection mode, and relevant offering version. It must not expose private venue details or another customer's reservation data.
+
+### 19.4 Allocation and provider authority
+
+- Only an active provider organization with current category/location-scoped Vybe approval, a published offering version, active category launch gate, and recorded supply authority may create or change time-slot allocations.
+- Provider allocations must identify the actual resource or capacity session, the offering/version scope, location, effective dates, and evidence reference. Every allocation adjustment records actor, signed delta or resource-state change, reason, timestamp, and evidence reference.
+- A provider cannot allocate the same exclusive resource to overlapping Vybe intervals. If a resource is also sold through another channel, the provider must allocate only the capacity it can genuinely reserve for Vybe; external channel synchronization is not implied.
+- Suspending provider/category/location approval blocks new occurrences, allocations, and holds in the affected scope. Existing holds/commitments are not silently deleted; continuity handling is a later booking/operations policy.
+- An offering edit that changes duration, buffer, capacity semantics, or resource requirements creates a new immutable offering version. Existing occurrences and holds retain their original snapshots.
+
+### 19.5 Hold lifecycle, idempotency, and concurrency
+
+- Reuse the approved 10-minute default hold duration, with category overrides bounded to 60–1800 seconds. The effective duration and expiry are fixed on each hold; later policy changes do not rewrite existing expiry timestamps.
+- Holds are scoped to user plus idempotency key and include the exact offering version, occurrence, service interval, selected resource (where applicable), quantity, blocked interval, and expiry snapshot. Replays with a changed payload are rejected.
+- For capacity sessions, lock the occurrence/capacity row inside the transaction, synchronously expire stale holds, recalculate held plus committed capacity, and create the hold only if the full requested quantity fits.
+- For exclusive resources, enforce non-overlap in PostgreSQL, not only in application read-before-write logic. Use a database-enforced range/exclusion strategy (for example, a `tstzrange` GiST exclusion constraint) over the resource identity and effective blocked interval for active holds/commitments. Expired/released holds must cease blocking; this requires a safe state-aware constraint strategy or a separate active-allocation table whose rows are removed atomically on terminal transition.
+- Resource-group selection must occur inside the same transaction as the hold. Lock candidate resources in deterministic order, attempt a database-enforced allocation, and return one concrete resource or a deterministic unavailable result. Never report a group-level hold without a concrete allocation.
+- Allocation changes and holds must serialize against one another. Reducing capacity or disabling a resource is rejected if it would invalidate active holds or committed use. Resource reassignment is not an ordinary allocation edit.
+- Expiry is synchronous in the transaction that needs capacity; background cleanup may be added later but is not correctness-critical. Release is owner-only and idempotent. Expiry, release, and consumption are mutually exclusive terminal transitions.
+- All allocation and hold transitions write audit records and transactional outbox events in the same database transaction.
+
+### 19.6 Physical schema and PostgreSQL verification requirements
+
+Before migrations are authorized, the implementation proposal must specify:
+- Whether capacity sessions and exclusive resources share occurrence metadata while retaining distinct allocation/constraint models.
+- Database-enforced non-overlap for exclusive resources, including active-hold expiry/release semantics.
+- Atomic resource selection for resource groups and deterministic lock ordering.
+- Capacity serialization for simultaneous requests and multi-unit holds.
+- How buffers are snapshotted and how policy changes interact with existing holds/commitments.
+- Idempotency uniqueness, payload fingerprinting, and terminal transition rules.
+- Provider approval/category/location revalidation and lock ordering against suspension/deactivation.
+- Transactional audit/outbox writes and recovery for retries.
+- Query/index strategy for time-range availability without making reads authoritative.
+
+Required PostgreSQL integration tests:
+- Two simultaneous requests competing for the final capacity unit: exactly one succeeds.
+- Multi-unit capacity hold racing with another hold: persisted totals never exceed capacity.
+- Two simultaneous overlapping holds on one exclusive resource: at most one succeeds.
+- Adjacent half-open intervals succeed when no buffer overlaps; buffer-expanded intervals correctly conflict.
+- Resource-group allocation racing across multiple candidate resources: each successful hold binds a distinct available resource.
+- Expiry racing with a new hold: expired capacity/resource is reusable exactly once.
+- Duplicate idempotency replay returns the original allocation; changed payload is rejected.
+- Release/expiry retries cannot double-free capacity or resources.
+- Capacity reduction/resource deactivation against active holds or commitments is rejected safely.
+- DST nonexistent and ambiguous local times follow the rules in Section 19.2.
+- Provider suspension racing with allocation/hold creation cannot authorize a new hold after suspension wins.
+- Audit and outbox records commit atomically with each successful state transition.
+
+### 19.7 Decisions and exclusions
+
+This design gate approves the time-slot inventory model and invariants, but leaves the following values configurable and unresolved: category-specific maximum booking horizon, minimum notice, maximum duration, buffer defaults, recurrence materialization horizon, and the initial set of categories activated for time-slot booking. These must be set in a later category launch-readiness decision, not guessed in schema defaults.
+
+This gate does not authorize:
+- Customer booking records or booking lifecycle.
+- Commerce carts, orders, checkout, or mixed ticket/Vybe checkout.
+- Payment authorization/capture, real Payments integration, refunds, or Finance.
+- Provider-confirmation/manual inventory or external supplier adapters.
+- Room-night/accommodation allocation (a separate model and design gate).
+- Fulfilment, redemption, cancellations, disputes, or settlement.
+- Automatic category activation.
+
+After product-owner approval, the next step is a separate physical schema review and implementation plan for time-slot inventory, with migrations and PostgreSQL tests. Booking/Commerce work remains blocked until time-slot and accommodation inventory are both implemented and verified.
