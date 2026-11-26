@@ -57,16 +57,16 @@ describe.skipIf(!enabled)(
         }
       });
       const roomCategory = await prisma.vybeAccommodationRoomCategory.create({
-          data: {
-            providerProfileId: profile.id,
-            propertyId: property.id,
-            providerCategoryKey: `standard-${suffix}`,
-            name: "Standard room",
-            maxOccupancy: 2,
-            specifications: { bed: "queen", bathroom: "private" },
-            offeringId: offering.id
-          }
-        });
+        data: {
+          providerProfileId: profile.id,
+          propertyId: property.id,
+          providerCategoryKey: `standard-${suffix}`,
+          name: "Standard room",
+          maxOccupancy: 2,
+          specifications: { bed: "queen", bathroom: "private" },
+          offeringId: offering.id
+        }
+      });
       const allocation = await prisma.vybeAccommodationAllocation.create({
         data: {
           roomCategoryId: roomCategory.id,
