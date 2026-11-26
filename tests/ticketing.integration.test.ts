@@ -24,26 +24,6 @@ describe.skipIf(!enabled)("Ticketing inventory PostgreSQL integration", () => {
   });
 
   beforeEach(async () => {
-    await prisma.ticketHoldLine.deleteMany();
-    await prisma.ticketHold.deleteMany();
-    await prisma.ticketTypeVersion.deleteMany();
-    await prisma.ticketType.deleteMany();
-    await prisma.eventAccessHold.deleteMany();
-    await prisma.eventAccessGrant.deleteMany();
-    await prisma.eventAccessRequest.deleteMany();
-    await prisma.eventInvitation.deleteMany();
-    await prisma.eventRevision.deleteMany();
-    await prisma.eventVenue.deleteMany();
-    await prisma.eventSchedule.deleteMany();
-    await prisma.event.deleteMany();
-    await prisma.organizerApplication.deleteMany();
-    await prisma.organizationMembership.deleteMany();
-    await prisma.organization.deleteMany();
-    await prisma.session.deleteMany();
-    await prisma.passwordCredential.deleteMany();
-    await prisma.userProfile.deleteMany();
-    await prisma.user.deleteMany();
-
     const owner = await prisma.user.create({
       data: { email: `ticket-owner-${crypto.randomUUID()}@events.test` }
     });
