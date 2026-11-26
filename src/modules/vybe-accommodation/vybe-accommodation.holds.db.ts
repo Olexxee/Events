@@ -78,6 +78,13 @@ function approvedLocations(value: Prisma.JsonValue) {
   });
 }
 
+async function getDatabaseNow(tx: PrismaClientTypes.TransactionClient) {
+  const result = await tx.$queryRaw<Array<{ now: Date }>>(
+    Prisma.sql`SELECT CURRENT_TIMESTAMP AS now`
+  );
+  return result[0]?.now ?? new Date();
+}
+
 async function getHoldDurationSeconds(
   tx: PrismaClientTypes.TransactionClient
 ) {
@@ -306,8 +313,9 @@ async function recordAccommodationHoldEvent(
 export async function expireAccommodationHoldsInTransaction(
   tx: PrismaClientTypes.TransactionClient,
   roomCategoryId: string,
-  now: Date
+  _now: Date
 ) {
+  const now = await getDatabaseNow(tx);
   const expired = await tx.vybeAccommodationHold.findMany({
     where: {
       roomCategoryId,
@@ -477,7 +485,6 @@ export async function createAccommodationHold(input: {
   try {
     return await prisma.$transaction(async (tx) => {
       await assertActiveVerifiedAccount(tx, input.userId);
-      const now = new Date();
       const { category, version } = await assertAccommodationCategoryAvailable(
         tx,
         input.roomCategoryId
@@ -534,6 +541,7 @@ export async function createAccommodationHold(input: {
         );
       }
 
+      const now = await getDatabaseNow(tx);
       const holdDurationSeconds = await getHoldDurationSeconds(tx);
       const expiresAt = new Date(now.getTime() + holdDurationSeconds * 1000);
       await expireAccommodationHoldsInTransaction(tx, category.id, now);
@@ -743,12 +751,12 @@ export async function releaseMyAccommodationHold(input: {
         WHERE id = ${initial.id}::uuid
         FOR UPDATE`
     );
-    const now = new Date();
     await expireAccommodationHoldsInTransaction(
       tx,
       initial.roomCategoryId,
-      now
+      new Date()
     );
+    const now = await getDatabaseNow(tx);
     const current = await tx.vybeAccommodationHold.findUniqueOrThrow({
       where: { id: initial.id }
     });
