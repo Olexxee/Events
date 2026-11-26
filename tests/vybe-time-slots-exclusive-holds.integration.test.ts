@@ -174,6 +174,26 @@ describe.skipIf(!enabled)("Vybe exclusive-resource holds PostgreSQL integration"
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
   });
 
+  it("serializes contention across different occurrences sharing one resource group", async () => {
+    const fixture = await createExclusiveFixture();
+    const first = await fixture.createOccurrence();
+    const second = await fixture.createOccurrence();
+    const results = await Promise.allSettled([
+      createTimeSlotResourceHold({
+        occurrenceId: first.id,
+        userId: fixture.userId,
+        idempotencyKey: `group-contention-a-${crypto.randomUUID()}`
+      }),
+      createTimeSlotResourceHold({
+        occurrenceId: second.id,
+        userId: fixture.userId,
+        idempotencyKey: `group-contention-b-${crypto.randomUUID()}`
+      })
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+  });
+
   it("assigns different concrete resources when a group has parallel capacity", async () => {
     const fixture = await createExclusiveFixture({ resourceCount: 2 });
     const occurrence = await fixture.createOccurrence();
@@ -265,6 +285,23 @@ describe.skipIf(!enabled)("Vybe exclusive-resource holds PostgreSQL integration"
     expect(await prisma.auditLog.findFirst({
       where: { resourceId: hold.id, action: "vybe.time_slot_hold.expired" }
     })).not.toBeNull();
+  });
+
+  it("prevents resource deactivation while an active hold depends on it", async () => {
+    const fixture = await createExclusiveFixture();
+    const occurrence = await fixture.createOccurrence();
+    const hold = await createTimeSlotResourceHold({
+      occurrenceId: occurrence.id,
+      userId: fixture.userId,
+      idempotencyKey: `resource-deactivation-${crypto.randomUUID()}`
+    });
+    await expect(prisma.vybeTimeSlotResource.update({
+      where: { id: hold.resourceId! },
+      data: { isActive: false }
+    })).rejects.toThrow();
+    expect(await prisma.vybeTimeSlotResource.findUniqueOrThrow({
+      where: { id: hold.resourceId! }
+    })).toMatchObject({ isActive: true });
   });
 
   it("makes concurrent owner release idempotent and rejects other users", async () => {
