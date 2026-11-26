@@ -6,6 +6,12 @@ import {
 } from "../src/infrastructure/database/prisma.js";
 import { listPublicOfferings } from "../src/modules/vybe-catalogue/vybe-catalogue.db.js";
 import {
+  createAccommodationHold,
+  getAccommodationAvailability,
+  getMyAccommodationHold,
+  releaseMyAccommodationHold
+} from "../src/modules/vybe-accommodation/vybe-accommodation.holds.db.js";
+import {
   adjustAccommodationAllocationNight,
   createAccommodationAllocation,
   createAccommodationProperty,
@@ -174,7 +180,55 @@ describe.skipIf(!enabled)(
       });
     }
 
-    it("requires the property location to fall within the active provider approval", async () => {
+  
+  async function withAccommodationActivation<T>(
+    userId: string,
+    callback: () => Promise<T>
+  ) {
+    const previous = await prisma.vybeCategoryActivation.findUnique({
+      where: { category: "ACCOMMODATION" }
+    });
+    await prisma.vybeCategoryActivation.upsert({
+      where: { category: "ACCOMMODATION" },
+      create: {
+        category: "ACCOMMODATION",
+        isActive: true,
+        checklist: [],
+        reason: "Accommodation hold integration test",
+        activatedByUserId: userId,
+        activatedAt: new Date()
+      },
+      update: {
+        isActive: true,
+        checklist: [],
+        reason: "Accommodation hold integration test",
+        activatedByUserId: userId,
+        activatedAt: new Date()
+      }
+    });
+    try {
+      return await callback();
+    } finally {
+      if (previous) {
+        await prisma.vybeCategoryActivation.update({
+          where: { category: "ACCOMMODATION" },
+          data: {
+            isActive: previous.isActive,
+            checklist: previous.checklist,
+            reason: previous.reason,
+            activatedByUserId: previous.activatedByUserId,
+            activatedAt: previous.activatedAt
+          }
+        });
+      } else {
+        await prisma.vybeCategoryActivation.delete({
+          where: { category: "ACCOMMODATION" }
+        });
+      }
+    }
+  }
+
+  it("requires the property location to fall within the active provider approval", async () => {
       const fixture = await createFixture();
       await expect(
         createAccommodationProperty({
@@ -388,7 +442,228 @@ describe.skipIf(!enabled)(
       ).rejects.toThrow();
     });
 
-    it("allows adjustments only under the allocation cutoff and releases only uncommitted, unheld lots", async () => {
+  
+  it("reports availability per local stay night using the full hold window", async () => {
+    const fixture = await createFixture();
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      await createAllocation(fixture, roomCategory.id, [4, 3]);
+      const availability = await getAccommodationAvailability({
+        roomCategoryId: roomCategory.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 3
+      });
+
+      expect(availability.holdDurationSeconds).toBe(600);
+      expect(availability.nights).toEqual([
+        { stayDate: "2027-06-10", availableQuantity: 4 },
+        { stayDate: "2027-06-11", availableQuantity: 3 }
+      ]);
+      expect(availability.minimumAvailableQuantity).toBe(3);
+      expect(availability.isAvailable).toBe(true);
+    });
+  });
+
+  it("creates multi-night holds across allocation lots and replays idempotently", async () => {
+    const fixture = await createFixture();
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      await createAccommodationAllocation({
+        roomCategoryId: roomCategory.id,
+        actorUserId: fixture.user.id,
+        startDate: "2027-06-10",
+        endDate: "2027-06-12",
+        releaseCutoffLocal: "2027-06-01T12:00:00+01:00",
+        agreementReference: "provider-agreement:hold-lot-one",
+        evidenceReference: "private://provider/hold-lot-one",
+        nights: [
+          { stayDate: "2027-06-10", allocatedQuantity: 1 },
+          { stayDate: "2027-06-11", allocatedQuantity: 1 }
+        ]
+      });
+      await createAccommodationAllocation({
+        roomCategoryId: roomCategory.id,
+        actorUserId: fixture.user.id,
+        startDate: "2027-06-10",
+        endDate: "2027-06-12",
+        releaseCutoffLocal: "2027-06-02T12:00:00+01:00",
+        agreementReference: "provider-agreement:hold-lot-two",
+        evidenceReference: "private://provider/hold-lot-two",
+        nights: [
+          { stayDate: "2027-06-10", allocatedQuantity: 2 },
+          { stayDate: "2027-06-11", allocatedQuantity: 2 }
+        ]
+      });
+
+      const request = {
+        roomCategoryId: roomCategory.id,
+        userId: fixture.user.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 2,
+        idempotencyKey: "accommodation-hold-001"
+      };
+      const hold = await createAccommodationHold(request);
+      const replay = await createAccommodationHold(request);
+      expect(replay.id).toBe(hold.id);
+      expect(hold.nights).toHaveLength(4);
+      expect(hold.nights.reduce((sum, night) => sum + night.quantity, 0)).toBe(4);
+      expect(hold.expiresAt.getTime() - Date.now()).toBeGreaterThan(9 * 60 * 1000);
+
+      await expect(
+        createAccommodationHold({
+          ...request,
+          roomQuantity: 1
+        })
+      ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+    });
+  });
+
+  it("serializes concurrent holds so the same room-night capacity cannot be held twice", async () => {
+    const fixture = await createFixture();
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      await createAllocation(fixture, roomCategory.id, [8, 8]);
+
+      const results = await Promise.allSettled([
+        createAccommodationHold({
+          roomCategoryId: roomCategory.id,
+          userId: fixture.user.id,
+          checkInDate: "2027-06-10",
+          checkOutDate: "2027-06-12",
+          roomQuantity: 7,
+          idempotencyKey: "concurrent-accommodation-hold-1"
+        }),
+        createAccommodationHold({
+          roomCategoryId: roomCategory.id,
+          userId: fixture.user.id,
+          checkInDate: "2027-06-10",
+          checkOutDate: "2027-06-12",
+          roomQuantity: 7,
+          idempotencyKey: "concurrent-accommodation-hold-2"
+        })
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+      const availability = await getAccommodationAvailability({
+        roomCategoryId: roomCategory.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 2
+      });
+      expect(availability.minimumAvailableQuantity).toBe(1);
+      expect(availability.isAvailable).toBe(false);
+    });
+  });
+
+  it("expires stale holds synchronously before admitting replacement inventory", async () => {
+    const fixture = await createFixture();
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      await createAllocation(fixture, roomCategory.id, [2, 2]);
+      const first = await createAccommodationHold({
+        roomCategoryId: roomCategory.id,
+        userId: fixture.user.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 2,
+        idempotencyKey: "expired-accommodation-hold-1"
+      });
+      await prisma.vybeAccommodationHold.update({
+        where: { id: first.id },
+        data: { expiresAt: new Date(Date.now() - 1000) }
+      });
+
+      const replacement = await createAccommodationHold({
+        roomCategoryId: roomCategory.id,
+        userId: fixture.user.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 2,
+        idempotencyKey: "expired-accommodation-hold-2"
+      });
+      const expired = await prisma.vybeAccommodationHold.findUniqueOrThrow({
+        where: { id: first.id }
+      });
+      expect(expired.status).toBe("EXPIRED");
+      expect(replacement.status).toBe("ACTIVE");
+    });
+  });
+
+  it("enforces hold ownership and releases inventory when the owner cancels", async () => {
+    const fixture = await createFixture();
+    const otherUser = await prisma.user.create({
+      data: {
+        email: `vybe-accommodation-other-${crypto.randomUUID()}@events.test`,
+        emailVerifiedAt: new Date()
+      }
+    });
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      await createAllocation(fixture, roomCategory.id, [3, 3]);
+      const hold = await createAccommodationHold({
+        roomCategoryId: roomCategory.id,
+        userId: fixture.user.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 2,
+        idempotencyKey: "owned-accommodation-hold-1"
+      });
+
+      await expect(
+        getMyAccommodationHold({ holdId: hold.id, userId: otherUser.id })
+      ).rejects.toMatchObject({ code: "VYBE_ACCOMMODATION_HOLD_FORBIDDEN" });
+      const released = await releaseMyAccommodationHold({
+        holdId: hold.id,
+        userId: fixture.user.id
+      });
+      expect(released.status).toBe("RELEASED");
+      const availability = await getAccommodationAvailability({
+        roomCategoryId: roomCategory.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 3
+      });
+      expect(availability.minimumAvailableQuantity).toBe(3);
+    });
+  });
+
+  it("does not hold inventory when a provider cutoff is inside the hold window", async () => {
+    const fixture = await createFixture();
+    await withAccommodationActivation(fixture.user.id, async () => {
+      const { roomCategory } = await createPropertyAndCategory(fixture);
+      const allocation = await createAllocation(fixture, roomCategory.id, [3, 3]);
+      await prisma.vybeAccommodationAllocation.update({
+        where: { id: allocation.id },
+        data: { releaseCutoffAt: new Date(Date.now() + 5 * 60 * 1000) }
+      });
+
+      const availability = await getAccommodationAvailability({
+        roomCategoryId: roomCategory.id,
+        checkInDate: "2027-06-10",
+        checkOutDate: "2027-06-12",
+        roomQuantity: 1
+      });
+      expect(availability.minimumAvailableQuantity).toBe(0);
+      expect(availability.isAvailable).toBe(false);
+      await expect(
+        createAccommodationHold({
+          roomCategoryId: roomCategory.id,
+          userId: fixture.user.id,
+          checkInDate: "2027-06-10",
+          checkOutDate: "2027-06-12",
+          roomQuantity: 1,
+          idempotencyKey: "cutoff-accommodation-hold-1"
+        })
+      ).rejects.toMatchObject({
+        code: "VYBE_INSUFFICIENT_ACCOMMODATION_INVENTORY"
+      });
+    });
+  });
+
+  it("allows adjustments only under the allocation cutoff and releases only uncommitted, unheld lots", async () => {
       const fixture = await createFixture();
       const { roomCategory } = await createPropertyAndCategory(fixture);
       const allocation = await createAllocation(fixture, roomCategory.id, [8]);
