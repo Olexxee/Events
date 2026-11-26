@@ -114,24 +114,39 @@ describe.skipIf(!enabled)(
       fixture: Awaited<ReturnType<typeof createFixture>>,
       input: { key?: string; quantity?: number } = {}
     ) {
-      return prisma.vybeAccommodationHold.create({
-        data: {
-          roomCategoryId: fixture.roomCategory.id,
-          userId: fixture.user.id,
-          idempotencyKey: input.key ?? crypto.randomUUID(),
-          requestHash: "a".repeat(64),
-          checkInDate: new Date("2027-06-10T00:00:00.000Z"),
-          checkOutDate: new Date("2027-06-11T00:00:00.000Z"),
-          roomQuantity: input.quantity ?? 1,
-          expiresAt: new Date("2027-05-31T11:00:00.000Z"),
-          snapshot: {
-            offeringId: fixture.offering.id,
-            offeringVersion: 1,
-            currency: "NGN",
-            unitPriceMinor: 2500000,
-            cancellationTerms: { policy: "provider_terms" }
+      return prisma.$transaction(async (tx) => {
+        const hold = await tx.vybeAccommodationHold.create({
+          data: {
+            roomCategoryId: fixture.roomCategory.id,
+            userId: fixture.user.id,
+            idempotencyKey: input.key ?? crypto.randomUUID(),
+            requestHash: "a".repeat(64),
+            checkInDate: new Date("2027-06-10T00:00:00.000Z"),
+            checkOutDate: new Date("2027-06-11T00:00:00.000Z"),
+            roomQuantity: input.quantity ?? 1,
+            expiresAt: new Date("2027-05-31T11:00:00.000Z"),
+            snapshot: {
+              offeringId: fixture.offering.id,
+              offeringVersion: 1,
+              currency: "NGN",
+              unitPriceMinor: 2500000,
+              cancellationTerms: { policy: "provider_terms" }
+            }
           }
-        }
+        });
+        await tx.vybeAccommodationHoldNight.create({
+          data: {
+            holdId: hold.id,
+            allocationNightId: fixture.allocationNight.id,
+            roomCategoryId: fixture.roomCategory.id,
+            stayDate: new Date("2027-06-10T00:00:00.000Z"),
+            quantity: input.quantity ?? 1,
+            releaseCutoffAtSnapshot: fixture.allocation.releaseCutoffAt,
+            releaseCutoffLocalSnapshot: fixture.allocation.releaseCutoffLocal,
+            releaseCutoffTimezoneSnapshot: fixture.allocation.releaseCutoffTimezone
+          }
+        });
+        return hold;
       });
     }
 
@@ -201,36 +216,18 @@ describe.skipIf(!enabled)(
       const fixture = await createFixture();
       const hold = await createHold(fixture);
 
+      const hold = await createHold(fixture);
+      const holdNight = await prisma.vybeAccommodationHoldNight.findFirstOrThrow({
+        where: { holdId: hold.id }
+      });
       await expect(
-        prisma.vybeAccommodationHoldNight.create({
-          data: {
-            holdId: hold.id,
-            allocationNightId: fixture.allocationNight.id,
-            roomCategoryId: fixture.roomCategory.id,
-            stayDate: new Date("2027-06-10T00:00:00.000Z"),
-            quantity: 1,
-            releaseCutoffAtSnapshot: new Date("2027-06-01T11:00:00.000Z"),
-            releaseCutoffLocalSnapshot: "2027-06-01T12:00:00+01:00",
-            releaseCutoffTimezoneSnapshot: "Africa/Lagos"
-          }
-        })
-      ).resolves.toMatchObject({ holdId: hold.id });
-
-      const anotherHold = await createHold(fixture);
-      await expect(
-        prisma.vybeAccommodationHoldNight.create({
-          data: {
-            holdId: anotherHold.id,
-            allocationNightId: fixture.allocationNight.id,
-            roomCategoryId: fixture.roomCategory.id,
-            stayDate: new Date("2027-06-10T00:00:00.000Z"),
-            quantity: 2,
-            releaseCutoffAtSnapshot: new Date("2027-06-01T11:00:00.000Z"),
-            releaseCutoffLocalSnapshot: "2027-06-01T12:00:00+01:00",
-            releaseCutoffTimezoneSnapshot: "Africa/Lagos"
-          }
+        prisma.vybeAccommodationHoldNight.update({
+          where: { id: holdNight.id },
+          data: { quantity: 2 }
         })
       ).rejects.toThrow();
+
+      await expect(createHold(fixture, { quantity: 2 })).rejects.toThrow();
     });
 
     it("enforces aggregate physical room capacity across allocation lots", async () => {
