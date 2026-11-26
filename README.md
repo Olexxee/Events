@@ -628,3 +628,6 @@ A release should not be considered production-ready unless:
 ## Vybe accommodation inventory decision (VYBE-013)
 
 Unused room-category inventory allocated to Vybe may return to the provider's independent sales channels only at a provider-agreed release cutoff recorded for that allocation. The provider cannot reclaim quantities covered by active holds or confirmed bookings. A missing cutoff means the allocation is not bookable; no universal default is assumed. The full design gate and PostgreSQL verification requirements are in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md), Section 21. This decision authorizes design review only, not schema or implementation.
+
+
+**Accommodation physical schema review:** VYBE-014 is documented in [Section 22 of docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md#22-accommodation-physical-schema-review-and-implementation-plan-vybe-014). The recommended model uses property/room-category records, allocation-night lots with provider-agreed release cutoffs, lock-only room-night anchors, and atomic multi-night hold details. This remains a design approval gate: no Prisma models or migration are authorized until the physical model is approved.
