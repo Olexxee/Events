@@ -225,6 +225,7 @@ export async function createTimeSlotOccurrence(input: {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
     const offering = await assertOfferingSetupAccess(tx, input.offeringId, input.actorUserId);
+    const offeringVersion = offering.currentPublishedVersion ?? fail("VYBE_OFFERING_NOT_PUBLISHED", "A published offering version is required", 409);
     const serviceStartsAt = parseInstant(input.serviceStartsAt, input.timezone);
     const serviceEndsAt = parseInstant(input.serviceEndsAt, input.timezone);
     if (serviceStartsAt >= serviceEndsAt) {
@@ -262,7 +263,7 @@ export async function createTimeSlotOccurrence(input: {
     const occurrence = await tx.vybeTimeSlotOccurrence.create({
       data: {
         offeringId: offering.id,
-        offeringVersion: offering.currentPublishedVersion,
+        offeringVersion,
         inventoryMode: input.inventoryMode,
         timezone: input.timezone,
         serviceStartsAt,
@@ -287,7 +288,7 @@ export async function createTimeSlotOccurrence(input: {
       eventType: "vybe.time_slot_occurrence.created.v1",
       payload: {
         offeringId: offering.id,
-        offeringVersion: offering.currentPublishedVersion,
+        offeringVersion,
         inventoryMode: input.inventoryMode,
         timezone: input.timezone,
         serviceStartsAt: serviceStartsAt.toISOString(),
