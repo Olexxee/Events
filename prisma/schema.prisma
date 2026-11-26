@@ -990,6 +990,7 @@ model VybeAccommodationRoomCategory {
   holds             VybeAccommodationHold[]
 
   @@unique([propertyId, providerCategoryKey], map: "vybe_accommodation_room_categories_property_key")
+  @@unique([offeringId, providerProfileId], map: "vybe_accommodation_room_categories_offering_provider_key")
   @@unique([id, providerProfileId], map: "vybe_accommodation_room_categories_id_provider_key")
   @@index([providerProfileId, status], map: "vybe_accommodation_room_categories_provider_status_idx")
   @@map("vybe_accommodation_room_categories")
