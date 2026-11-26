@@ -19,22 +19,23 @@ describe.skipIf(!enabled)(
       await disconnectDatabase();
     });
 
-    it(
-      "rejects overlapping active holds for one exclusive resource and permits adjacent intervals",
-      async () => {
-          const suffix = crypto.randomUUID();
-          const user = await prisma.user.create({
-            data: { email: `vybe-time-slot-${suffix}@events.test` }
+    const overlappingHoldTestName = [
+      "rejects overlapping active holds for one exclusive resource",
+      "and permits adjacent intervals"
+    ].join(" ");
+
+    it(overlappingHoldTestName, async () => {
+      const suffix = crypto.randomUUID();
+      const user = await prisma.user.create({
+        data: { email: `vybe-time-slot-${suffix}@events.test` }
+      });
+      const organization = await prisma.organization.create({
+        data: {
+          name: "Vybe Time Slot Schema Provider",
+          slug: `vybe-time-slot-${suffix}`,
+          createdById: user.id
         }
-      );
-        const organization = await prisma.organization.create({
-          data: {
-            name: "Vybe Time Slot Schema Provider",
-            slug: `vybe-time-slot-${suffix}`,
-            createdById: user.id
-          }
-      }
-    );
+      });
       const profile = await prisma.vybeProviderProfile.create({
         data: { organizationId: organization.id }
       });
@@ -125,9 +126,12 @@ describe.skipIf(!enabled)(
       ).toBe(2);
     });
 
-    it(
-      "rejects cross-provider and cross-offering links and enforces hold and capacity modes",
-      async () => {
+    const integrityTestName = [
+      "rejects cross-provider and cross-offering links",
+      "and enforces hold and capacity modes"
+    ].join(" ");
+
+    it(integrityTestName, async () => {
       const suffix = crypto.randomUUID();
       const createProvider = async (label: string) => {
         const user = await prisma.user.create({
