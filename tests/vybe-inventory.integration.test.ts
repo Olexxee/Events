@@ -117,7 +117,9 @@ describe.skipIf(!enabled)(
       await disconnectDatabase();
     });
 
-    it("creates a provider-owned allocation with an auditable allocation record", async () => {
+    it(
+      "creates a provider-owned allocation with an auditable allocation record",
+      async () => {
       const pool = await createInventoryPool({
         organizationId,
         offeringId,
@@ -141,7 +143,9 @@ describe.skipIf(!enabled)(
       ).toBe("provider-inventory-register:initial-8");
     });
 
-    it("prevents concurrent holds from exceeding the allocated quantity", async () => {
+    it(
+      "prevents concurrent holds from exceeding the allocated quantity",
+      async () => {
       await createInventoryPool({
         organizationId,
         offeringId,
@@ -171,7 +175,9 @@ describe.skipIf(!enabled)(
       expect(availability.availableQuantity).toBe(0);
     });
 
-    it("reuses the same idempotent hold and rejects a changed payload", async () => {
+    it(
+      "reuses the same idempotent hold and rejects a changed payload",
+      async () => {
       await createInventoryPool({
         organizationId,
         offeringId,
@@ -212,7 +218,9 @@ describe.skipIf(!enabled)(
       });
     });
 
-    it("expires stale holds synchronously before allocating capacity again", async () => {
+    it(
+      "expires stale holds synchronously before allocating capacity again",
+      async () => {
       await createInventoryPool({
         organizationId,
         offeringId,
