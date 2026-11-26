@@ -260,13 +260,15 @@ export async function createInventoryHold(input: {
       if (input.quantity > available) {
         fail("VYBE_INSUFFICIENT_INVENTORY", "The requested quantity is no longer available");
       }
+      const policy = await tx.vybeInventoryPolicy.findUnique({ where: { category: offering.category } });
+      const holdDurationSeconds = policy?.holdDurationSeconds ?? 600;
       const hold = await tx.vybeInventoryHold.create({
         data: {
           poolId: pool.id,
           userId: input.userId,
           idempotencyKey: input.idempotencyKey,
           quantity: input.quantity,
-          expiresAt: new Date(now.getTime() + pool.holdDurationSeconds * 1000)
+          expiresAt: new Date(now.getTime() + holdDurationSeconds * 1000)
         }
       });
       await recordInventoryEvent(tx, {
