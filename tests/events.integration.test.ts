@@ -58,7 +58,7 @@ describe.skipIf(!enabled)("Event marketplace PostgreSQL integration", () => {
     });
     organizationId = organization.id;
     const category = await prisma.eventCategory.findUniqueOrThrow({
-      where: { slug: `music-${crypto.randomUUID()}` },
+      where: { slug: "music" },
       select: { id: true }
     });
     categoryId = category.id;
