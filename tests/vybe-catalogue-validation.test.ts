@@ -8,15 +8,18 @@ import {
 
 const offeringContent = {
   title: "A quiet serviced apartment",
-  description: "A furnished apartment close to the city centre for short stays.",
+  description:
+    "A furnished apartment close to the city centre for short stays.",
   mediaRefs: [],
   inclusions: ["Wi-Fi", "Air conditioning"],
   exclusions: ["Airport transfer"],
   location: { city: "Ile-Ife", state: "Osun", country: "Nigeria" },
   eventAssociation: "PROVIDER_WIDE",
   price: { amountMinor: "4500000", currency: "NGN", unit: "PER_NIGHT" },
-  cancellationTerms: "Cancellation terms are disclosed before customer commitment.",
-  fulfilmentTerms: "The provider confirms check-in instructions before arrival.",
+  cancellationTerms:
+    "Cancellation terms are disclosed before customer commitment.",
+  fulfilmentTerms:
+    "The provider confirms check-in instructions before arrival.",
   attributes: {
     category: "ACCOMMODATION",
     propertyType: "APARTMENT",
@@ -71,32 +74,40 @@ describe("Vybe catalogue validation", () => {
   });
 
   it("accepts public catalogue queries and publish requests without bodies", () => {
-    expect(listVybeCatalogueSchema.safeParse({
-      params: {},
-      query: { category: "ACCOMMODATION", city: "Ile-Ife" },
-      body: undefined
-    }).success).toBe(true);
-    expect(publishVybeOfferingSchema.safeParse({
-      params: { id: "c0d32c50-7c6c-4c1c-b09c-c9e2b06e42f3" },
-      query: {},
-      body: undefined
-    }).success).toBe(true);
+    expect(
+      listVybeCatalogueSchema.safeParse({
+        params: {},
+        query: { category: "ACCOMMODATION", city: "Ile-Ife" },
+        body: undefined
+      }).success
+    ).toBe(true);
+    expect(
+      publishVybeOfferingSchema.safeParse({
+        params: { id: "c0d32c50-7c6c-4c1c-b09c-c9e2b06e42f3" },
+        query: {},
+        body: undefined
+      }).success
+    ).toBe(true);
   });
 
   it("validates evidence-backed activation check entries", () => {
-    expect(activateVybeCategorySchema.safeParse({
-      params: { category: "ACCOMMODATION" },
-      query: {},
-      body: {
-        active: true,
-        reason: "Accommodation launch readiness was reviewed.",
-        checks: [{
-          key: "secured_room_category_allocation",
-          completed: true,
-          evidenceReference: "ops://readiness/accommodation/allocation",
-          notes: "Signed room category allocation is on file."
-        }]
-      }
-    }).success).toBe(true);
+    expect(
+      activateVybeCategorySchema.safeParse({
+        params: { category: "ACCOMMODATION" },
+        query: {},
+        body: {
+          active: true,
+          reason: "Accommodation launch readiness was reviewed.",
+          checks: [
+            {
+              key: "secured_room_category_allocation",
+              completed: true,
+              evidenceReference: "ops://readiness/accommodation/allocation",
+              notes: "Signed room category allocation is on file."
+            }
+          ]
+        }
+      }).success
+    ).toBe(true);
   });
 });
