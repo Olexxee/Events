@@ -648,3 +648,21 @@ Every slice must pass PostgreSQL integration tests, Prisma validation/generation
 This plan excludes booking records, Commerce, orders/checkout, payment authorization/capture, real Payments, Finance, refunds, provider-confirmation/manual inventory, external adapters, fulfilment, redemption, cancellation/disputes, and accommodation room-night inventory. No category is activated by this module.
 
 Before Slice A, approve the proposed model boundary and whether capacity sessions and exclusive-resource holds launch together or separately. Recommendation: share occurrence metadata but release capacity and exclusive-resource holds in separate implementation slices. Category-specific booking horizon, minimum notice, maximum duration, and buffer defaults remain launch-policy configuration; do not invent universal schema constants.
+
+
+### 20.8 Slice B implementation contract
+
+Slice B implements provider-side configuration only. The current implementation exposes:
+
+- `POST /api/v1/vybe/time-slots/occurrences` — create a capacity or exclusive occurrence.
+- `POST /api/v1/vybe/time-slots/resource-groups` — create an offering-scoped exclusive resource group.
+- `POST /api/v1/vybe/time-slots/resources` — register a concrete provider-owned resource.
+- `POST /api/v1/vybe/time-slots/resource-groups/:groupId/members` — allocate a concrete resource to a group for a validity window.
+
+Every operation requires an authenticated organization OWNER or ADMIN, an active provider organization, an active category-scoped approval covering the published offering location, and an active category launch gate. The offering row is locked while its current published version is read and snapshotted.
+
+Occurrence timestamps must be full ISO-8601 instants with an explicit UTC offset. The supplied IANA timezone must render that instant to the same local wall-clock fields. This rejects nonexistent local times and requires an explicit offset to resolve a repeated DST wall-clock time. The service and effective blocked intervals are persisted as UTC instants.
+
+CAPACITY occurrence creation writes its capacity row in the same transaction. EXCLUSIVE occurrence creation requires an active resource group belonging to the same provider and offering, with a validity window covering the full blocked interval; it does not create a capacity row. Resource membership requires same-provider ownership and rejects overlapping validity windows for one physical resource across different groups.
+
+Each creation requires a supply-evidence reference. The reference is retained in the append-only audit metadata and transactional outbox payload; this is a reference to evidence, not a file upload or evidence-storage implementation. No public availability or hold operation is part of Slice B. Slice C and Slice D remain separate.
