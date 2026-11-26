@@ -1074,10 +1074,20 @@ export async function getTimeSlotResourceAvailability(occurrenceId: string) {
       select: { id: true, offeringId: true, inventoryMode: true, status: true, resourceGroupId: true, blockedStartsAt: true, blockedEndsAt: true }
     });
     if (!occurrence) fail("VYBE_TIME_SLOT_NOT_FOUND", "Time slot was not found", 404);
-    await assertOfferingAvailabilityAccess(tx, occurrence.offeringId);
+    const offering = await assertOfferingAvailabilityAccess(tx, occurrence.offeringId);
     if (occurrence.inventoryMode !== "EXCLUSIVE" || !occurrence.resourceGroupId || occurrence.status !== "ACTIVE") {
       fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "This time slot does not offer active exclusive-resource inventory");
     }
+    const group = await tx.vybeTimeSlotResourceGroup.findFirst({
+      where: {
+        id: occurrence.resourceGroupId,
+        offeringId: offering.id,
+        providerProfileId: offering.providerProfileId,
+        isActive: true
+      },
+      select: { id: true }
+    });
+    if (!group) fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "The resource group is not active");
     const now = new Date();
     const members = await tx.vybeTimeSlotResourceGroupMember.findMany({
       where: {
@@ -1184,24 +1194,21 @@ export async function createTimeSlotResourceHold(input: { occurrenceId: string; 
         const policy = await tx.vybeInventoryPolicy.findUnique({
           where: { category: offering.category }, select: { holdDurationSeconds: true }
         });
-        let hold;
-        try {
-          hold = await tx.vybeTimeSlotHold.create({
-            data: {
-              occurrenceId: occurrence.id, userId: input.userId, idempotencyKey: input.idempotencyKey,
-              resourceId, expiresAt: new Date(now.getTime() + (policy?.holdDurationSeconds ?? 600) * 1000),
-              serviceStartsAt: occurrence.serviceStartsAt, serviceEndsAt: occurrence.serviceEndsAt,
-              blockedStartsAt: occurrence.blockedStartsAt, blockedEndsAt: occurrence.blockedEndsAt
-            }
-          });
-        } catch (error) {
+        const hold = await tx.vybeTimeSlotHold.create({
+          data: {
+            occurrenceId: occurrence.id, userId: input.userId, idempotencyKey: input.idempotencyKey,
+            resourceId, expiresAt: new Date(now.getTime() + (policy?.holdDurationSeconds ?? 600) * 1000),
+            serviceStartsAt: occurrence.serviceStartsAt, serviceEndsAt: occurrence.serviceEndsAt,
+            blockedStartsAt: occurrence.blockedStartsAt, blockedEndsAt: occurrence.blockedEndsAt
+          }
+        }).catch((error: unknown) => {
           if (isExclusiveOverlapConflict(error)) {
             const conflict = new AppError("VYBE_TIME_SLOT_RESOURCE_CONFLICT", "The selected resource was claimed concurrently", 409);
             Object.assign(conflict, { resourceId });
             throw conflict;
           }
           throw error;
-        }
+        });
         await recordTimeSlotHoldEvent(tx, {
           actorUserId: input.userId, action: "vybe.time_slot_hold.created",
           holdId: hold.id, occurrenceId: occurrence.id, eventType: "vybe.time_slot_hold.created.v1",
