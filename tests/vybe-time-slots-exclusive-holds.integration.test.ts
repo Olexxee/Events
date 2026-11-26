@@ -213,6 +213,23 @@ describe.skipIf(!enabled)("Vybe exclusive-resource holds PostgreSQL integration"
     expect(new Set(holds.map((hold) => hold.resourceId)).size).toBe(2);
   });
 
+  it("returns the same concrete resource for an identical idempotent replay", async () => {
+    const fixture = await createExclusiveFixture({ resourceCount: 2 });
+    const occurrence = await fixture.createOccurrence();
+    const input = {
+      occurrenceId: occurrence.id,
+      userId: fixture.userId,
+      idempotencyKey: `resource-idempotent-${crypto.randomUUID()}`
+    };
+    const first = await createTimeSlotResourceHold(input);
+    const replay = await createTimeSlotResourceHold(input);
+    expect(replay.id).toBe(first.id);
+    expect(replay.resourceId).toBe(first.resourceId);
+    expect(await prisma.vybeTimeSlotHold.count({
+      where: { occurrenceId: occurrence.id, userId: fixture.userId }
+    })).toBe(1);
+  });
+
   it("treats adjacent half-open blocked intervals as available", async () => {
     const fixture = await createExclusiveFixture();
     const first = await fixture.createOccurrence({
@@ -295,6 +312,13 @@ describe.skipIf(!enabled)("Vybe exclusive-resource holds PostgreSQL integration"
       userId: fixture.userId,
       idempotencyKey: `resource-deactivation-${crypto.randomUUID()}`
     });
+    await expect(prisma.vybeTimeSlotResourceGroup.update({
+      where: { id: (await prisma.vybeTimeSlotOccurrence.findUniqueOrThrow({
+        where: { id: occurrence.id },
+        select: { resourceGroupId: true }
+      })).resourceGroupId! },
+      data: { isActive: false }
+    })).rejects.toThrow();
     await expect(prisma.vybeTimeSlotResource.update({
       where: { id: hold.resourceId! },
       data: { isActive: false }
