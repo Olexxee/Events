@@ -68,12 +68,18 @@ async function assertOfferingCanTrade(
       403
     );
   }
-  await tx.$queryRaw<Array<{ id: string }>>(
+  const approvalLock = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM vybe_provider_approvals WHERE id = ${approval.id}::uuid AND status = 'ACTIVE' FOR SHARE`
   );
-  await tx.$queryRaw<Array<{ id: string }>>(
+  if (approvalLock.length === 0) {
+    fail("VYBE_PROVIDER_APPROVAL_REQUIRED", "The provider approval is no longer active", 403);
+  }
+  const organizationLock = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM organizations WHERE id = ${offering.providerProfile.organization.id}::uuid AND status = 'ACTIVE' FOR SHARE`
   );
+  if (organizationLock.length === 0) {
+    fail("VYBE_PROVIDER_INACTIVE", "The provider organization is no longer active", 403);
+  }
   const activation = await tx.vybeCategoryActivation.findUnique({
     where: { category: offering.category },
     select: { isActive: true }
@@ -84,9 +90,12 @@ async function assertOfferingCanTrade(
       "This Vybe category has not passed its launch gates"
     );
   }
-  await tx.$queryRaw<Array<{ id: string }>>(
+  const activationLock = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM vybe_category_activations WHERE category = ${offering.category}::vybe_category AND is_active = true FOR SHARE`
   );
+  if (activationLock.length === 0) {
+    fail("VYBE_CATEGORY_NOT_ACTIVE", "This Vybe category has been deactivated");
+  }
   const version = offering.versions.find(
     (item) => item.version === offering.currentPublishedVersion
   );
