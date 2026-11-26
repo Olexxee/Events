@@ -26,16 +26,16 @@ BEGIN
   category_id := NEW."room_category_id";
   night_date := NEW."stay_date";
 
-  PERFORM 1
-    FROM "vybe_accommodation_night_locks"
-   WHERE "room_category_id" = category_id
-     AND "stay_date" = night_date
-   FOR UPDATE;
-
   SELECT "physical_unit_count"
     INTO physical_count
     FROM "vybe_accommodation_room_categories"
    WHERE "id" = category_id
+   FOR UPDATE;
+
+  PERFORM 1
+    FROM "vybe_accommodation_night_locks"
+   WHERE "room_category_id" = category_id
+     AND "stay_date" = night_date
    FOR UPDATE;
 
   IF physical_count IS NULL OR physical_count <= 0 THEN
