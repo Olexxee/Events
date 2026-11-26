@@ -376,7 +376,7 @@ The product owner must approve or amend the proposed directions in Section 15 be
 **Document status:** Vybe branding, staged catalogue rollout (VYBE-001), risk-based category-scoped provider approval (VYBE-008), and strict external inventory certification (VYBE-009) are approved. The Provider Foundation is authorized as the first implementation slice: existing-Organization provider applications, verified-account and organization-authority checks, category/location scope, evidence references with recorded requirement reasons, independent platform review, category approvals, approval conditions/expiry, and audit history. The API records a server-assigned provider-terms version (`vybe-provider-v1`); the exact customer-facing/provider terms must be published and legally reviewed before production application intake is enabled. Provider document storage, listing publication, inventory, bookings, fulfilment, Commerce, Payments, and Finance implementation are outside this slice. Remaining marketplace policies must be resolved before their corresponding implementation.
 
 
-## 15. Catalogue foundation implementation boundary
+## 16. Catalogue foundation implementation boundary
 
 The first catalogue implementation slice introduces provider-owned offering drafts, category-specific validated descriptive content, immutable published offering versions, and public discovery of currently eligible published versions. It does not represent sellable inventory or real-time availability.
 
