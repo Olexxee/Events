@@ -786,30 +786,33 @@ describe.skipIf(!enabled)(
         })
       ).rejects.toThrow();
 
-      const hold = await prisma.vybeAccommodationHold.create({
-        data: {
-          roomCategoryId: roomCategory.id,
-          userId: fixture.user.id,
-          idempotencyKey: crypto.randomUUID(),
-          requestHash: "a".repeat(64),
-          checkInDate: new Date("2027-06-10T00:00:00.000Z"),
-          checkOutDate: new Date("2027-06-11T00:00:00.000Z"),
-          roomQuantity: 1,
-          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-          snapshot: {}
-        }
-      });
-      await prisma.vybeAccommodationHoldNight.create({
-        data: {
-          holdId: hold.id,
-          allocationNightId: night.id,
-          roomCategoryId: roomCategory.id,
-          stayDate: new Date("2027-06-10T00:00:00.000Z"),
-          quantity: 1,
-          releaseCutoffAtSnapshot: allocation.releaseCutoffAt,
-          releaseCutoffLocalSnapshot: allocation.releaseCutoffLocal,
-          releaseCutoffTimezoneSnapshot: allocation.releaseCutoffTimezone
-        }
+      const hold = await prisma.$transaction(async (tx) => {
+        const created = await tx.vybeAccommodationHold.create({
+          data: {
+            roomCategoryId: roomCategory.id,
+            userId: fixture.user.id,
+            idempotencyKey: crypto.randomUUID(),
+            requestHash: "a".repeat(64),
+            checkInDate: new Date("2027-06-10T00:00:00.000Z"),
+            checkOutDate: new Date("2027-06-11T00:00:00.000Z"),
+            roomQuantity: 1,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+            snapshot: {}
+          }
+        });
+        await tx.vybeAccommodationHoldNight.create({
+          data: {
+            holdId: created.id,
+            allocationNightId: night.id,
+            roomCategoryId: roomCategory.id,
+            stayDate: new Date("2027-06-10T00:00:00.000Z"),
+            quantity: 1,
+            releaseCutoffAtSnapshot: allocation.releaseCutoffAt,
+            releaseCutoffLocalSnapshot: allocation.releaseCutoffLocal,
+            releaseCutoffTimezoneSnapshot: allocation.releaseCutoffTimezone
+          }
+        });
+        return created;
       });
 
       await prisma.vybeAccommodationAllocation.update({
