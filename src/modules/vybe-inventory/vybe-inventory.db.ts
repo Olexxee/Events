@@ -72,13 +72,21 @@ async function assertOfferingCanTrade(
     Prisma.sql`SELECT id FROM vybe_provider_approvals WHERE id = ${approval.id}::uuid AND status = 'ACTIVE' FOR SHARE`
   );
   if (approvalLock.length === 0) {
-    fail("VYBE_PROVIDER_APPROVAL_REQUIRED", "The provider approval is no longer active", 403);
+    fail(
+      "VYBE_PROVIDER_APPROVAL_REQUIRED",
+      "The provider approval is no longer active",
+      403
+    );
   }
   const organizationLock = await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM organizations WHERE id = ${offering.providerProfile.organization.id}::uuid AND status = 'ACTIVE' FOR SHARE`
   );
   if (organizationLock.length === 0) {
-    fail("VYBE_PROVIDER_INACTIVE", "The provider organization is no longer active", 403);
+    fail(
+      "VYBE_PROVIDER_INACTIVE",
+      "The provider organization is no longer active",
+      403
+    );
   }
   const activation = await tx.vybeCategoryActivation.findUnique({
     where: { category: offering.category },
