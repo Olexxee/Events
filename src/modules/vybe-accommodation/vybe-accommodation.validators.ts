@@ -6,7 +6,9 @@ const dateOnly = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine((value) => {
     const date = new Date(`${value}T00:00:00.000Z`);
-    return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+    return (
+      !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+    );
   }, "Must be a valid calendar date");
 const evidenceReference = z.string().trim().min(5).max(1000);
 const reason = z.string().trim().min(10).max(1000);
@@ -90,10 +92,12 @@ export const createAccommodationAllocationSchema = z.object({
       evidenceReference,
       nights: z
         .array(
-          z.object({
-            stayDate: dateOnly,
-            allocatedQuantity: z.number().int().min(1).max(10000)
-          }).strict()
+          z
+            .object({
+              stayDate: dateOnly,
+              allocatedQuantity: z.number().int().min(1).max(10000)
+            })
+            .strict()
         )
         .min(1)
         .max(366)
@@ -106,7 +110,12 @@ export const adjustAccommodationAllocationNightSchema = z.object({
   query: z.object({}),
   body: z
     .object({
-      quantityDelta: z.number().int().min(-10000).max(10000).refine((value) => value !== 0),
+      quantityDelta: z
+        .number()
+        .int()
+        .min(-10000)
+        .max(10000)
+        .refine((value) => value !== 0),
       reason,
       evidenceReference
     })
