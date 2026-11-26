@@ -1,11 +1,11 @@
 # Vybe — Experiences Marketplace Design Gate
 
-**Status:** Design in progress; Vybe branding and staged catalogue rollout (VYBE-001) approved  
+**Status:** Product design approved incrementally; provider foundation merged; catalogue foundation implementation in progress  
 **Customer-facing brand:** Vybe  
 **Domain owner:** Vybe  
 **Depends on:** Identity & Access, Organizations, Events, Event Access  
 **Integrates with:** Ticketing & Admission, Commerce, independent Payments, Finance, Notifications, Operations & Trust  
-**Implementation authorization:** None. Product scope decisions are being approved incrementally; this document does not authorize Prisma models, migrations, APIs, workers, or provider integrations.
+**Implementation authorization:** Provider governance is implemented. The catalogue foundation is authorized for provider-owned drafts, immutable published versions, public discovery of eligible listings, and platform-controlled staged category activation. Inventory, availability, reservations, bookings, payments, and fulfilment remain separate later slices.
 
 Vybe is the platform's experiences and bookings marketplace. It covers accommodation, dining, drinks, tables, lounges, VIP experiences, and other bookable services. It is not a hotel-management module and must not be designed around one generic reservation shape.
 
@@ -374,3 +374,14 @@ The product owner must approve or amend the proposed directions in Section 15 be
 ---
 
 **Document status:** Vybe branding, staged catalogue rollout (VYBE-001), risk-based category-scoped provider approval (VYBE-008), and strict external inventory certification (VYBE-009) are approved. The Provider Foundation is authorized as the first implementation slice: existing-Organization provider applications, verified-account and organization-authority checks, category/location scope, evidence references with recorded requirement reasons, independent platform review, category approvals, approval conditions/expiry, and audit history. The API records a server-assigned provider-terms version (`vybe-provider-v1`); the exact customer-facing/provider terms must be published and legally reviewed before production application intake is enabled. Provider document storage, listing publication, inventory, bookings, fulfilment, Commerce, Payments, and Finance implementation are outside this slice. Remaining marketplace policies must be resolved before their corresponding implementation.
+
+
+## 16. Catalogue foundation implementation boundary
+
+The first catalogue implementation slice introduces provider-owned offering drafts, category-specific validated descriptive content, immutable published offering versions, and public discovery of currently eligible published versions. It does not represent sellable inventory or real-time availability.
+
+Publication requires both an active category-scoped provider approval covering the offering location and an active category launch gate. Launch-gate activation is a platform-admin attestation with a complete, evidence-referenced checklist for the shared and category-specific operational controls defined in section 4.1. Categories remain inactive by default. Deactivation immediately removes that category's offerings from public discovery; it does not modify historical published versions.
+
+Material edits after publication create a new draft version. Publishing the new version advances the offering's current published version; previous published versions remain immutable so future bookings can snapshot the exact customer-facing terms. The catalogue stores descriptive price and policy terms only; it does not calculate checkout totals, reserve capacity, or guarantee availability.
+
+This implementation slice must not be interpreted as approval to launch a category. A category remains non-bookable until its inventory, capacity, operational, safety, and compliance systems are implemented and verified.
