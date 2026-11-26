@@ -274,7 +274,6 @@ describe.skipIf(!enabled)(
         where: { id: fixture.roomCategory.id },
         data: { physicalUnitCount: 12 }
       });
-    }
     });
 
     it("rechecks aggregate capacity when a released allocation is reactivated", async () => {
@@ -316,7 +315,6 @@ describe.skipIf(!enabled)(
           data: { status: "ACTIVE" }
         })
       ).rejects.toThrow();
-    }
     });
 
     it("serializes concurrent allocation lots against the category physical ceiling", async () => {
@@ -359,7 +357,6 @@ describe.skipIf(!enabled)(
       expect(
         results.filter((result) => result.status === "rejected")
       ).toHaveLength(1);
-    }
     });
 
     it("rejects allocation when physical room count is unknown", async () => {
@@ -397,7 +394,6 @@ describe.skipIf(!enabled)(
           }
         })
       ).rejects.toThrow();
-    }
     });
 
     it("keeps allocation adjustments append-only", async () => {
