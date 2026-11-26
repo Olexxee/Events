@@ -49,7 +49,7 @@ function parseInstant(value: string, timezone: string): Date {
   return instant;
 }
 
-function validateWindow(validFrom?: Date, validUntil?: Date) {
+function parseValidityInstant(value: string): Date {\n  const instant = new Date(value);\n  if (!Number.isFinite(instant.getTime())) {\n    fail("VYBE_TIME_SLOT_INVALID_VALIDITY_WINDOW", "A valid ISO-8601 validity timestamp is required", 400);\n  }\n  return instant;\n}\n\nfunction validateWindow(validFrom?: Date, validUntil?: Date) {
   if (validFrom && validUntil && validFrom >= validUntil) {
     fail(
       "VYBE_TIME_SLOT_INVALID_VALIDITY_WINDOW",
@@ -72,7 +72,6 @@ async function assertOfferingSetupAccess(
           organization: { select: { id: true, status: true } },
           approvals: {
             where: {
-              category: { not: undefined },
               status: "ACTIVE",
               OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }]
             }
@@ -292,8 +291,8 @@ export async function createTimeSlotResourceGroup(input: {
   const prisma = getPrismaClient();
   return prisma.$transaction(async (tx) => {
     const offering = await assertOfferingSetupAccess(tx, input.offeringId, input.actorUserId);
-    const validFrom = input.validFrom ? parseInstant(input.validFrom, "UTC") : undefined;
-    const validUntil = input.validUntil ? parseInstant(input.validUntil, "UTC") : undefined;
+    const validFrom = input.validFrom ? parseValidityInstant(input.validFrom) : undefined;
+    const validUntil = input.validUntil ? parseValidityInstant(input.validUntil) : undefined;
     validateWindow(validFrom, validUntil);
     const group = await tx.vybeTimeSlotResourceGroup.create({
       data: {
