@@ -234,6 +234,21 @@ enum VybeOfferingVersionStatus {
   @@map("vybe_offering_version_status")
 }
 
+enum VybeInventoryPoolStatus {
+  ACTIVE
+  PAUSED
+
+  @@map("vybe_inventory_pool_status")
+}
+
+enum VybeInventoryHoldStatus {
+  ACTIVE
+  RELEASED
+  EXPIRED
+
+  @@map("vybe_inventory_hold_status")
+}
+
 // Shared infrastructure.
 model OutboxMessage {
   id               String    @id @default(uuid()) @db.Uuid
@@ -298,6 +313,8 @@ model User {
   eventAccessHoldsReleased EventAccessHold[] @relation("EventAccessHoldReleaser")
   ticketTypesCreated TicketType[] @relation("TicketTypeCreator")
   ticketHolds TicketHold[]
+  vybeInventoryHolds VybeInventoryHold[]
+  vybeInventoryAllocations VybeInventoryAllocation[]
   vybeApplicationsSubmitted VybeProviderApplication[] @relation("VybeApplicationApplicant")
   vybeProviderReviews VybeProviderReview[]
   vybeEvidenceReviewed VybeProviderEvidence[] @relation("VybeEvidenceReviewer")
@@ -840,6 +857,7 @@ model VybeOffering {
   providerProfile           VybeProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
   creator                   User @relation("VybeOfferingCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   versions                  VybeOfferingVersion[]
+  inventoryPool             VybeInventoryPool?
 
   @@index([providerProfileId, category, status], map: "vybe_offerings_provider_category_status_idx")
   @@index([category, status, createdAt], map: "vybe_offerings_category_status_created_idx")
@@ -875,4 +893,64 @@ model VybeCategoryActivation {
   activatedBy        User? @relation("VybeCategoryActivationActor", fields: [activatedByUserId], references: [id], onDelete: Restrict)
 
   @@map("vybe_category_activations")
+}
+
+model VybeInventoryPool {
+  id                 String                    @id @default(uuid()) @db.Uuid
+  offeringId         String                    @unique @map("offering_id") @db.Uuid
+  status             VybeInventoryPoolStatus   @default(ACTIVE)
+  allocatedQuantity  Int                       @default(0) @map("allocated_quantity")
+  committedQuantity  Int                       @default(0) @map("committed_quantity")
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  offering           VybeOffering              @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  allocations        VybeInventoryAllocation[]
+  holds              VybeInventoryHold[]
+
+  @@index([status, updatedAt])
+  @@map("vybe_inventory_pools")
+}
+
+model VybeInventoryAllocation {
+  id          String            @id @default(uuid()) @db.Uuid
+  poolId      String            @map("pool_id") @db.Uuid
+  actorUserId String            @map("actor_user_id") @db.Uuid
+  quantityDelta Int             @map("quantity_delta")
+  reason      String            @db.VarChar(1000)
+  evidenceReference String      @map("evidence_reference") @db.VarChar(1000)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  pool        VybeInventoryPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  actor       User              @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([poolId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("vybe_inventory_allocations")
+}
+
+model VybeInventoryHold {
+  id             String                 @id @default(uuid()) @db.Uuid
+  poolId         String                 @map("pool_id") @db.Uuid
+  userId         String                 @map("user_id") @db.Uuid
+  idempotencyKey String                 @map("idempotency_key") @db.VarChar(128)
+  quantity       Int
+  status         VybeInventoryHoldStatus @default(ACTIVE)
+  expiresAt      DateTime               @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  pool           VybeInventoryPool      @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, idempotencyKey], map: "vybe_inventory_holds_user_idempotency_key")
+  @@index([poolId, status, expiresAt], map: "vybe_inventory_holds_pool_status_expiry_idx")
+  @@index([userId, status, expiresAt], map: "vybe_inventory_holds_user_status_expiry_idx")
+  @@map("vybe_inventory_holds")
+}
+
+model VybeInventoryPolicy {
+  id                  String      @id @default(uuid()) @db.Uuid
+  category            VybeCategory @unique
+  holdDurationSeconds Int         @default(600) @map("hold_duration_seconds")
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("vybe_inventory_policies")
 }

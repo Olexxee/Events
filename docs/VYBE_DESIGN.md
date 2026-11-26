@@ -483,3 +483,16 @@ This design gate does not authorize:
 - External supplier adapters before certification and reconciliation are implemented.
 
 The design PR must update this document and the root README together, state any unresolved decisions, and include a schema/concurrency test plan. Only after explicit product-owner approval of the inventory design may a separate implementation plan and physical schema review begin.
+
+
+## 18. Quantity-pool inventory implementation boundary
+
+The first implementation slice adds platform-controlled quantity pools for published Vybe offerings. A provider organization owner/admin may create and adjust the allocation only for its own offering, while an active category-scoped provider approval, approved location, active provider organization, published offering, and active category launch gate are revalidated before allocation changes or new holds.
+
+Every allocation increase or reduction records the actor, signed quantity delta, reason, and a provider supply evidence reference. Reductions are serialized against the pool and rejected if they would reduce allocated capacity below active holds plus committed quantity. The allocation record is append-only; the pool's allocated quantity is the current platform-controlled ceiling, not the provider's total external stock.
+
+Customer holds are serialized by locking the pool row in PostgreSQL. The transaction expires stale holds synchronously, calculates active holds and committed quantity, verifies remaining capacity, and creates a hold with a fixed expiry. The default hold duration is 600 seconds (10 minutes). A category-level policy row can override it within the database-enforced 60–1800 second range; an absent policy uses 600 seconds. The effective duration and expiry are fixed on each hold. Existing holds retain their stored expiry when settings change. Create-hold idempotency is scoped to user plus idempotency key; replays with a changed pool or quantity are rejected. Release is owner-only and idempotent.
+
+This slice exposes pool creation, evidence-backed allocation adjustment, availability, hold creation, and owner release. Availability is informational and may change immediately; only the transactional hold operation reserves capacity. The implementation does not create bookings, convert holds into confirmed commitments, collect or refund money, or claim provider-confirmed/manual or external inventory as instantly bookable. Time-slot resources, room-night allocations, workers, booking orchestration, Commerce, Payments, Finance, fulfilment, and cancellation remain separate slices.
+
+PostgreSQL integration coverage must assert persisted capacity under simultaneous final-unit requests, synchronous expiry, idempotent retries and payload mismatch, and allocation reduction against active holds. The implementation must pass migration apply, Prisma validation/generation, typecheck, lint, formatting, integration tests, and build before merge.
