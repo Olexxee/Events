@@ -634,3 +634,6 @@ Unused room-category inventory allocated to Vybe may return to the provider's in
 
 
 **Vybe accommodation inventory:** The approved physical model is implemented as Slice A in the Prisma schema and PostgreSQL migration. It establishes property/room-category records, allocation-night lots, lock anchors, hold records, evidence-backed adjustment history, composite ownership constraints and database guards. It does not yet expose accommodation APIs or create customer holds. See [Section 23 of the Vybe design](docs/VYBE_DESIGN.md#23-accommodation-room-night-schema-implementation-vybe-014-slice-a).
+
+
+**Vybe accommodation capacity invariant (VYBE-015):** each room category records a provider-evidenced physical unit count. PostgreSQL enforces that the sum of all active/paused allocation lots for a category and local stay date cannot exceed that count. Unknown physical capacity cannot be allocated, and capacity cannot be reduced below existing allocation totals. See [Section 24 of the Vybe design](docs/VYBE_DESIGN.md#24-category-level-physical-room-capacity-guard-vybe-015). This schema guard is required before accommodation provider supply workflows.
