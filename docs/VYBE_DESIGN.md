@@ -589,3 +589,62 @@ This gate does not authorize:
 - Automatic category activation.
 
 After product-owner approval, the next step is a separate physical schema review and implementation plan for time-slot inventory, with migrations and PostgreSQL tests. Booking/Commerce work remains blocked until time-slot and accommodation inventory are both implemented and verified.
+
+
+## 20. Time-slot physical schema and implementation plan (VYBE-012)
+
+### 20.1 Decision
+
+This section translates the approved time-slot design gate (Section 19) into a proposed PostgreSQL/Prisma shape and a bounded implementation sequence. It is a schema review, not permission to begin migrations. Capacity-session accounting and exclusive-resource conflict enforcement remain separate because an application-only quantity counter cannot guarantee exclusive interval correctness.
+
+### 20.2 Proposed domain records
+
+1. **`VybeTimeSlotOccurrence`** — one concrete materialized service occurrence. Fields: UUID, offering ID, immutable offering-version number, IANA timezone, service start/end UTC instants, pre/post buffer seconds, effective blocked start/end UTC instants, status, timestamps. Store concrete occurrences, not recurrence rules.
+2. **`VybeTimeSlotCapacity`** — one-to-one with a capacity occurrence. Fields: occurrence ID (unique), total capacity, committed quantity (initially zero and reserved for future booking conversion), timestamps. Enforce capacity >= 0 and 0 <= committed <= capacity. Derive active held quantity under the occurrence lock rather than maintaining a separately mutable counter.
+3. **`VybeTimeSlotResourceGroup`** — an offering-scoped pool of interchangeable exclusive resources, with provider profile, offering, active state, and allocation validity window. A group count is never itself reservable.
+4. **`VybeTimeSlotResource`** — one concrete provider-controlled asset (such as table A or lounge B), owned by a provider profile, with active state and stable provider-scoped identifier. Prevent duplicate active representations of the same physical asset within a provider scope.
+5. **`VybeTimeSlotResourceGroupMember`** — join record connecting a concrete resource to a group, with effective membership dates. A resource may belong to multiple groups only where their allocation rules cannot grant overlapping use; the hold transaction still locks the concrete resource.
+6. **`VybeTimeSlotHold`** — one idempotent temporary reservation. Fields: UUID, occurrence ID, user ID, idempotency key, optional capacity quantity, optional concrete resource ID, status, expiry, immutable service/blocked interval snapshot, timestamps. A database check requires exactly one target: positive quantity with no resource for capacity sessions, or quantity = 1 with a concrete resource for exclusive inventory. Unique idempotency scope is user + key. Store the concrete resource selected from a group, never only the group ID.
+
+Occurrences snapshot offering version, timezone, service interval, and buffers. Holds copy interval values so later schedule or buffer edits cannot alter an existing hold. Use RESTRICT foreign keys; do not cascade-delete historical allocations or holds.
+
+### 20.3 Database constraints and indexes
+
+- UUID primary/foreign keys; `TIMESTAMPTZ(6)` timestamps; service and blocked intervals require start < end.
+- CHECK constraints for nonnegative buffers, valid capacity/commitment, valid hold target shape, positive capacity quantity, and exclusive hold quantity exactly one.
+- Unique idempotency index on (user_id, idempotency_key); indexes for occurrence status/start, offering/start, active hold expiry by occurrence, and active hold lookup by resource.
+- For exclusive resources, enable PostgreSQL `btree_gist` and add a GiST exclusion constraint over concrete `resource_id` and `tstzrange(blocked_start_at, blocked_end_at, '[)')` for rows with status ACTIVE. This is the final race-condition barrier. The transaction synchronously marks expired holds EXPIRED before inserting a new hold. Do not use a time-dependent predicate such as `expires_at > now()` in a partial index.
+- Prisma models ordinary schema; a hand-reviewed SQL migration adds the extension, range/exclusion constraint, and any expression/partial indexes. Replay the migration from an empty PostgreSQL 16 database in CI.
+- Application read-before-write overlap checks are not sufficient. Do not rely on nullable resource IDs without database-enforced exclusive conflict protection.
+
+### 20.4 Transaction contracts
+
+**Capacity hold:** revalidate active user, provider organization, category/location approval, published offering version, category launch activation, and supply authority using the existing Vybe eligibility lock order; lock occurrence/capacity with `SELECT ... FOR UPDATE`; enforce user+key idempotency and reject changed payloads; synchronously expire stale holds; verify committed + held + requested <= capacity; insert hold, audit, and outbox atomically.
+
+**Exclusive-resource hold:** revalidate the same eligibility; resolve eligible group members; lock candidate concrete resources in deterministic UUID order; synchronously expire stale holds; insert a hold bound to one concrete resource. Let the GiST exclusion constraint arbitrate overlap at commit. On conflict, try the next eligible candidate within a bounded retry; return unavailable if none remain. Write audit/outbox in the same transaction. Never return a successful group-only hold.
+
+**Release/expiry:** lock the capacity occurrence or concrete resource first, then re-read the hold and perform one terminal transition. Release is owner-only and idempotent. Expiry and release cannot double-free capacity or resource time. Keep lock order consistent: provider eligibility rows, occurrence/capacity or concrete resources in deterministic order, then hold rows. Availability reads remain advisory.
+
+### 20.5 API and module boundary
+
+Create `src/modules/vybe-time-slots/` with `db`, `service`, `controller`, `routes`, and `validators`, matching existing domain modules. Keep quantity-pool inventory unchanged.
+
+Initial endpoints cover provider-authorized occurrence creation; resource/group setup and membership; capacity allocation; occurrence/resource pause; customer availability; capacity/resource hold creation; and owner release. Public responses must not expose private resource identifiers or private venue details. Validate IANA timezone names and DST ambiguity/nonexistence at the boundary. Persist resolved UTC instants; never infer an ambiguous DST fold. No recurrence editor is included; a future scheduler may materialize occurrences.
+
+### 20.6 Implementation slices and acceptance criteria
+
+**A — Schema and migration:** add Prisma models/relations/indexes and reviewed SQL for `btree_gist` and exclusion constraint; verify clean PostgreSQL 16 migration and Prisma parity; test overlapping ACTIVE holds are rejected and adjacent half-open intervals are permitted.
+
+**B — Provider occurrence/resource setup:** implement provider-authorized occurrence and resource/group setup; require active provider/category/location eligibility and supply evidence; snapshot offering version, timezone, service interval, and buffers; test provider scope, approval-suspension races, immutable snapshots, invalid intervals, and duplicate resource identifiers.
+
+**C — Capacity holds:** implement advisory availability, serialized holds, idempotency, synchronous expiry, owner release, audit/outbox; test final-unit and multi-unit races, expiry/release races, changed idempotency payload, and capacity reduction against active holds.
+
+**D — Exclusive-resource holds:** implement deterministic resource selection, concrete-resource binding, exclusion-constraint handling, bounded retries, expiry/release; test overlapping requests, adjacent intervals, buffer conflicts, group contention, and resource deactivation/allocation races.
+
+Every slice must pass PostgreSQL integration tests, Prisma validation/generation, typecheck, lint, formatting, and build. Do not merge an unverified migration or concurrency behavior.
+
+### 20.7 Exclusions and remaining approval gate
+
+This plan excludes booking records, Commerce, orders/checkout, payment authorization/capture, real Payments, Finance, refunds, provider-confirmation/manual inventory, external adapters, fulfilment, redemption, cancellation/disputes, and accommodation room-night inventory. No category is activated by this module.
+
+Before Slice A, approve the proposed model boundary and whether capacity sessions and exclusive-resource holds launch together or separately. Recommendation: share occurrence metadata but release capacity and exclusive-resource holds in separate implementation slices. Category-specific booking horizon, minimum notice, maximum duration, and buffer defaults remain launch-policy configuration; do not invent universal schema constants.
