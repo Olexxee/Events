@@ -20,7 +20,8 @@ export const adjustVybeInventoryAllocationSchema = z.object({
   query: z.object({}),
   body: z.object({
     quantityDelta: z.number().int().min(-100000).max(100000).refine((value) => value !== 0),
-    reason: z.string().trim().min(15).max(1000)
+    reason: z.string().trim().min(15).max(1000),
+    evidenceReference: z.string().trim().min(5).max(1000)
   }).strict()
 });
 
