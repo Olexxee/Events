@@ -73,12 +73,12 @@ async function assertOfferingCanTrade(tx: Prisma.TransactionClient, offeringId: 
 
 async function recordInventoryEvent(
   tx: Prisma.TransactionClient,
-  input: { actorUserId: string; action: string; resourceType: string; resourceId: string; aggregateType: string; eventType: string; key: string; payload: Prisma.InputJsonObject }
+  input: { actorUserId: string | null; actorType?: string; action: string; resourceType: string; resourceId: string; aggregateType: string; eventType: string; key: string; payload: Prisma.InputJsonObject }
 ) {
   await tx.auditLog.create({
     data: {
       actorId: input.actorUserId,
-      actorType: "user",
+      actorType: input.actorType ?? "user",
       action: input.action,
       resourceType: input.resourceType,
       resourceId: input.resourceId,
@@ -92,6 +92,31 @@ async function recordInventoryEvent(
     deduplicationKey: input.key,
     payload: input.payload
   });
+}
+
+async function expirePoolHolds(tx: Prisma.TransactionClient, poolId: string, now: Date) {
+  const expired = await tx.vybeInventoryHold.findMany({
+    where: { poolId, status: "ACTIVE", expiresAt: { lte: now } },
+    select: { id: true, quantity: true, poolId: true }
+  });
+  if (expired.length === 0) return;
+  await tx.vybeInventoryHold.updateMany({
+    where: { id: { in: expired.map((hold) => hold.id) }, status: "ACTIVE" },
+    data: { status: "EXPIRED" }
+  });
+  for (const hold of expired) {
+    await recordInventoryEvent(tx, {
+      actorUserId: null,
+      actorType: "system",
+      action: "vybe.inventory.hold_expired",
+      resourceType: "vybe_inventory_hold",
+      resourceId: hold.id,
+      aggregateType: "vybe_inventory_pool",
+      eventType: "vybe.inventory.hold_expired.v1",
+      key: `vybe.inventory.hold:${hold.id}:expired`,
+      payload: { holdId: hold.id, poolId: hold.poolId, quantity: hold.quantity }
+    });
+  }
 }
 
 export async function createInventoryPool(input: {
@@ -163,10 +188,7 @@ export async function adjustInventoryAllocation(input: {
     });
     await assertOfferingCanTrade(tx, pool.offeringId);
     const now = new Date();
-    await tx.vybeInventoryHold.updateMany({
-      where: { poolId: pool.id, status: "ACTIVE", expiresAt: { lte: now } },
-      data: { status: "EXPIRED" }
-    });
+    await expirePoolHolds(tx, pool.id, now);
     const active = await tx.vybeInventoryHold.aggregate({
       where: { poolId: pool.id, status: "ACTIVE", expiresAt: { gt: now } },
       _sum: { quantity: true }
@@ -248,10 +270,7 @@ export async function createInventoryHold(input: {
         fail("VYBE_HOLD_NO_LONGER_ACTIVE", "This idempotent hold has expired or been released");
       }
       const now = new Date();
-      await tx.vybeInventoryHold.updateMany({
-        where: { poolId: pool.id, status: "ACTIVE", expiresAt: { lte: now } },
-        data: { status: "EXPIRED" }
-      });
+      await expirePoolHolds(tx, pool.id, now);
       const active = await tx.vybeInventoryHold.aggregate({
         where: { poolId: pool.id, status: "ACTIVE", expiresAt: { gt: now } },
         _sum: { quantity: true }
