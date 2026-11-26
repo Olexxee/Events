@@ -508,6 +508,7 @@ export async function createAccommodationHold(input: {
           404
         );
       }
+      const now = await getDatabaseNow(tx);
       const existing = await tx.vybeAccommodationHold.findUnique({
         where: {
           userId_idempotencyKey: {
@@ -541,7 +542,6 @@ export async function createAccommodationHold(input: {
         );
       }
 
-      const now = await getDatabaseNow(tx);
       const holdDurationSeconds = await getHoldDurationSeconds(tx);
       const expiresAt = new Date(now.getTime() + holdDurationSeconds * 1000);
       await expireAccommodationHoldsInTransaction(tx, category.id, now);
