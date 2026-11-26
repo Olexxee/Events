@@ -161,7 +161,7 @@ async function recordInventoryEvent(
   });
   await enqueueOutboxMessage(tx, {
     aggregateType: input.aggregateType,
-    aggregateId: input.resourceId,
+    aggregateId: input.aggregateId ?? input.resourceId,
     eventType: input.eventType,
     deduplicationKey: input.key,
     payload: input.payload
@@ -190,6 +190,7 @@ async function expirePoolHolds(
       resourceType: "vybe_inventory_hold",
       resourceId: hold.id,
       aggregateType: "vybe_inventory_pool",
+      aggregateId: hold.poolId,
       eventType: "vybe.inventory.hold_expired.v1",
       key: `vybe.inventory.hold:${hold.id}:expired`,
       payload: { holdId: hold.id, poolId: hold.poolId, quantity: hold.quantity }
@@ -450,6 +451,7 @@ export async function createInventoryHold(input: {
         resourceType: "vybe_inventory_hold",
         resourceId: hold.id,
         aggregateType: "vybe_inventory_pool",
+        aggregateId: pool.id,
         eventType: "vybe.inventory.hold_created.v1",
         key: `vybe.inventory.hold:${hold.id}:created`,
         payload: {
