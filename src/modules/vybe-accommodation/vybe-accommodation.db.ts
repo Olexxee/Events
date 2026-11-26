@@ -1,9 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import type {
-  Prisma as PrismaClientTypes,
-  VybeAccommodationAllocationStatus
-} from "@prisma/client";
+import type { Prisma as PrismaClientTypes } from "@prisma/client";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { enqueueOutboxMessage } from "../../shared/outbox/outbox.repository.js";
@@ -284,8 +281,8 @@ async function lockNightAnchors(
   await tx.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`SELECT id FROM vybe_accommodation_night_locks
       WHERE room_category_id = ${roomCategoryId}::uuid
-        AND stay_date >= ${startDate}::date
-        AND stay_date < ${endDate}::date
+        AND stay_date >= ${startDate.toISOString().slice(0, 10)}::date
+        AND stay_date < ${endDate.toISOString().slice(0, 10)}::date
       ORDER BY stay_date
       FOR UPDATE`
   );
@@ -484,6 +481,8 @@ export async function createAccommodationRoomCategory(input: {
       !attributes ||
       attributes.category !== "ACCOMMODATION" ||
       String(attributes.roomCategory ?? "").trim().toLowerCase() !== input.name.trim().toLowerCase() ||
+      !Number.isInteger(Number(attributes.maxOccupancy)) ||
+      Number(attributes.maxOccupancy) < 1 ||
       Number(attributes.maxOccupancy) > input.maxOccupancy ||
       !sameLocation(
         {
@@ -769,6 +768,16 @@ export async function adjustAccommodationAllocationNight(input: {
     const current = await tx.vybeAccommodationAllocationNight.findUniqueOrThrow({
       where: { id: initial.id }
     });
+    if (
+      input.quantityDelta > 0 &&
+      initial.allocation.releaseCutoffAt.getTime() <= Date.now()
+    ) {
+      fail(
+        "VYBE_ACCOMMODATION_ALLOCATION_CUTOFF_PASSED",
+        "Inventory cannot be added after the provider-agreed release cutoff",
+        409
+      );
+    }
     const nextQuantity = current.allocatedQuantity + input.quantityDelta;
     if (nextQuantity <= 0) {
       fail(
@@ -858,8 +867,8 @@ export async function releaseAccommodationAllocation(input: {
         await tx.$queryRaw<Array<{ id: string }>>(
           Prisma.sql`SELECT id FROM vybe_accommodation_night_locks
             WHERE room_category_id = ${allocation.roomCategoryId}::uuid
-              AND stay_date >= ${first}::date
-              AND stay_date < ${endExclusive}::date
+              AND stay_date >= ${first.toISOString().slice(0, 10)}::date
+              AND stay_date < ${endExclusive.toISOString().slice(0, 10)}::date
             ORDER BY stay_date
             FOR UPDATE`
         );
