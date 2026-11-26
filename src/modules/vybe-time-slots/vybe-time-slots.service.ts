@@ -17,6 +17,7 @@ export const addVybeTimeSlotResourceGroupMember =
   addTimeSlotResourceGroupMember;
 export const getVybeTimeSlotAvailability = getTimeSlotCapacityAvailability;
 export const createVybeTimeSlotCapacityHold = createTimeSlotCapacityHold;
-export const getVybeTimeSlotResourceAvailability = getTimeSlotResourceAvailability;
+export const getVybeTimeSlotResourceAvailability =
+  getTimeSlotResourceAvailability;
 export const createVybeTimeSlotResourceHold = createTimeSlotResourceHold;
 export const releaseVybeTimeSlotHold = releaseTimeSlotHold;

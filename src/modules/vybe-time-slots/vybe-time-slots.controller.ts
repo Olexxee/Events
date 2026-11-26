@@ -169,21 +169,34 @@ export const createVybeTimeSlotCapacityHoldController: RequestHandler = async (
   }
 };
 
-export const getVybeTimeSlotResourceAvailabilityController: RequestHandler = async (_req, res, next) => {
-  try {
-    const { occurrenceId } = getValidatedRequest<{ params: { occurrenceId: string } }>(res).params;
-    const availability = await getVybeTimeSlotResourceAvailability(occurrenceId);
-    return successResponse(res, { availability });
-  } catch (error) {
-    return next(error);
-  }
-};
+export const getVybeTimeSlotResourceAvailabilityController: RequestHandler =
+  async (_req, res, next) => {
+    try {
+      const { occurrenceId } = getValidatedRequest<{
+        params: { occurrenceId: string };
+      }>(res).params;
+      const availability =
+        await getVybeTimeSlotResourceAvailability(occurrenceId);
+      return successResponse(res, { availability });
+    } catch (error) {
+      return next(error);
+    }
+  };
 
-export const createVybeTimeSlotResourceHoldController: RequestHandler = async (req, res, next) => {
+export const createVybeTimeSlotResourceHoldController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
     const auth = requireAuth(req);
-    const body = getValidatedRequest<{ body: { occurrenceId: string; idempotencyKey: string } }>(res).body;
-    const hold = await createVybeTimeSlotResourceHold({ ...body, userId: auth.subjectId });
+    const body = getValidatedRequest<{
+      body: { occurrenceId: string; idempotencyKey: string };
+    }>(res).body;
+    const hold = await createVybeTimeSlotResourceHold({
+      ...body,
+      userId: auth.subjectId
+    });
     return successResponse(res, { hold }, 201);
   } catch (error) {
     return next(error);
