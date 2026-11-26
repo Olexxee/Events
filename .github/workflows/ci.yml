@@ -36,6 +36,8 @@ jobs:
           node-version: 22
       - run: npm install --global npm@11
       - run: npm ci --no-audit --no-fund --legacy-peer-deps --ignore-scripts
+      - name: Temporary Prettier output inspection
+        run: npx prettier tests/vybe-accommodation-schema.integration.test.ts
       - run: npm rebuild esbuild @prisma/client prisma @prisma/engines
       - name: Validate Prisma schema
         run: npm run prisma:validate
