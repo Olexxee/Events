@@ -902,7 +902,6 @@ model VybeInventoryPool {
   status             VybeInventoryPoolStatus   @default(ACTIVE)
   allocatedQuantity  Int                       @default(0) @map("allocated_quantity")
   committedQuantity  Int                       @default(0) @map("committed_quantity")
-  holdDurationSeconds Int                      @default(600) @map("hold_duration_seconds")
   createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
   offering           VybeOffering              @relation(fields: [offeringId], references: [id], onDelete: Restrict)
@@ -946,4 +945,13 @@ model VybeInventoryHold {
   @@index([poolId, status, expiresAt], map: "vybe_inventory_holds_pool_status_expiry_idx")
   @@index([userId, status, expiresAt], map: "vybe_inventory_holds_user_status_expiry_idx")
   @@map("vybe_inventory_holds")
+}
+
+model VybeInventoryPolicy {
+  id                  String      @id @default(uuid()) @db.Uuid
+  category            VybeCategory @unique
+  holdDurationSeconds Int         @default(600) @map("hold_duration_seconds")
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("vybe_inventory_policies")
 }
