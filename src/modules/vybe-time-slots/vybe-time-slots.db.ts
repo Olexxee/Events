@@ -72,6 +72,25 @@ async function assertOfferingSetupAccess(
   offeringId: string,
   actorUserId: string
 ) {
+  const initialOffering = await tx.vybeOffering.findUnique({
+    where: { id: offeringId },
+    include: { providerProfile: true }
+  });
+  if (!initialOffering) {
+    fail("VYBE_OFFERING_NOT_PUBLISHED", "Time-slot setup requires a published offering", 404);
+  }
+  const organizationId = initialOffering.providerProfile.organizationId;
+  await assertOrganizationAuthority(tx, {
+    organizationId,
+    userId: actorUserId,
+    allowedRoles: ["OWNER", "ADMIN"]
+  });
+  const offeringLock = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM vybe_offerings WHERE id = ${offeringId}::uuid FOR SHARE`
+  );
+  if (offeringLock.length === 0) {
+    fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering was not found", 404);
+  }
   const offering = await tx.vybeOffering.findUnique({
     where: { id: offeringId },
     include: {
@@ -103,12 +122,6 @@ async function assertOfferingSetupAccess(
       404
     );
   }
-  const organizationId = offering.providerProfile.organizationId;
-  await assertOrganizationAuthority(tx, {
-    organizationId,
-    userId: actorUserId,
-    allowedRoles: ["OWNER", "ADMIN"]
-  });
   if (offering.providerProfile.organization.status !== "ACTIVE") {
     fail("VYBE_PROVIDER_INACTIVE", "The provider organization is not active", 403);
   }
