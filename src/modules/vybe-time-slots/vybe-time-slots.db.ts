@@ -614,9 +614,9 @@ async function recordTimeSlotHoldEvent(
     aggregateType: "vybe_time_slot_occurrence",
     aggregateId: input.occurrenceId,
     eventType: input.eventType,
-    deduplicationKey: `vybe.time_slot.hold:${input.holdId}:${
-      input.action.split(".").at(-1)
-    }`,
+    deduplicationKey: `vybe.time_slot.hold:${input.holdId}:${input.action
+      .split(".")
+      .at(-1)}`,
     payload: input.payload
   });
 }
@@ -697,7 +697,11 @@ async function assertOfferingAvailabilityAccess(
     offering.status !== "PUBLISHED" ||
     !offering.currentPublishedVersion
   ) {
-    fail("VYBE_OFFERING_NOT_PUBLISHED", "Offering is not publicly available", 404);
+    fail(
+      "VYBE_OFFERING_NOT_PUBLISHED",
+      "Offering is not publicly available",
+      404
+    );
   }
   if (offering.providerProfile.organization.status !== "ACTIVE") {
     fail("VYBE_PROVIDER_INACTIVE", "Provider is not active", 404);
@@ -970,7 +974,11 @@ export async function releaseTimeSlotCapacityHold(input: {
       where: { id: input.holdId }
     });
     if (!initial) {
-      fail("VYBE_TIME_SLOT_HOLD_NOT_FOUND", "Time-slot hold was not found", 404);
+      fail(
+        "VYBE_TIME_SLOT_HOLD_NOT_FOUND",
+        "Time-slot hold was not found",
+        404
+      );
     }
     if (initial.userId !== input.userId) {
       fail(
