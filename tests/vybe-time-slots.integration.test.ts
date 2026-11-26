@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   connectDatabase,
   disconnectDatabase,
-  getPrismaClient
+  getPrismaClient,
 } from "../src/infrastructure/database/prisma.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
@@ -19,7 +19,9 @@ describe.skipIf(!enabled)(
       await disconnectDatabase();
     });
 
-    it("rejects overlapping active holds for one exclusive resource and permits adjacent intervals", async () => {
+    it(
+      "rejects overlapping active holds for one exclusive resource and permits adjacent intervals",
+      async () => {
       const suffix = crypto.randomUUID();
       const user = await prisma.user.create({
         data: { email: `vybe-time-slot-${suffix}@events.test` }
@@ -121,7 +123,9 @@ describe.skipIf(!enabled)(
       ).toBe(2);
     });
 
-    it("rejects cross-provider and cross-offering links and enforces hold and capacity modes", async () => {
+    it(
+      "rejects cross-provider and cross-offering links and enforces hold and capacity modes",
+      async () => {
       const suffix = crypto.randomUUID();
       const createProvider = async (label: string) => {
         const user = await prisma.user.create({
