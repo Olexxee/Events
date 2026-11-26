@@ -5,7 +5,9 @@ import {
   createTimeSlotResource,
   createTimeSlotResourceGroup,
   getTimeSlotCapacityAvailability,
-  releaseTimeSlotCapacityHold
+  getTimeSlotResourceAvailability,
+  createTimeSlotResourceHold,
+  releaseTimeSlotHold
 } from "./vybe-time-slots.db.js";
 
 export const createVybeTimeSlotOccurrence = createTimeSlotOccurrence;
@@ -15,4 +17,6 @@ export const addVybeTimeSlotResourceGroupMember =
   addTimeSlotResourceGroupMember;
 export const getVybeTimeSlotAvailability = getTimeSlotCapacityAvailability;
 export const createVybeTimeSlotCapacityHold = createTimeSlotCapacityHold;
-export const releaseVybeTimeSlotCapacityHold = releaseTimeSlotCapacityHold;
+export const getVybeTimeSlotResourceAvailability = getTimeSlotResourceAvailability;
+export const createVybeTimeSlotResourceHold = createTimeSlotResourceHold;
+export const releaseVybeTimeSlotHold = releaseTimeSlotHold;
