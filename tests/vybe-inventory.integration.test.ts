@@ -124,7 +124,8 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
       offeringId,
       actorUserId: ownerId,
       allocatedQuantity: 8,
-      reason: "Initial secured inventory allocation"
+      reason: "Initial secured inventory allocation",
+      evidenceReference: "provider-inventory-register:initial-8"
     });
     expect(pool.allocatedQuantity).toBe(8);
     expect(await prisma.vybeInventoryAllocation.count({ where: { poolId: pool.id } })).toBe(1);
@@ -136,7 +137,8 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
       offeringId,
       actorUserId: ownerId,
       allocatedQuantity: 1,
-      reason: "One secured unit for concurrency test"
+      reason: "One secured unit for concurrency test",
+      evidenceReference: "provider-inventory-register:concurrency-1"
     });
     const results = await Promise.allSettled([
       createInventoryHold({ offeringId, userId: ownerId, quantity: 1, idempotencyKey: crypto.randomUUID() }),
@@ -153,7 +155,8 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
       offeringId,
       actorUserId: ownerId,
       allocatedQuantity: 3,
-      reason: "Idempotency fixture allocation"
+      reason: "Idempotency fixture allocation",
+      evidenceReference: "provider-inventory-register:idempotency-3"
     });
     const idempotencyKey = crypto.randomUUID();
     const first = await createInventoryHold({ offeringId, userId: ownerId, quantity: 1, idempotencyKey });
@@ -170,7 +173,8 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
       offeringId,
       actorUserId: ownerId,
       allocatedQuantity: 1,
-      reason: "Expiry fixture allocation"
+      reason: "Expiry fixture allocation",
+      evidenceReference: "provider-inventory-register:expiry-1"
     });
     const old = await createInventoryHold({
       offeringId,
@@ -200,7 +204,8 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
       offeringId,
       actorUserId: ownerId,
       allocatedQuantity: 2,
-      reason: "Allocation reduction fixture"
+      reason: "Allocation reduction fixture",
+      evidenceReference: "provider-inventory-register:reduction-2"
     });
     await createInventoryHold({
       offeringId,
@@ -212,7 +217,8 @@ describe.skipIf(!enabled)("Vybe quantity inventory PostgreSQL integration", () =
       poolId: pool.id,
       actorUserId: ownerId,
       quantityDelta: -1,
-      reason: "Attempted reduction below protected stock"
+      reason: "Attempted reduction below protected stock",
+      evidenceReference: "provider-inventory-register:reduction-attempt"
     })).rejects.toMatchObject({
       code: "VYBE_ALLOCATION_BELOW_COMMITMENTS"
     });
