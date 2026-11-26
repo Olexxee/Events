@@ -798,10 +798,9 @@ export async function createTimeSlotCapacityHold(input: {
       if (!initial) {
         fail("VYBE_TIME_SLOT_NOT_FOUND", "Time slot was not found", 404);
       }
-      const offering = await assertOfferingSetupAccess(
+      const offering = await assertOfferingAvailabilityAccess(
         tx,
-        initial.offeringId,
-        input.userId
+        initial.offeringId
       );
       const locked = await tx.$queryRaw<Array<{ id: string }>>(
         Prisma.sql`SELECT id FROM vybe_time_slot_occurrences WHERE id = ${input.occurrenceId}::uuid FOR UPDATE`
