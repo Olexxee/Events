@@ -4,6 +4,10 @@ import { getValidatedRequest } from "../../shared/middleware/validate-request.js
 import { successResponse } from "../../shared/responses/success-response.js";
 import {
   adjustVybeAccommodationAllocationNight,
+  createVybeAccommodationHold,
+  getMyVybeAccommodationHold,
+  getVybeAccommodationAvailability,
+  releaseMyVybeAccommodationHold,
   createVybeAccommodationAllocation,
   createVybeAccommodationProperty,
   createVybeAccommodationRoomCategory,
@@ -16,6 +20,8 @@ import type {
   CreateAccommodationAllocationBody,
   CreateAccommodationPropertyBody,
   CreateAccommodationRoomCategoryBody,
+  CreateAccommodationHoldBody,
+  GetAccommodationAvailabilityQuery,
   ReleaseAccommodationAllocationBody,
   UpdateAccommodationCapacityBody
 } from "./vybe-accommodation.validators.js";
@@ -167,3 +173,85 @@ export const releaseVybeAccommodationAllocationController: RequestHandler =
       return next(error);
     }
   };
+
+export const getVybeAccommodationAvailabilityController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const { roomCategoryId } = getValidatedRequest<{
+      params: { roomCategoryId: string };
+    }>(res).params;
+    const query = getValidatedRequest<{
+      query: GetAccommodationAvailabilityQuery;
+    }>(res).query;
+    const availability = await getVybeAccommodationAvailability({
+      roomCategoryId,
+      ...query
+    });
+    return successResponse(res, { availability });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const createVybeAccommodationHoldController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const auth = requireAuth(req);
+    const body = getValidatedRequest<{
+      body: CreateAccommodationHoldBody;
+    }>(res).body;
+    const hold = await createVybeAccommodationHold({
+      ...body,
+      userId: auth.subjectId
+    });
+    return successResponse(res, { hold }, 201);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getMyVybeAccommodationHoldController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const auth = requireAuth(req);
+    const { holdId } = getValidatedRequest<{
+      params: { holdId: string };
+    }>(res).params;
+    const hold = await getMyVybeAccommodationHold({
+      holdId,
+      userId: auth.subjectId
+    });
+    return successResponse(res, { hold });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const releaseMyVybeAccommodationHoldController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const auth = requireAuth(req);
+    const { holdId } = getValidatedRequest<{
+      params: { holdId: string };
+    }>(res).params;
+    const hold = await releaseMyVybeAccommodationHold({
+      holdId,
+      userId: auth.subjectId
+    });
+    return successResponse(res, { hold });
+  } catch (error) {
+    return next(error);
+  }
+};
