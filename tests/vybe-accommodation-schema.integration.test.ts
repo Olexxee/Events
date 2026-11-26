@@ -313,6 +313,9 @@ describe.skipIf(!enabled)(
 
     it("rejects allocation when physical room count is unknown", async () => {
       const fixture = await createFixture();
+      await prisma.vybeAccommodationAllocationNight.delete({
+        where: { id: fixture.allocationNight.id }
+      });
       await prisma.vybeAccommodationRoomCategory.update({
         where: { id: fixture.roomCategory.id },
         data: { physicalUnitCount: null }
