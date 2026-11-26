@@ -483,6 +483,24 @@ export async function createAccommodationHold(input: {
         input.roomCategoryId
       );
       await lockCategoryAndNights(tx, category.id, dates);
+      const lockedCategory = await tx.vybeAccommodationRoomCategory.findUnique({
+        where: { id: category.id },
+        include: { property: true, offering: true }
+      });
+      if (
+        !lockedCategory ||
+        lockedCategory.status !== "ACTIVE" ||
+        lockedCategory.property.status !== "ACTIVE" ||
+        lockedCategory.physicalUnitCount === null ||
+        !lockedCategory.physicalUnitCountEvidenceReference ||
+        lockedCategory.offeringId !== category.offeringId
+      ) {
+        fail(
+          "VYBE_ACCOMMODATION_UNAVAILABLE",
+          "This accommodation is not currently available",
+          404
+        );
+      }
       const existing = await tx.vybeAccommodationHold.findUnique({
         where: {
           userId_idempotencyKey: {
@@ -582,18 +600,18 @@ export async function createAccommodationHold(input: {
           expiresAt,
           snapshot: {
             roomCategory: {
-              id: category.id,
-              name: category.name,
-              maxOccupancy: category.maxOccupancy,
-              specifications: category.specifications
+              id: lockedCategory.id,
+              name: lockedCategory.name,
+              maxOccupancy: lockedCategory.maxOccupancy,
+              specifications: lockedCategory.specifications
             },
             property: {
-              id: category.property.id,
-              name: category.property.name,
-              city: category.property.city,
-              state: category.property.state,
-              country: category.property.country,
-              timezone: category.property.timezone
+              id: lockedCategory.property.id,
+              name: lockedCategory.property.name,
+              city: lockedCategory.property.city,
+              state: lockedCategory.property.state,
+              country: lockedCategory.property.country,
+              timezone: lockedCategory.property.timezone
             },
             offering: {
               id: category.offering.id,
@@ -663,17 +681,36 @@ export async function getMyAccommodationHold(input: {
   userId: string;
 }) {
   const prisma = getPrismaClient();
-  const hold = await prisma.vybeAccommodationHold.findUnique({
-    where: { id: input.holdId },
-    include: { nights: { orderBy: { stayDate: "asc" } } }
+  return prisma.$transaction(async (tx) => {
+    const initial = await tx.vybeAccommodationHold.findUnique({
+      where: { id: input.holdId },
+      include: { nights: { orderBy: { stayDate: "asc" } } }
+    });
+    if (!initial) {
+      fail("VYBE_ACCOMMODATION_HOLD_NOT_FOUND", "Accommodation hold was not found", 404);
+    }
+    if (initial.userId !== input.userId) {
+      fail("VYBE_ACCOMMODATION_HOLD_FORBIDDEN", "Only the hold owner may view it", 403);
+    }
+    if (initial.nights.length === 0) {
+      fail("VYBE_ACCOMMODATION_HOLD_INVALID", "Accommodation hold has no reserved room nights", 409);
+    }
+    const dates = [
+      ...new Set(
+        initial.nights.map((night) => night.stayDate.toISOString().slice(0, 10))
+      )
+    ].sort();
+    await lockCategoryAndNights(tx, initial.roomCategoryId, dates);
+    await expireAccommodationHoldsInTransaction(
+      tx,
+      initial.roomCategoryId,
+      new Date()
+    );
+    return tx.vybeAccommodationHold.findUniqueOrThrow({
+      where: { id: initial.id },
+      include: { nights: { orderBy: { stayDate: "asc" } } }
+    });
   });
-  if (!hold) {
-    fail("VYBE_ACCOMMODATION_HOLD_NOT_FOUND", "Accommodation hold was not found", 404);
-  }
-  if (hold.userId !== input.userId) {
-    fail("VYBE_ACCOMMODATION_HOLD_FORBIDDEN", "Only the hold owner may view it", 403);
-  }
-  return hold;
 }
 
 export async function releaseMyAccommodationHold(input: {
