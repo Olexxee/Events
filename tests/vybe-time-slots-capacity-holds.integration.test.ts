@@ -136,6 +136,24 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
     expect(availability.heldQuantity).toBe(1);
   });
 
+  it("prevents concurrent multi-unit requests from exceeding total capacity", async () => {
+    const fixture = await createCapacityFixture(3);
+    const results = await Promise.allSettled([
+      createTimeSlotCapacityHold({
+        ...fixture,
+        quantity: 2,
+        idempotencyKey: `multi-unit-a-${crypto.randomUUID()}`
+      }),
+      createTimeSlotCapacityHold({
+        ...fixture,
+        quantity: 2,
+        idempotencyKey: `multi-unit-b-${crypto.randomUUID()}`
+      })
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect((await getTimeSlotCapacityAvailability(fixture.occurrenceId)).heldQuantity).toBe(2);
+  });
+
   it("returns the original hold for an identical idempotent replay", async () => {
     const fixture = await createCapacityFixture(5);
     const input = {
@@ -186,6 +204,26 @@ describe.skipIf(!enabled)("Vybe time-slot capacity holds PostgreSQL integration"
         action: "vybe.time_slot_hold.expired"
       }
     })).not.toBeNull();
+  });
+
+  it("makes concurrent release retries a single terminal transition", async () => {
+    const fixture = await createCapacityFixture(2);
+    const hold = await createTimeSlotCapacityHold({
+      ...fixture,
+      quantity: 1,
+      idempotencyKey: `release-race-${crypto.randomUUID()}`
+    });
+    const results = await Promise.all([
+      releaseTimeSlotCapacityHold({ holdId: hold.id, userId: fixture.userId }),
+      releaseTimeSlotCapacityHold({ holdId: hold.id, userId: fixture.userId })
+    ]);
+    expect(results.every((result) => result.status === "RELEASED")).toBe(true);
+    expect(await prisma.auditLog.count({
+      where: { resourceId: hold.id, action: "vybe.time_slot_hold.released" }
+    })).toBe(1);
+    expect(await prisma.outboxMessage.count({
+      where: { aggregateId: fixture.occurrenceId, eventType: "vybe.time_slot_hold.released.v1" }
+    })).toBe(1);
   });
 
   it("allows only the hold owner to release capacity", async () => {
