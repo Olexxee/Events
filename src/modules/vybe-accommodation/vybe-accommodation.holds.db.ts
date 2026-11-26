@@ -542,7 +542,7 @@ export async function createAccommodationHold(input: {
 
       const holdDurationSeconds = await getHoldDurationSeconds(tx);
       const expiresAt = new Date(now.getTime() + holdDurationSeconds * 1000);
-      await expireAccommodationHoldsInTransaction(tx, category.id, now);
+      await expireAccommodationHoldsInTransaction(tx, category.id);
 
       const allocationNights = await getAllocationNights(
         tx,
@@ -750,8 +750,7 @@ export async function releaseMyAccommodationHold(input: {
     );
     await expireAccommodationHoldsInTransaction(
       tx,
-      initial.roomCategoryId,
-      new Date()
+      initial.roomCategoryId
     );
     const now = await getDatabaseNow(tx);
     const current = await tx.vybeAccommodationHold.findUniqueOrThrow({
