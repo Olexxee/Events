@@ -9,7 +9,9 @@ import {
   createVybeTimeSlotResource,
   createVybeTimeSlotResourceGroup,
   getVybeTimeSlotAvailability,
-  releaseVybeTimeSlotCapacityHold
+  getVybeTimeSlotResourceAvailability,
+  createVybeTimeSlotResourceHold,
+  releaseVybeTimeSlotHold
 } from "./vybe-time-slots.service.js";
 
 function requireAuth(req: Parameters<RequestHandler>[0]) {
@@ -167,6 +169,27 @@ export const createVybeTimeSlotCapacityHoldController: RequestHandler = async (
   }
 };
 
+export const getVybeTimeSlotResourceAvailabilityController: RequestHandler = async (_req, res, next) => {
+  try {
+    const { occurrenceId } = getValidatedRequest<{ params: { occurrenceId: string } }>(res).params;
+    const availability = await getVybeTimeSlotResourceAvailability(occurrenceId);
+    return successResponse(res, { availability });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const createVybeTimeSlotResourceHoldController: RequestHandler = async (req, res, next) => {
+  try {
+    const auth = requireAuth(req);
+    const body = getValidatedRequest<{ body: { occurrenceId: string; idempotencyKey: string } }>(res).body;
+    const hold = await createVybeTimeSlotResourceHold({ ...body, userId: auth.subjectId });
+    return successResponse(res, { hold }, 201);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const releaseVybeTimeSlotCapacityHoldController: RequestHandler = async (
   req,
   res,
@@ -177,7 +200,7 @@ export const releaseVybeTimeSlotCapacityHoldController: RequestHandler = async (
     const { holdId } = getValidatedRequest<{ params: { holdId: string } }>(
       res
     ).params;
-    const hold = await releaseVybeTimeSlotCapacityHold({
+    const hold = await releaseVybeTimeSlotHold({
       holdId,
       userId: auth.subjectId
     });
