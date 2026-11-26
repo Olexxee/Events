@@ -729,6 +729,7 @@ async function assertOfferingAvailabilityAccess(
   if (!approvalLock.length || !organizationLock.length || !activationLock.length) {
     fail("VYBE_TIME_SLOT_UNAVAILABLE", "This time slot is not currently available", 404);
   }
+  return offering;
 }
 
 export async function getTimeSlotCapacityAvailability(occurrenceId: string) {
