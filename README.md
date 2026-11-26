@@ -631,3 +631,6 @@ Unused room-category inventory allocated to Vybe may return to the provider's in
 
 
 **Accommodation physical schema review:** VYBE-014 is documented in [Section 22 of docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md#22-accommodation-physical-schema-review-and-implementation-plan-vybe-014). The recommended model uses property/room-category records, allocation-night lots with provider-agreed release cutoffs, lock-only room-night anchors, and atomic multi-night hold details. This remains a design approval gate: no Prisma models or migration are authorized until the physical model is approved.
+
+
+**Vybe accommodation inventory:** The approved physical model is implemented as Slice A in the Prisma schema and PostgreSQL migration. It establishes property/room-category records, allocation-night lots, lock anchors, hold records, evidence-backed adjustment history, composite ownership constraints and database guards. It does not yet expose accommodation APIs or create customer holds. See [Section 23 of the Vybe design](docs/VYBE_DESIGN.md#23-accommodation-room-night-schema-implementation-vybe-014-slice-a).
