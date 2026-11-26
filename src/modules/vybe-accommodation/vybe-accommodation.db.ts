@@ -326,11 +326,11 @@ export async function createAccommodationProperty(input: {
   actorUserId: string;
   providerPropertyKey: string;
   name: string;
-  addressLine?: string;
+  addressLine?: string | undefined;
   city: string;
   state: string;
   country: string;
-  postalCode?: string;
+  postalCode?: string | undefined;
   timezone: string;
 }) {
   assertTimezone(input.timezone);
@@ -419,7 +419,7 @@ export async function createAccommodationRoomCategory(input: {
   actorUserId: string;
   providerCategoryKey: string;
   name: string;
-  description?: string;
+  description?: string | undefined;
   maxOccupancy: number;
   physicalUnitCount: number;
   physicalUnitCountEvidenceReference: string;
@@ -731,9 +731,15 @@ export async function adjustAccommodationAllocationNight(input: {
     const initial = await tx.vybeAccommodationAllocationNight.findUnique({
       where: { id: input.allocationNightId },
       include: {
-        allocation: true,
-        roomCategory: {
-          include: { property: true, providerProfile: { select: { organizationId: true } } }
+        allocation: {
+          include: {
+            roomCategory: {
+              include: {
+                property: true,
+                providerProfile: { select: { organizationId: true } }
+              }
+            }
+          }
         }
       }
     });
@@ -741,9 +747,9 @@ export async function adjustAccommodationAllocationNight(input: {
       fail("VYBE_ACCOMMODATION_ALLOCATION_NIGHT_NOT_FOUND", "Allocation night was not found", 404);
     }
     await assertProviderAuthority(tx, {
-      organizationId: initial.roomCategory.providerProfile.organizationId,
+      organizationId: initial.allocation.roomCategory.providerProfile.organizationId,
       actorUserId: input.actorUserId,
-      location: initial.roomCategory.property,
+      location: initial.allocation.roomCategory.property,
       requireActiveAccommodationApproval: input.quantityDelta > 0
     });
     if (initial.allocation.status !== "ACTIVE" && initial.allocation.status !== "PAUSED") {
@@ -752,7 +758,7 @@ export async function adjustAccommodationAllocationNight(input: {
 
     await lockPropertyAndCategory(
       tx,
-      initial.roomCategory.propertyId,
+      initial.allocation.roomCategory.propertyId,
       initial.roomCategoryId
     );
     await tx.$queryRaw<Array<{ id: string }>>(
