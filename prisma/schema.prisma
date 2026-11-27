@@ -299,6 +299,14 @@ enum VybeBookingSourceType {
   @@map("vybe_booking_source_type")
 }
 
+enum VybeBookingCancellationDecision {
+  ACCEPTED
+  REJECTED
+  ALREADY_CANCELLED
+
+  @@map("vybe_booking_cancellation_decision")
+}
+
 enum VybeAccommodationPropertyStatus {
   ACTIVE
   PAUSED
@@ -397,6 +405,7 @@ model User {
   vybeTimeSlotHolds                   VybeTimeSlotHold[]
   vybeBookingsAsCustomer              VybeBooking[]                           @relation("VybeBookingCustomer")
   vybeBookingStatusChanges            VybeBookingStatusHistory[]              @relation("VybeBookingStatusActor")
+  vybeBookingCancellations             VybeBookingCancellation[]               @relation("VybeBookingCancellationCustomer")
   vybeInventoryAllocations            VybeInventoryAllocation[]
   vybeAccommodationAllocationsCreated VybeAccommodationAllocation[]           @relation("VybeAccommodationAllocationCreator")
   vybeAccommodationAdjustments        VybeAccommodationAllocationAdjustment[]
@@ -1032,6 +1041,7 @@ model VybeBooking {
   timeSlotHold               VybeTimeSlotHold?              @relation("VybeBookingTimeSlotHold", fields: [timeSlotHoldId], references: [id], onDelete: Restrict)
   occupancy                  VybeTimeSlotResourceOccupancy?
   statusHistory              VybeBookingStatusHistory[]
+  cancellations              VybeBookingCancellation[]
 
   @@index([customerUserId, createdAt])
   @@index([providerProfileId, status, serviceStartsAt])
@@ -1056,6 +1066,29 @@ model VybeBookingStatusHistory {
   @@index([bookingId, occurredAt])
   @@index([actorUserId, occurredAt])
   @@map("vybe_booking_status_history")
+}
+
+model VybeBookingCancellation {
+  id                String                            @id @default(uuid()) @db.Uuid
+  bookingId         String                            @map("booking_id") @db.Uuid
+  customerUserId    String                            @map("customer_user_id") @db.Uuid
+  sourceType        VybeBookingSourceType             @map("source_type")
+  sourceHoldId      String                            @map("source_hold_id") @db.Uuid
+  idempotencyKey    String                            @map("idempotency_key") @db.VarChar(120)
+  requestHash       String                            @map("request_hash") @db.Char(64)
+  decision          VybeBookingCancellationDecision
+  decisionCode      String?                           @map("decision_code") @db.VarChar(80)
+  reason            String                            @db.VarChar(1000)
+  policyVersion     String?                           @map("policy_version") @db.VarChar(80)
+  policySnapshot    Json?                             @map("policy_snapshot")
+  decidedAt         DateTime                          @default(now()) @map("decided_at") @db.Timestamptz(6)
+  createdAt         DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  booking           VybeBooking                       @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  customer          User                              @relation("VybeBookingCancellationCustomer", fields: [customerUserId], references: [id], onDelete: Restrict)
+
+  @@unique([customerUserId, idempotencyKey], map: "vybe_booking_cancellations_customer_idempotency_key")
+  @@index([bookingId, decidedAt], map: "vybe_booking_cancellations_booking_decided_idx")
+  @@map("vybe_booking_cancellations")
 }
 
 model VybeAccommodationProperty {

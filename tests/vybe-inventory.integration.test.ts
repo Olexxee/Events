@@ -11,6 +11,7 @@ import {
   getInventoryAvailability
 } from "../src/modules/vybe-inventory/vybe-inventory.db.js";
 import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.service.js";
+import { cancelMyVybeBooking } from "../src/modules/vybe-bookings/vybe-bookings.cancellations.db.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -383,6 +384,122 @@ describe.skipIf(!enabled)(
           verifier
         )
       ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+    });
+
+    it("cancels a quantity-pool booking exactly once and replays idempotently", async () => {
+      const pool = await createInventoryPool({
+        organizationId,
+        offeringId,
+        actorUserId: ownerId,
+        allocatedQuantity: 2,
+        reason: "Customer cancellation fixture",
+        evidenceReference: "provider-inventory-register:customer-cancellation"
+      });
+      const hold = await createInventoryHold({
+        offeringId,
+        userId: ownerId,
+        quantity: 2,
+        idempotencyKey: `cancel-quantity-${crypto.randomUUID()}`
+      });
+      const reference = `cancel-quantity-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "QUANTITY_POOL",
+          sourceHoldId: hold.id,
+          customerUserId: ownerId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+
+      const request = {
+        bookingId: booking.id,
+        customerUserId: ownerId,
+        idempotencyKey: `customer-cancel-${crypto.randomUUID()}`,
+        reason: "Plans changed"
+      };
+      const cancelled = await cancelMyVybeBooking(request);
+      expect(cancelled.cancellation.decision).toBe("ACCEPTED");
+      expect(cancelled.booking.status).toBe("CANCELLED");
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
+      expect(
+        await prisma.vybeInventoryHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "CONVERTED" });
+      expect(
+        await prisma.vybeBookingStatusHistory.count({
+          where: {
+            bookingId: booking.id,
+            fromStatus: "CONFIRMED",
+            toStatus: "CANCELLED"
+          }
+        })
+      ).toBe(1);
+
+      const replay = await cancelMyVybeBooking(request);
+      expect(replay.replayed).toBe(true);
+      expect(replay.cancellation.id).toBe(cancelled.cancellation.id);
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
+
+      const outboxBeforeAlreadyCancelled = await prisma.outboxMessage.count({
+        where: {
+          aggregateId: booking.id,
+          eventType: {
+            in: [
+              "vybe.booking.cancellation_decided.v1",
+              "vybe.booking.cancelled.v1"
+            ]
+          }
+        }
+      });
+      const secondKey = await cancelMyVybeBooking({
+        ...request,
+        idempotencyKey: `customer-cancel-again-${crypto.randomUUID()}`
+      });
+      expect(secondKey.cancellation.decision).toBe("ALREADY_CANCELLED");
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
+      expect(
+        await prisma.vybeBookingCancellation.count({
+          where: { bookingId: booking.id, decision: "ACCEPTED" }
+        })
+      ).toBe(1);
+      expect(
+        await prisma.outboxMessage.count({
+          where: {
+            aggregateId: booking.id,
+            eventType: {
+              in: [
+                "vybe.booking.cancellation_decided.v1",
+                "vybe.booking.cancelled.v1"
+              ]
+            }
+          }
+        })
+      ).toBe(outboxBeforeAlreadyCancelled);
     });
 
     it("fails closed when the immutable offering version has no structured cancellation policy", async () => {
