@@ -489,6 +489,21 @@ describe.skipIf(!enabled)(
       ).rejects.toMatchObject({
         code: "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE"
       });
+      await expect(
+        prisma.vybeTimeSlotHold.create({
+          data: {
+            occurrenceId: overlappingOccurrence.id,
+            userId: fixture.userId,
+            idempotencyKey: `legacy-app-over-committed-${crypto.randomUUID()}`,
+            resourceId: hold.resourceId!,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+            serviceStartsAt: overlappingOccurrence.serviceStartsAt,
+            serviceEndsAt: overlappingOccurrence.serviceEndsAt,
+            blockedStartsAt: overlappingOccurrence.blockedStartsAt,
+            blockedEndsAt: overlappingOccurrence.blockedEndsAt
+          }
+        })
+      ).rejects.toThrow();
       expect(
         await prisma.vybeTimeSlotHold.count({
           where: { occurrenceId: overlappingOccurrence.id, status: "ACTIVE" }
