@@ -459,7 +459,22 @@ export async function confirmVybeBookingFromHold(
     await tx.$queryRaw(
       Prisma.sql`SELECT id FROM vybe_time_slot_occurrences WHERE id = ${source.occurrenceId}::uuid FOR UPDATE`
     );
-    if (input.sourceType === "EXCLUSIVE_RESOURCE" && source.resourceId) {
+    if (input.sourceType === "EXCLUSIVE_RESOURCE") {
+      if (!source.resourceId || !source.occurrence.resourceGroupId) {
+        fail(
+          "VYBE_BOOKING_SOURCE_MISMATCH",
+          "The exclusive hold is missing its resource or resource group"
+        );
+      }
+      const groupLock = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id FROM vybe_time_slot_resource_groups WHERE id = ${source.occurrence.resourceGroupId}::uuid AND is_active = true FOR SHARE`
+      );
+      if (!groupLock.length) {
+        fail(
+          "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE",
+          "The resource group is no longer active"
+        );
+      }
       await tx.$queryRaw(
         Prisma.sql`SELECT id FROM vybe_time_slot_resources WHERE id = ${source.resourceId}::uuid FOR UPDATE`
       );
