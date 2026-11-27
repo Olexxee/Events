@@ -376,32 +376,56 @@ export async function confirmVybeBookingFromHold(
   }
 
   const prisma = getPrismaClient();
-  const initial =
-    input.sourceType === "QUANTITY_POOL"
-      ? await prisma.vybeInventoryHold.findUnique({
-          where: { id: input.sourceHoldId },
-          include: { pool: { select: { offeringId: true } } }
-        })
-      : await prisma.vybeTimeSlotHold.findUnique({
-          where: { id: input.sourceHoldId },
-          include: {
-            occurrence: {
-              select: {
-                offeringId: true,
-                offeringVersion: true,
-                timezone: true
-              }
-            }
+  let initialStatus: string;
+  let initialOfferingId: string;
+  let initialOfferingVersion: number;
+  let initialServiceStartsAt: Date | null = null;
+  let initialServiceTimezone: string | null = null;
+
+  if (input.sourceType === "QUANTITY_POOL") {
+    const initial = await prisma.vybeInventoryHold.findUnique({
+      where: { id: input.sourceHoldId },
+      include: { pool: { select: { offeringId: true } } }
+    });
+    if (!initial)
+      fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
+    if (initial.userId !== input.customerUserId) {
+      fail(
+        "VYBE_BOOKING_HOLD_FORBIDDEN",
+        "Only the hold owner may confirm this booking",
+        403
+      );
+    }
+    initialStatus = initial.status;
+    initialOfferingId = initial.pool.offeringId;
+    initialOfferingVersion = initial.offeringVersion;
+  } else {
+    const initial = await prisma.vybeTimeSlotHold.findUnique({
+      where: { id: input.sourceHoldId },
+      include: {
+        occurrence: {
+          select: {
+            offeringId: true,
+            offeringVersion: true,
+            timezone: true
           }
-        });
-  if (!initial)
-    fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
-  if (initial.userId !== input.customerUserId) {
-    fail(
-      "VYBE_BOOKING_HOLD_FORBIDDEN",
-      "Only the hold owner may confirm this booking",
-      403
-    );
+        }
+      }
+    });
+    if (!initial)
+      fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
+    if (initial.userId !== input.customerUserId) {
+      fail(
+        "VYBE_BOOKING_HOLD_FORBIDDEN",
+        "Only the hold owner may confirm this booking",
+        403
+      );
+    }
+    initialStatus = initial.status;
+    initialOfferingId = initial.occurrence.offeringId;
+    initialOfferingVersion = initial.occurrence.offeringVersion;
+    initialServiceStartsAt = initial.serviceStartsAt;
+    initialServiceTimezone = initial.occurrence.timezone;
   }
 
   const existingBooking =
@@ -419,21 +443,13 @@ export async function confirmVybeBookingFromHold(
     assertReplayMatches(existingBooking, input, verified);
     return existingBooking;
   }
-  if (initial.status !== "ACTIVE") {
+  if (initialStatus !== "ACTIVE") {
     fail(
       "VYBE_BOOKING_HOLD_NOT_ACTIVE",
       "Only an active, unexpired hold can become a booking"
     );
   }
 
-  const initialOfferingId =
-    input.sourceType === "QUANTITY_POOL"
-      ? initial.pool.offeringId
-      : initial.occurrence.offeringId;
-  const initialOfferingVersion =
-    input.sourceType === "QUANTITY_POOL"
-      ? initial.offeringVersion
-      : initial.occurrence.offeringVersion;
   const preflightVersion = await prisma.vybeOfferingVersion.findUnique({
     where: {
       offeringId_version: {
@@ -460,8 +476,8 @@ export async function confirmVybeBookingFromHold(
   buildAcceptedTermsSnapshot(
     input.acceptedTermsSnapshot,
     preflightOfferingSnapshot,
-    input.sourceType === "QUANTITY_POOL" ? null : initial.serviceStartsAt,
-    input.sourceType === "QUANTITY_POOL" ? null : initial.occurrence.timezone,
+    initialServiceStartsAt,
+    initialServiceTimezone,
     acceptedAt
   );
 
