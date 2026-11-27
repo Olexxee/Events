@@ -792,11 +792,6 @@ describe.skipIf(!enabled)(
           data: { status: "CONVERTED" }
         });
       });
-      const legacyVersion = await prisma.vybeOfferingVersion.findUniqueOrThrow({
-        where: {
-          offeringId_version: { offeringId: legacyOffering.id, version: 1 }
-        }
-      });
       const legacyBooking = await prisma.vybeBooking.create({
         data: {
           publicReference: `LEGACY-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`,
@@ -812,7 +807,15 @@ describe.skipIf(!enabled)(
             schemaVersion: 1,
             offeringId: legacyOffering.id,
             offeringVersion: 1,
-            content: legacyVersion.content
+            content: {
+              title: "Legacy drinks package",
+              location: {
+                city: "Lagos",
+                state: "Lagos",
+                country: "Nigeria"
+              },
+              attributes: { category: "DRINKS" }
+            }
           },
           priceQuoteSnapshot: {
             schemaVersion: 1,
