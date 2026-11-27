@@ -478,6 +478,21 @@ export async function confirmVybeBookingFromHold(
       await tx.$queryRaw(
         Prisma.sql`SELECT id FROM vybe_time_slot_resources WHERE id = ${source.resourceId}::uuid FOR UPDATE`
       );
+      const membershipLock = await tx.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT id
+          FROM vybe_time_slot_resource_group_members
+         WHERE resource_group_id = ${source.occurrence.resourceGroupId}::uuid
+           AND resource_id = ${source.resourceId}::uuid
+           AND (valid_from IS NULL OR valid_from <= ${source.blockedStartsAt})
+           AND (valid_until IS NULL OR valid_until >= ${source.blockedEndsAt})
+         FOR SHARE`
+      );
+      if (!membershipLock.length) {
+        fail(
+          "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE",
+          "The held resource is no longer a valid member of its resource group"
+        );
+      }
     }
     await tx.$queryRaw(
       Prisma.sql`SELECT id FROM vybe_time_slot_holds WHERE id = ${source.id}::uuid FOR UPDATE`
