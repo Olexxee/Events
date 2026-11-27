@@ -24,12 +24,16 @@ function validateConfirmation(
     !value ||
     (value.kind !== "FREE_ORDER_ACCEPTED" &&
       value.kind !== "PAYMENT_VERIFIED") ||
-    !value.reference.trim() ||
+    typeof value.reference !== "string" ||
+    value.reference.trim().length === 0 ||
     !(value.verifiedAt instanceof Date) ||
     !Number.isFinite(value.verifiedAt.getTime()) ||
-    !value.quote.quoteReference.trim() ||
+    !value.quote ||
+    typeof value.quote.quoteReference !== "string" ||
+    value.quote.quoteReference.trim().length === 0 ||
     !Number.isSafeInteger(value.quote.amountMinor) ||
     value.quote.amountMinor < 0 ||
+    typeof value.quote.currency !== "string" ||
     !/^[A-Z]{3}$/.test(value.quote.currency)
   ) {
     fail(
