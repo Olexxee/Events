@@ -21,3 +21,5 @@ export const getVybeTimeSlotResourceAvailability =
   getTimeSlotResourceAvailability;
 export const createVybeTimeSlotResourceHold = createTimeSlotResourceHold;
 export const releaseVybeTimeSlotHold = releaseTimeSlotHold;
+
+export { assertOfferingAvailabilityAccess as assertVybeOfferingAvailabilityAccess } from "./vybe-time-slots.db.js";
