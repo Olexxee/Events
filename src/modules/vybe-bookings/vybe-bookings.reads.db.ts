@@ -74,6 +74,7 @@ function customerBookingDto(record: NonNullable<BookingReadRecord>) {
       cancellationPolicy: Object.keys(acceptedPolicy).length
         ? {
             policyVersion: acceptedPolicy.policyVersion ?? null,
+            acceptedAt: acceptedPolicy.acceptedAt ?? null,
             customerCancellation: {
               allowed: cancellation.allowed ?? null,
               cutoffAt: cancellation.cutoffAt ?? null,

@@ -66,13 +66,20 @@ function validateConfirmation(
   };
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 function assertTermsSnapshot(value: Prisma.InputJsonObject): void {
+  const terms = asObject(value);
   if (
     !value ||
     typeof value !== "object" ||
     Array.isArray(value) ||
-    typeof value.version !== "string" ||
-    value.version.trim().length === 0
+    typeof terms.version !== "string" ||
+    terms.version.trim().length === 0
   ) {
     fail(
       "VYBE_BOOKING_TERMS_REQUIRED",
@@ -80,6 +87,104 @@ function assertTermsSnapshot(value: Prisma.InputJsonObject): void {
       422
     );
   }
+  if ("cancellationPolicy" in terms) {
+    fail(
+      "VYBE_BOOKING_POLICY_CLIENT_SUPPLIED",
+      "Cancellation policy must be derived from the immutable published offering version",
+      422
+    );
+  }
+}
+
+function buildAcceptedTermsSnapshot(
+  input: Prisma.InputJsonObject,
+  offeringSnapshot: Prisma.InputJsonObject,
+  serviceStartsAt: Date | null,
+  serviceTimezone: string | null,
+  acceptedAt: string
+): Prisma.InputJsonObject {
+  assertTermsSnapshot(input);
+  const content = asObject(asObject(offeringSnapshot).content);
+  const policy = asObject(content.cancellationPolicy);
+  const customerCancellation = asObject(policy.customerCancellation);
+  const policyVersion = policy.policyVersion;
+  const allowed = customerCancellation.allowed;
+  const cutoffMinutes = customerCancellation.cutoffMinutesBeforeService;
+  const timezone = customerCancellation.timezone;
+  const displayText = customerCancellation.displayText;
+
+  if (
+    typeof policyVersion !== "string" ||
+    policyVersion.trim().length === 0 ||
+    typeof allowed !== "boolean" ||
+    (cutoffMinutes !== null &&
+      (!Number.isSafeInteger(cutoffMinutes) ||
+        (cutoffMinutes as number) < 0 ||
+        (cutoffMinutes as number) > 525600)) ||
+    typeof timezone !== "string" ||
+    typeof displayText !== "string" ||
+    displayText.trim().length < 20 ||
+    !Number.isFinite(Date.parse(acceptedAt))
+  ) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_POLICY_REQUIRED",
+      "A valid structured cancellation policy is required on the published offering version",
+      422
+    );
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  } catch {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_POLICY_INVALID",
+      "The cancellation policy timezone must be a valid IANA timezone",
+      422
+    );
+  }
+
+  if (!allowed && cutoffMinutes !== null) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_POLICY_INVALID",
+      "A disallowed cancellation policy cannot have a cutoff",
+      422
+    );
+  }
+  if (serviceTimezone && serviceTimezone !== timezone) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_TIMEZONE_MISMATCH",
+      "The cancellation policy timezone must match the booked service timezone",
+      422
+    );
+  }
+  if (cutoffMinutes !== null && !serviceStartsAt) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_CUTOFF_UNRESOLVED",
+      "A relative cancellation cutoff requires a scheduled service start",
+      422
+    );
+  }
+
+  const cutoffAt =
+    cutoffMinutes === null
+      ? null
+      : new Date(
+          serviceStartsAt!.getTime() - (cutoffMinutes as number) * 60_000
+        ).toISOString();
+
+  return {
+    ...input,
+    cancellationPolicy: {
+      policyVersion,
+      customerCancellation: {
+        allowed,
+        cutoffAt,
+        timezone,
+        displayText
+      },
+      acceptedAt
+    }
+  };
 }
 
 function assertReplayMatches(
@@ -88,6 +193,9 @@ function assertReplayMatches(
     sourceType: VybeBookingSourceType;
     externalOrderItemReference: string | null;
     acceptedTermsSnapshot: Prisma.JsonValue;
+    offeringSnapshot: Prisma.JsonValue;
+    serviceStartsAt: Date | null;
+    timezone: string | null;
     priceQuoteSnapshot: Prisma.JsonValue;
   },
   input: ConfirmVybeBookingInput,
@@ -107,15 +215,32 @@ function assertReplayMatches(
     stored.schemaVersion === incoming.schemaVersion &&
     storedConfirmation?.kind === incomingConfirmation?.kind &&
     storedConfirmation?.reference === incomingConfirmation?.reference;
+
+  const storedTerms = asObject(booking.acceptedTermsSnapshot);
+  const storedPolicy = asObject(storedTerms.cancellationPolicy);
+  let expectedTerms: Prisma.InputJsonObject = input.acceptedTermsSnapshot;
+  if (Object.keys(storedPolicy).length > 0) {
+    try {
+      expectedTerms = buildAcceptedTermsSnapshot(
+        input.acceptedTermsSnapshot,
+        booking.offeringSnapshot as Prisma.InputJsonObject,
+        booking.serviceStartsAt,
+        booking.timezone,
+        typeof storedPolicy.acceptedAt === "string"
+          ? storedPolicy.acceptedAt
+          : ""
+      );
+    } catch {
+      expectedTerms = {};
+    }
+  }
+
   if (
     booking.customerUserId !== input.customerUserId ||
     booking.sourceType !== input.sourceType ||
     booking.externalOrderItemReference !==
       (input.externalOrderItemReference ?? null) ||
-    !isDeepStrictEqual(
-      booking.acceptedTermsSnapshot,
-      input.acceptedTermsSnapshot
-    ) ||
+    !isDeepStrictEqual(booking.acceptedTermsSnapshot, expectedTerms) ||
     !sameCommercialEvidence
   ) {
     fail(
@@ -251,24 +376,56 @@ export async function confirmVybeBookingFromHold(
   }
 
   const prisma = getPrismaClient();
-  const initial =
-    input.sourceType === "QUANTITY_POOL"
-      ? await prisma.vybeInventoryHold.findUnique({
-          where: { id: input.sourceHoldId },
-          include: { pool: { select: { offeringId: true } } }
-        })
-      : await prisma.vybeTimeSlotHold.findUnique({
-          where: { id: input.sourceHoldId },
-          include: { occurrence: { select: { offeringId: true } } }
-        });
-  if (!initial)
-    fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
-  if (initial.userId !== input.customerUserId) {
-    fail(
-      "VYBE_BOOKING_HOLD_FORBIDDEN",
-      "Only the hold owner may confirm this booking",
-      403
-    );
+  let initialStatus: string;
+  let initialOfferingId: string;
+  let initialOfferingVersion: number;
+  let initialServiceStartsAt: Date | null = null;
+  let initialServiceTimezone: string | null = null;
+
+  if (input.sourceType === "QUANTITY_POOL") {
+    const initial = await prisma.vybeInventoryHold.findUnique({
+      where: { id: input.sourceHoldId },
+      include: { pool: { select: { offeringId: true } } }
+    });
+    if (!initial)
+      fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
+    if (initial.userId !== input.customerUserId) {
+      fail(
+        "VYBE_BOOKING_HOLD_FORBIDDEN",
+        "Only the hold owner may confirm this booking",
+        403
+      );
+    }
+    initialStatus = initial.status;
+    initialOfferingId = initial.pool.offeringId;
+    initialOfferingVersion = initial.offeringVersion;
+  } else {
+    const initial = await prisma.vybeTimeSlotHold.findUnique({
+      where: { id: input.sourceHoldId },
+      include: {
+        occurrence: {
+          select: {
+            offeringId: true,
+            offeringVersion: true,
+            timezone: true
+          }
+        }
+      }
+    });
+    if (!initial)
+      fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
+    if (initial.userId !== input.customerUserId) {
+      fail(
+        "VYBE_BOOKING_HOLD_FORBIDDEN",
+        "Only the hold owner may confirm this booking",
+        403
+      );
+    }
+    initialStatus = initial.status;
+    initialOfferingId = initial.occurrence.offeringId;
+    initialOfferingVersion = initial.occurrence.offeringVersion;
+    initialServiceStartsAt = initial.serviceStartsAt;
+    initialServiceTimezone = initial.occurrence.timezone;
   }
 
   const existingBooking =
@@ -286,12 +443,43 @@ export async function confirmVybeBookingFromHold(
     assertReplayMatches(existingBooking, input, verified);
     return existingBooking;
   }
-  if (initial.status !== "ACTIVE") {
+  if (initialStatus !== "ACTIVE") {
     fail(
       "VYBE_BOOKING_HOLD_NOT_ACTIVE",
       "Only an active, unexpired hold can become a booking"
     );
   }
+
+  const preflightVersion = await prisma.vybeOfferingVersion.findUnique({
+    where: {
+      offeringId_version: {
+        offeringId: initialOfferingId,
+        version: initialOfferingVersion
+      }
+    },
+    select: { content: true, version: true }
+  });
+  if (!preflightVersion) {
+    fail(
+      "VYBE_BOOKING_OFFERING_VERSION_MISSING",
+      "The offering version associated with this hold is unavailable",
+      409
+    );
+  }
+  const preflightOfferingSnapshot = {
+    schemaVersion: 1,
+    offeringId: initialOfferingId,
+    offeringVersion: preflightVersion.version,
+    content: preflightVersion.content
+  } as Prisma.InputJsonObject;
+  const acceptedAt = new Date().toISOString();
+  buildAcceptedTermsSnapshot(
+    input.acceptedTermsSnapshot,
+    preflightOfferingSnapshot,
+    initialServiceStartsAt,
+    initialServiceTimezone,
+    acceptedAt
+  );
 
   const verifiedConfirmation = await verifier.verify(input);
   const priceQuoteSnapshot = validateConfirmation(verifiedConfirmation);
@@ -384,6 +572,13 @@ export async function confirmVybeBookingFromHold(
         offering.id,
         hold.offeringVersion
       );
+      const bookingTermsSnapshot = buildAcceptedTermsSnapshot(
+        input.acceptedTermsSnapshot,
+        offeringSnapshot,
+        null,
+        null,
+        acceptedAt
+      );
       await tx.vybeInventoryHold.update({
         where: { id: hold.id },
         data: { status: "CONVERTED" }
@@ -412,7 +607,7 @@ export async function confirmVybeBookingFromHold(
           resourceId: null,
           offeringSnapshot,
           priceQuoteSnapshot,
-          acceptedTermsSnapshot: input.acceptedTermsSnapshot,
+          acceptedTermsSnapshot: bookingTermsSnapshot,
           externalOrderItemReference: input.externalOrderItemReference ?? null
         }
       });
@@ -561,6 +756,13 @@ export async function confirmVybeBookingFromHold(
         offering.id,
         hold.occurrence.offeringVersion
       );
+      const bookingTermsSnapshot = buildAcceptedTermsSnapshot(
+        input.acceptedTermsSnapshot,
+        offeringSnapshot,
+        hold.serviceStartsAt,
+        hold.occurrence.timezone,
+        acceptedAt
+      );
       await tx.vybeTimeSlotHold.update({
         where: { id: hold.id },
         data: { status: "CONVERTED" }
@@ -589,7 +791,7 @@ export async function confirmVybeBookingFromHold(
           resourceId: null,
           offeringSnapshot,
           priceQuoteSnapshot,
-          acceptedTermsSnapshot: input.acceptedTermsSnapshot,
+          acceptedTermsSnapshot: bookingTermsSnapshot,
           externalOrderItemReference: input.externalOrderItemReference ?? null
         }
       });
@@ -647,6 +849,13 @@ export async function confirmVybeBookingFromHold(
       offering.id,
       hold.occurrence.offeringVersion
     );
+    const bookingTermsSnapshot = buildAcceptedTermsSnapshot(
+      input.acceptedTermsSnapshot,
+      offeringSnapshot,
+      hold.serviceStartsAt,
+      hold.occurrence.timezone,
+      acceptedAt
+    );
     let occupancy = await tx.vybeTimeSlotResourceOccupancy.findUnique({
       where: { sourceHoldId: hold.id }
     });
@@ -692,7 +901,7 @@ export async function confirmVybeBookingFromHold(
         resourceId: hold.resourceId,
         offeringSnapshot,
         priceQuoteSnapshot,
-        acceptedTermsSnapshot: input.acceptedTermsSnapshot,
+        acceptedTermsSnapshot: bookingTermsSnapshot,
         externalOrderItemReference: input.externalOrderItemReference ?? null
       }
     });

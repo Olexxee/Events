@@ -44,18 +44,40 @@ List filters should be deliberately narrow for MVP: status and a bounded cursor/
 
 ## 4. Cancellation policy snapshot
 
-The cancellation policy must be a structured object inside `acceptedTermsSnapshot`, captured and accepted before booking confirmation. It must not be reconstructed at cancellation time from the current offering version.
+The cancellation policy is configured on the immutable published offering version and copied into `acceptedTermsSnapshot.cancellationPolicy` when a booking is confirmed. The customer may accept the offering's terms, but must never supply or override the machine-readable policy. The booking service rejects a caller-supplied `cancellationPolicy` and derives the snapshot from the exact offering version referenced by the source hold.
 
-Proposed minimum shape (schema versioned independently):
+The provider-facing offering content configuration is:
 
-- `policyVersion`: non-empty immutable policy identifier.
+```json
+{
+  "cancellationPolicy": {
+    "policyVersion": "provider-policy-v1",
+    "customerCancellation": {
+      "allowed": true,
+      "cutoffMinutesBeforeService": 60,
+      "timezone": "Africa/Lagos",
+      "displayText": "Customers may cancel up to 60 minutes before service."
+    }
+  }
+}
+```
+
+- `policyVersion`: non-empty immutable policy identifier within the published offering version.
 - `customerCancellation.allowed`: boolean.
-- `customerCancellation.cutoffAt`: absolute ISO-8601 instant with offset, or null when the policy has no time cutoff.
-- `customerCancellation.timezone`: valid IANA timezone used to display the cutoff.
-- `customerCancellation.displayText`: customer-facing text that describes the accepted rule.
-- `acceptedAt`: server-recorded acceptance instant.
+- `customerCancellation.cutoffMinutesBeforeService`: integer from 0 to 525600, or null for no time cutoff. A relative cutoff requires a scheduled service start. Unscheduled quantity-pool bookings must use null.
+- `customerCancellation.timezone`: valid IANA timezone. For scheduled time-slot bookings it must match the occurrence timezone; for unscheduled bookings it is the provider-configured display timezone.
+- `customerCancellation.displayText`: customer-facing explanation of the accepted rule.
 
-The backend validates the structure and validates that a non-null cutoff is a valid instant. The UI's displayed local time is presentation only; the server compares database time against the absolute cutoff instant. Do not trust a client-supplied cutoff or policy.
+The stored booking snapshot is resolved to an absolute policy:
+
+- `policyVersion`: copied from the immutable offering version.
+- `customerCancellation.allowed`: copied from the immutable offering version.
+- `customerCancellation.cutoffAt`: server-computed ISO-8601 UTC instant, equal to the booked service start minus the configured number of minutes; null when no cutoff is configured.
+- `customerCancellation.timezone`: copied from the immutable offering version and checked against the scheduled occurrence timezone.
+- `customerCancellation.displayText`: copied from the immutable offering version.
+- `acceptedAt`: server-generated timestamp recorded when booking confirmation creates the accepted policy snapshot.
+
+The policy configuration is optional on legacy catalogue versions so existing catalogue records remain readable, but booking confirmation fails closed if the hold's immutable offering version lacks a valid structured policy. A provider must publish a new version with a policy before that offering can create new bookings. The backend compares database time against the stored absolute cutoff instant; UI-local time is presentation only.
 
 For legacy bookings whose accepted-terms snapshot lacks this structured policy, self-service cancellation must fail closed with a clear unsupported-policy response. Do not backfill from mutable current offering terms. Such cases require a future explicit support/operations path.
 

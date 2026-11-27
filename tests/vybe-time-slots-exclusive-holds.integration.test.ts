@@ -106,6 +106,17 @@ describe.skipIf(!enabled)(
               content: {
                 title: "Exclusive resource test offering",
                 location: { city: "Lagos", state: "Lagos", country: "Nigeria" },
+                cancellationPolicy: {
+                  policyVersion: "provider-cancellation-v1",
+                  customerCancellation: {
+                    allowed: true,
+                    cutoffMinutesBeforeService: 60,
+                    timezone: "Africa/Lagos",
+                    displayText:
+                      "Customers may cancel up to 60 minutes before service."
+                  }
+                },
+
                 attributes: { category: "DINING" }
               },
               createdByUserId: user.id,
@@ -431,6 +442,17 @@ describe.skipIf(!enabled)(
         timeSlotHoldId: hold.id,
         resourceId: hold.resourceId,
         status: "CONFIRMED"
+      });
+      expect(results[0].acceptedTermsSnapshot).toMatchObject({
+        cancellationPolicy: {
+          policyVersion: "provider-cancellation-v1",
+          customerCancellation: {
+            allowed: true,
+            cutoffAt: "2027-06-15T16:00:00.000Z",
+            timezone: "Africa/Lagos"
+          },
+          acceptedAt: expect.any(String)
+        }
       });
       expect(
         await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({

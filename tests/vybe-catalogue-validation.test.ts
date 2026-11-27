@@ -73,6 +73,75 @@ describe("Vybe catalogue validation", () => {
     expect(result.success).toBe(false);
   });
 
+  it("validates structured cancellation policy configuration", () => {
+    const valid = createVybeOfferingSchema.safeParse({
+      params: {},
+      query: {},
+      body: {
+        organizationId: "7a7dbf1e-1b23-4f45-9f30-cc68a0d6f23b",
+        category: "ACCOMMODATION",
+        content: {
+          ...offeringContent,
+          cancellationPolicy: {
+            policyVersion: "provider-policy-v1",
+            customerCancellation: {
+              allowed: true,
+              cutoffMinutesBeforeService: 60,
+              timezone: "Africa/Lagos",
+              displayText:
+                "Customers may cancel up to 60 minutes before service."
+            }
+          }
+        }
+      }
+    });
+    expect(valid.success).toBe(true);
+
+    const invalidTimezone = createVybeOfferingSchema.safeParse({
+      params: {},
+      query: {},
+      body: {
+        organizationId: "7a7dbf1e-1b23-4f45-9f30-cc68a0d6f23b",
+        category: "ACCOMMODATION",
+        content: {
+          ...offeringContent,
+          cancellationPolicy: {
+            policyVersion: "provider-policy-v1",
+            customerCancellation: {
+              allowed: true,
+              cutoffMinutesBeforeService: null,
+              timezone: "Not/A_Timezone",
+              displayText: "Customers may cancel this booking at any time."
+            }
+          }
+        }
+      }
+    });
+    expect(invalidTimezone.success).toBe(false);
+
+    const invalidDisallowedCutoff = createVybeOfferingSchema.safeParse({
+      params: {},
+      query: {},
+      body: {
+        organizationId: "7a7dbf1e-1b23-4f45-9f30-cc68a0d6f23b",
+        category: "ACCOMMODATION",
+        content: {
+          ...offeringContent,
+          cancellationPolicy: {
+            policyVersion: "provider-policy-v1",
+            customerCancellation: {
+              allowed: false,
+              cutoffMinutesBeforeService: 60,
+              timezone: "Africa/Lagos",
+              displayText: "Customers cannot cancel this booking."
+            }
+          }
+        }
+      }
+    });
+    expect(invalidDisallowedCutoff.success).toBe(false);
+  });
+
   it("accepts public catalogue queries and publish requests without bodies", () => {
     expect(
       listVybeCatalogueSchema.safeParse({
