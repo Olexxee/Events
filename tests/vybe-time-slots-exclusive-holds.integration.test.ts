@@ -392,8 +392,9 @@ describe.skipIf(!enabled)(
           where: { resourceId: hold.id, action: "vybe.time_slot_hold.released" }
         })
       ).toBe(1);
+    });
 
-      it("keeps an exclusive resource occupied across hold-to-booking conversion", async () => {
+    it("keeps an exclusive resource occupied across hold-to-booking conversion", async () => {
         const fixture = await createExclusiveFixture();
         const occurrence = await fixture.createOccurrence();
         const hold = await createTimeSlotResourceHold({
@@ -581,6 +582,5 @@ describe.skipIf(!enabled)(
           })
         ).toMatchObject({ status: "EXPIRED" });
       });
-    });
   }
 );
