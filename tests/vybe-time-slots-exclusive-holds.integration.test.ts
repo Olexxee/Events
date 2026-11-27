@@ -10,6 +10,7 @@ import {
   createTimeSlotResource,
   createTimeSlotResourceGroup,
   createTimeSlotResourceHold,
+  getTimeSlotResourceAvailability,
   releaseTimeSlotHold
 } from "../src/modules/vybe-time-slots/vybe-time-slots.db.js";
 import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.db.js";
@@ -440,6 +441,12 @@ describe.skipIf(!enabled)(
           where: { id: hold.id }
         })
       ).toMatchObject({ status: "CONVERTED" });
+      expect(
+        await getTimeSlotResourceAvailability(occurrence.id)
+      ).toMatchObject({
+        eligibleResourceCount: 1,
+        availableResourceCount: 0
+      });
 
       const overlappingOccurrence = await fixture.createOccurrence({
         startsAt: "2027-06-15T18:30:00+01:00",
