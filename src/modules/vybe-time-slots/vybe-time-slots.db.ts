@@ -1068,6 +1068,51 @@ function isExclusiveOverlapConflict(error: unknown): boolean {
   );
 }
 
+async function findOccupiedResourceIds(
+  tx: Prisma.TransactionClient,
+  resourceIds: string[],
+  blockedStartsAt: Date,
+  blockedEndsAt: Date,
+  now: Date
+): Promise<Set<string>> {
+  if (!resourceIds.length) return new Set();
+  const ids = Prisma.join(resourceIds.map((id) => Prisma.sql`${id}::uuid`));
+  const rows = await tx.$queryRaw<Array<{ resource_id: string }>>(Prisma.sql`
+    SELECT occupancy.resource_id
+      FROM vybe_time_slot_resource_occupancies occupancy
+     WHERE occupancy.resource_id IN (${ids})
+       AND occupancy.blocked_starts_at < ${blockedEndsAt}
+       AND occupancy.blocked_ends_at > ${blockedStartsAt}
+       AND (
+         occupancy.status = 'COMMITTED'
+         OR (
+           occupancy.status = 'HELD'
+           AND EXISTS (
+             SELECT 1
+               FROM vybe_time_slot_holds source_hold
+              WHERE source_hold.id = occupancy.source_hold_id
+                AND source_hold.status = 'ACTIVE'
+                AND source_hold.expires_at > ${now}
+           )
+         )
+       )
+    UNION
+    SELECT source_hold.resource_id
+      FROM vybe_time_slot_holds source_hold
+     WHERE source_hold.resource_id IN (${ids})
+       AND source_hold.status = 'ACTIVE'
+       AND source_hold.expires_at > ${now}
+       AND source_hold.blocked_starts_at < ${blockedEndsAt}
+       AND source_hold.blocked_ends_at > ${blockedStartsAt}
+       AND NOT EXISTS (
+         SELECT 1
+           FROM vybe_time_slot_resource_occupancies occupancy
+          WHERE occupancy.source_hold_id = source_hold.id
+       )
+  `);
+  return new Set(rows.map((row) => row.resource_id));
+}
+
 async function expireResourceHolds(
   tx: Prisma.TransactionClient,
   resourceIds: string[],
@@ -1176,24 +1221,18 @@ export async function getTimeSlotResourceAvailability(occurrenceId: string) {
       select: { resourceId: true }
     });
     const resourceIds = members.map((member) => member.resourceId);
-    const held = resourceIds.length
-      ? await tx.vybeTimeSlotHold.findMany({
-          where: {
-            resourceId: { in: resourceIds },
-            status: "ACTIVE",
-            expiresAt: { gt: now },
-            blockedStartsAt: { lt: occurrence.blockedEndsAt },
-            blockedEndsAt: { gt: occurrence.blockedStartsAt }
-          },
-          select: { resourceId: true },
-          distinct: ["resourceId"]
-        })
-      : [];
+    const occupied = await findOccupiedResourceIds(
+      tx,
+      resourceIds,
+      occurrence.blockedStartsAt,
+      occurrence.blockedEndsAt,
+      now
+    );
     return {
       occurrenceId,
       inventoryMode: "EXCLUSIVE" as const,
       eligibleResourceCount: resourceIds.length,
-      availableResourceCount: Math.max(0, resourceIds.length - held.length),
+      availableResourceCount: Math.max(0, resourceIds.length - occupied.size),
       asOf: now.toISOString()
     };
   });
@@ -1338,18 +1377,13 @@ export async function createTimeSlotResourceHold(input: {
           .filter((item) => item.is_active)
           .map((item) => item.id);
         await expireResourceHolds(tx, lockedIds, now);
-        const conflicts = await tx.vybeTimeSlotHold.findMany({
-          where: {
-            resourceId: { in: lockedIds },
-            status: "ACTIVE",
-            expiresAt: { gt: now },
-            blockedStartsAt: { lt: occurrence.blockedEndsAt },
-            blockedEndsAt: { gt: occurrence.blockedStartsAt }
-          },
-          select: { resourceId: true },
-          distinct: ["resourceId"]
-        });
-        const busy = new Set(conflicts.map((item) => item.resourceId));
+        const busy = await findOccupiedResourceIds(
+          tx,
+          lockedIds,
+          occurrence.blockedStartsAt,
+          occurrence.blockedEndsAt,
+          now
+        );
         const resourceId = lockedIds.find((id) => !busy.has(id));
         if (!resourceId)
           fail(
