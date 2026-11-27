@@ -245,6 +245,7 @@ enum VybeInventoryHoldStatus {
   ACTIVE
   RELEASED
   EXPIRED
+  CONVERTED
 
   @@map("vybe_inventory_hold_status")
 }
@@ -267,8 +268,35 @@ enum VybeTimeSlotHoldStatus {
   ACTIVE
   RELEASED
   EXPIRED
+  CONVERTED
 
   @@map("vybe_time_slot_hold_status")
+}
+
+enum VybeTimeSlotResourceOccupancyStatus {
+  HELD
+  COMMITTED
+  RELEASED
+  EXPIRED
+
+  @@map("vybe_time_slot_resource_occupancy_status")
+}
+
+enum VybeBookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+
+  @@map("vybe_booking_status")
+}
+
+enum VybeBookingSourceType {
+  QUANTITY_POOL
+  CAPACITY_SESSION
+  EXCLUSIVE_RESOURCE
+
+  @@map("vybe_booking_source_type")
 }
 
 enum VybeAccommodationPropertyStatus {
@@ -367,6 +395,8 @@ model User {
   ticketHolds TicketHold[]
   vybeInventoryHolds VybeInventoryHold[]
   vybeTimeSlotHolds VybeTimeSlotHold[]
+  vybeBookingsAsCustomer VybeBooking[] @relation("VybeBookingCustomer")
+  vybeBookingStatusChanges VybeBookingStatusHistory[] @relation("VybeBookingStatusActor")
   vybeInventoryAllocations VybeInventoryAllocation[]
   vybeAccommodationAllocationsCreated VybeAccommodationAllocation[] @relation("VybeAccommodationAllocationCreator")
   vybeAccommodationAdjustments VybeAccommodationAllocationAdjustment[]
@@ -450,6 +480,7 @@ model Organization {
   eventAccessGrants EventAccessGrant[]
   vybeProviderProfile VybeProviderProfile?
   vybeProviderApplications VybeProviderApplication[]
+  vybeBookings VybeBooking[]
 
   @@index([status, createdAt])
   @@map("organizations")
@@ -794,6 +825,7 @@ model VybeProviderProfile {
   timeSlotResourceGroups VybeTimeSlotResourceGroup[]
   accommodationProperties VybeAccommodationProperty[]
   accommodationRoomCategories VybeAccommodationRoomCategory[]
+  bookings VybeBooking[]
 
   @@map("vybe_provider_profiles")
 }
@@ -919,6 +951,7 @@ model VybeOffering {
   versions                  VybeOfferingVersion[]
   inventoryPool             VybeInventoryPool?
   timeSlotOccurrences       VybeTimeSlotOccurrence[]
+  bookings                  VybeBooking[]
   timeSlotResourceGroups    VybeTimeSlotResourceGroup[]
   accommodationRoomCategory VybeAccommodationRoomCategory?
 
@@ -945,6 +978,91 @@ model VybeOfferingVersion {
   @@map("vybe_offering_versions")
 }
 
+
+model VybeTimeSlotResourceOccupancy {
+  id              String                              @id @default(uuid()) @db.Uuid
+  resourceId      String                              @map("resource_id") @db.Uuid
+  occurrenceId    String                              @map("occurrence_id") @db.Uuid
+  sourceHoldId    String                              @unique @map("source_hold_id") @db.Uuid
+  bookingId       String?                             @unique @map("booking_id") @db.Uuid
+  status          VybeTimeSlotResourceOccupancyStatus @default(HELD)
+  blockedStartsAt DateTime                            @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt   DateTime                            @map("blocked_ends_at") @db.Timestamptz(6)
+  createdAt       DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  resource        VybeTimeSlotResource                @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  occurrence      VybeTimeSlotOccurrence              @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
+  sourceHold      VybeTimeSlotHold                    @relation(fields: [sourceHoldId], references: [id], onDelete: Restrict)
+  booking         VybeBooking?                        @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+
+  @@index([occurrenceId, status])
+  @@index([resourceId, status, blockedStartsAt])
+  @@map("vybe_time_slot_resource_occupancies")
+}
+
+model VybeBooking {
+  id                         String                @id @default(uuid()) @db.Uuid
+  publicReference            String                @unique @map("public_reference") @db.VarChar(32)
+  customerUserId             String                @map("customer_user_id") @db.Uuid
+  providerProfileId          String                @map("provider_profile_id") @db.Uuid
+  providerOrganizationId     String                @map("provider_organization_id") @db.Uuid
+  offeringId                 String                @map("offering_id") @db.Uuid
+  offeringVersion            Int                   @map("offering_version")
+  sourceType                 VybeBookingSourceType @map("source_type")
+  inventoryHoldId            String?               @unique @map("inventory_hold_id") @db.Uuid
+  timeSlotHoldId             String?               @unique @map("time_slot_hold_id") @db.Uuid
+  status                     VybeBookingStatus     @default(CONFIRMED)
+  serviceStartsAt            DateTime              @map("service_starts_at") @db.Timestamptz(6)
+  serviceEndsAt              DateTime              @map("service_ends_at") @db.Timestamptz(6)
+  blockedStartsAt            DateTime              @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt              DateTime              @map("blocked_ends_at") @db.Timestamptz(6)
+  timezone                   String                @db.VarChar(80)
+  quantity                   Int?
+  resourceId                 String?               @map("resource_id") @db.Uuid
+  offeringSnapshot           Json                  @map("offering_snapshot")
+  priceQuoteSnapshot         Json                  @map("price_quote_snapshot")
+  acceptedTermsSnapshot      Json                  @map("accepted_terms_snapshot")
+  externalOrderItemReference String?               @unique @map("external_order_item_reference") @db.VarChar(180)
+  confirmedAt                DateTime              @default(now()) @map("confirmed_at") @db.Timestamptz(6)
+  cancelledAt                DateTime?             @map("cancelled_at") @db.Timestamptz(6)
+  completedAt                DateTime?             @map("completed_at") @db.Timestamptz(6)
+  noShowAt                   DateTime?             @map("no_show_at") @db.Timestamptz(6)
+  createdAt                  DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customer                   User                  @relation("VybeBookingCustomer", fields: [customerUserId], references: [id], onDelete: Restrict)
+  providerProfile            VybeProviderProfile   @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  providerOrganization       Organization          @relation(fields: [providerOrganizationId], references: [id], onDelete: Restrict)
+  offering                   VybeOffering          @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  resource                   VybeTimeSlotResource? @relation("VybeBookingResource", fields: [resourceId], references: [id], onDelete: Restrict)
+  inventoryHold              VybeInventoryHold?    @relation("VybeBookingInventoryHold", fields: [inventoryHoldId], references: [id], onDelete: Restrict)
+  timeSlotHold               VybeTimeSlotHold?     @relation("VybeBookingTimeSlotHold", fields: [timeSlotHoldId], references: [id], onDelete: Restrict)
+  occupancy                  VybeTimeSlotResourceOccupancy?
+  statusHistory              VybeBookingStatusHistory[]
+
+  @@index([customerUserId, createdAt])
+  @@index([providerProfileId, status, serviceStartsAt])
+  @@index([providerOrganizationId, status, serviceStartsAt])
+  @@index([status, serviceStartsAt])
+  @@map("vybe_bookings")
+}
+
+model VybeBookingStatusHistory {
+  id          String             @id @default(uuid()) @db.Uuid
+  bookingId   String             @map("booking_id") @db.Uuid
+  fromStatus  VybeBookingStatus? @map("from_status")
+  toStatus    VybeBookingStatus  @map("to_status")
+  actorUserId String?            @map("actor_user_id") @db.Uuid
+  actorType   String             @map("actor_type") @db.VarChar(40)
+  reason      String?            @db.VarChar(1000)
+  metadata    Json               @default("{}")
+  occurredAt  DateTime           @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  booking     VybeBooking        @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  actor       User?              @relation("VybeBookingStatusActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@map("vybe_booking_status_history")
+}
 
 model VybeAccommodationProperty {
   id                String                           @id @default(uuid()) @db.Uuid
@@ -1173,6 +1291,7 @@ model VybeInventoryHold {
   updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
   pool           VybeInventoryPool      @relation(fields: [poolId], references: [id], onDelete: Restrict)
   user           User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  booking        VybeBooking?            @relation("VybeBookingInventoryHold")
 
   @@unique([userId, idempotencyKey], map: "vybe_inventory_holds_user_idempotency_key")
   @@index([poolId, status, expiresAt], map: "vybe_inventory_holds_pool_status_expiry_idx")
@@ -1209,6 +1328,7 @@ model VybeTimeSlotOccurrence {
   resourceGroup      VybeTimeSlotResourceGroup?   @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
   capacity           VybeTimeSlotCapacity?
   holds              VybeTimeSlotHold[]
+  occupancies         VybeTimeSlotResourceOccupancy[]
 
   @@index([offeringId, status, serviceStartsAt], map: "vybe_time_slot_occurrences_offering_status_start_idx")
   @@index([resourceGroupId, status, serviceStartsAt], map: "vybe_time_slot_occurrences_group_status_start_idx")
@@ -1258,6 +1378,8 @@ model VybeTimeSlotResource {
   providerProfile   VybeProviderProfile              @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
   groups            VybeTimeSlotResourceGroupMember[]
   holds             VybeTimeSlotHold[]
+  occupancies       VybeTimeSlotResourceOccupancy[]
+  bookings          VybeBooking[] @relation("VybeBookingResource")
 
   @@unique([providerProfileId, providerResourceKey], map: "vybe_time_slot_resources_provider_key")
   @@index([providerProfileId, isActive], map: "vybe_time_slot_resources_provider_active_idx")
@@ -1297,6 +1419,8 @@ model VybeTimeSlotHold {
   occurrence         VybeTimeSlotOccurrence  @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
   user               User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   resource           VybeTimeSlotResource?   @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  booking            VybeBooking?             @relation("VybeBookingTimeSlotHold")
+  occupancy          VybeTimeSlotResourceOccupancy?
 
   @@unique([userId, idempotencyKey], map: "vybe_time_slot_holds_user_idempotency_key")
   @@index([occurrenceId, status, expiresAt], map: "vybe_time_slot_holds_occurrence_status_expiry_idx")
