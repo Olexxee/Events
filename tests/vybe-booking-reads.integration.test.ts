@@ -99,7 +99,19 @@ describe.skipIf(!enabled)(
             currency: "NGN",
             confirmation: { reference: "internal-payment-evidence" }
           },
-          acceptedTermsSnapshot: { version: "terms-v1" }
+          acceptedTermsSnapshot: {
+          version: "terms-v1",
+          cancellationPolicy: {
+            policyVersion: "provider-cancellation-v1",
+            acceptedAt: "2026-11-27T10:00:00.000Z",
+            customerCancellation: {
+              allowed: true,
+              cutoffAt: null,
+              timezone: "Africa/Lagos",
+              displayText: "Customers may cancel this booking at any time."
+            }
+          }
+        }
         }
       });
 
