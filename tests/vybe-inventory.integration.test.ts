@@ -676,7 +676,9 @@ describe.skipIf(!enabled)(
         }
       );
       const otherUser = await prisma.user.create({
-        data: { email: `vybe-other-customer-${crypto.randomUUID()}@events.test` }
+        data: {
+          email: `vybe-other-customer-${crypto.randomUUID()}@events.test`
+        }
       });
 
       const notOwned = cancelMyVybeBooking({
