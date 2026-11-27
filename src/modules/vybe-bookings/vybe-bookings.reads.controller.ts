@@ -14,7 +14,11 @@ function requireAuth(req: Parameters<RequestHandler>[0]) {
   return req.auth;
 }
 
-export const listMyVybeBookingsController: RequestHandler = async (req, res, next) => {
+export const listMyVybeBookingsController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
     const auth = requireAuth(req);
     const query = getValidatedRequest<{
@@ -34,7 +38,11 @@ export const listMyVybeBookingsController: RequestHandler = async (req, res, nex
   }
 };
 
-export const getMyVybeBookingController: RequestHandler = async (req, res, next) => {
+export const getMyVybeBookingController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
     const auth = requireAuth(req);
     const { bookingId } = getValidatedRequest<{
