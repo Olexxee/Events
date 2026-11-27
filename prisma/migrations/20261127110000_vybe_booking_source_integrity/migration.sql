@@ -153,3 +153,134 @@ $$;
 CREATE TRIGGER "vybe_time_slot_hold_terminal_occupancy_sync"
 AFTER UPDATE OF "status" ON "vybe_time_slot_holds"
 FOR EACH ROW EXECUTE FUNCTION vybe_sync_exclusive_occupancy_terminal_hold();
+
+
+-- Once a hold becomes a booking, the concrete supply remains protected until
+-- a later accepted cancellation releases its committed occupancy.
+CREATE OR REPLACE FUNCTION vybe_prevent_time_slot_resource_deactivation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD."is_active" = true AND NEW."is_active" = false AND (
+    EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_holds" hold
+       WHERE hold."resource_id" = OLD."id"
+         AND hold."status" = 'ACTIVE'
+    )
+    OR EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_resource_occupancies" occupancy
+       WHERE occupancy."resource_id" = OLD."id"
+         AND occupancy."status" = 'COMMITTED'
+    )
+  ) THEN
+    RAISE EXCEPTION 'cannot deactivate a resource while active holds or confirmed bookings depend on it'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION vybe_prevent_time_slot_group_deactivation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD."is_active" = true AND NEW."is_active" = false AND (
+    EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_occurrences" occurrence
+        JOIN "vybe_time_slot_holds" hold
+          ON hold."occurrence_id" = occurrence."id"
+       WHERE occurrence."resource_group_id" = OLD."id"
+         AND hold."status" = 'ACTIVE'
+         AND hold."resource_id" IS NOT NULL
+    )
+    OR EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_occurrences" occurrence
+        JOIN "vybe_time_slot_resource_occupancies" occupancy
+          ON occupancy."occurrence_id" = occurrence."id"
+       WHERE occurrence."resource_group_id" = OLD."id"
+         AND occupancy."status" = 'COMMITTED'
+    )
+  ) THEN
+    RAISE EXCEPTION 'cannot deactivate a resource group while active holds or confirmed bookings depend on it'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION vybe_protect_time_slot_active_membership()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_holds" hold
+        JOIN "vybe_time_slot_occurrences" occurrence
+          ON occurrence."id" = hold."occurrence_id"
+       WHERE hold."resource_id" = OLD."resource_id"
+         AND occurrence."resource_group_id" = OLD."resource_group_id"
+         AND hold."status" = 'ACTIVE'
+    ) OR EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_resource_occupancies" occupancy
+        JOIN "vybe_time_slot_occurrences" occurrence
+          ON occurrence."id" = occupancy."occurrence_id"
+       WHERE occupancy."resource_id" = OLD."resource_id"
+         AND occurrence."resource_group_id" = OLD."resource_group_id"
+         AND occupancy."status" = 'COMMITTED'
+    ) THEN
+      RAISE EXCEPTION 'cannot remove resource membership while active holds or confirmed bookings depend on it'
+        USING ERRCODE = '23514';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id"
+     OR NEW."resource_id" IS DISTINCT FROM OLD."resource_id"
+     OR NEW."valid_from" IS DISTINCT FROM OLD."valid_from"
+     OR NEW."valid_until" IS DISTINCT FROM OLD."valid_until" THEN
+    IF EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_holds" hold
+        JOIN "vybe_time_slot_occurrences" occurrence
+          ON occurrence."id" = hold."occurrence_id"
+       WHERE hold."resource_id" = OLD."resource_id"
+         AND occurrence."resource_group_id" = OLD."resource_group_id"
+         AND hold."status" = 'ACTIVE'
+         AND (
+           NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id"
+           OR NEW."resource_id" IS DISTINCT FROM OLD."resource_id"
+           OR (NEW."valid_from" IS NOT NULL AND NEW."valid_from" > hold."blocked_starts_at")
+           OR (NEW."valid_until" IS NOT NULL AND NEW."valid_until" < hold."blocked_ends_at")
+         )
+    ) OR EXISTS (
+      SELECT 1
+        FROM "vybe_time_slot_resource_occupancies" occupancy
+        JOIN "vybe_time_slot_occurrences" occurrence
+          ON occurrence."id" = occupancy."occurrence_id"
+       WHERE occupancy."resource_id" = OLD."resource_id"
+         AND occurrence."resource_group_id" = OLD."resource_group_id"
+         AND occupancy."status" = 'COMMITTED'
+         AND (
+           NEW."resource_group_id" IS DISTINCT FROM OLD."resource_group_id"
+           OR NEW."resource_id" IS DISTINCT FROM OLD."resource_id"
+           OR (NEW."valid_from" IS NOT NULL AND NEW."valid_from" > occupancy."blocked_starts_at")
+           OR (NEW."valid_until" IS NOT NULL AND NEW."valid_until" < occupancy."blocked_ends_at")
+         )
+    ) THEN
+      RAISE EXCEPTION 'cannot narrow or reassign resource membership while active holds or confirmed bookings depend on it'
+        USING ERRCODE = '23514';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
