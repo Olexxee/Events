@@ -272,8 +272,9 @@ describe.skipIf(!enabled)(
       ).rejects.toMatchObject({
         code: "VYBE_ALLOCATION_BELOW_COMMITMENTS"
       });
+    });
 
-      it("converts a quantity hold exactly once and returns the same booking on concurrent retries", async () => {
+    it("converts a quantity hold exactly once and returns the same booking on concurrent retries", async () => {
         const pool = await createInventoryPool({
           organizationId,
           offeringId,
@@ -517,6 +518,5 @@ describe.skipIf(!enabled)(
           })
         ).toMatchObject({ committedQuantity: 0 });
       });
-    });
   }
 );
