@@ -461,6 +461,17 @@ describe.skipIf(!enabled)(
         })
       ).toMatchObject({ committedQuantity: 0 });
 
+      const outboxBeforeAlreadyCancelled = await prisma.outboxMessage.count({
+        where: {
+          aggregateId: booking.id,
+          eventType: {
+            in: [
+              "vybe.booking.cancellation_decided.v1",
+              "vybe.booking.cancelled.v1"
+            ]
+          }
+        }
+      });
       const secondKey = await cancelMyVybeBooking({
         ...request,
         idempotencyKey: `customer-cancel-again-${crypto.randomUUID()}`
@@ -476,6 +487,19 @@ describe.skipIf(!enabled)(
           where: { bookingId: booking.id, decision: "ACCEPTED" }
         })
       ).toBe(1);
+      expect(
+        await prisma.outboxMessage.count({
+          where: {
+            aggregateId: booking.id,
+            eventType: {
+              in: [
+                "vybe.booking.cancellation_decided.v1",
+                "vybe.booking.cancelled.v1"
+              ]
+            }
+          }
+        })
+      ).toBe(outboxBeforeAlreadyCancelled);
     });
 
     it("fails closed when the immutable offering version has no structured cancellation policy", async () => {
