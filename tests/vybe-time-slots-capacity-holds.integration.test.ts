@@ -95,6 +95,16 @@ describe.skipIf(!enabled)(
               content: {
                 title: "Capacity hold test offering",
                 location: { city: "Lagos", state: "Lagos", country: "Nigeria" },
+                                cancellationPolicy: {
+                  policyVersion: "provider-cancellation-v1",
+                  customerCancellation: {
+                    allowed: true,
+                    cutoffMinutesBeforeService: 60,
+                    timezone: "Africa/Lagos",
+                    displayText: "Customers may cancel up to 60 minutes before service."
+                  }
+                },
+
                 attributes: { category: "DRINKS" }
               },
               createdByUserId: user.id,
