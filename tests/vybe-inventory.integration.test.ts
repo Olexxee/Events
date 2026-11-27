@@ -334,6 +334,17 @@ describe.skipIf(!enabled)(
         offeringVersion: 1,
         status: "CONFIRMED"
       });
+      expect(results[0].acceptedTermsSnapshot).toMatchObject({
+        cancellationPolicy: {
+          policyVersion: "provider-cancellation-v1",
+          customerCancellation: {
+            allowed: true,
+            cutoffAt: null,
+            timezone: "Africa/Lagos"
+          },
+          acceptedAt: expect.any(String)
+        }
+      });
       expect(
         await prisma.vybeInventoryHold.findUniqueOrThrow({
           where: { id: hold.id }
@@ -371,6 +382,128 @@ describe.skipIf(!enabled)(
           verifier
         )
       ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
+    });
+
+    it("fails closed when the immutable offering version has no structured cancellation policy", async () => {
+      const provider = await prisma.vybeOffering.findUniqueOrThrow({
+        where: { id: offeringId },
+        select: { providerProfileId: true }
+      });
+      const legacyOffering = await prisma.vybeOffering.create({
+        data: {
+          providerProfileId: provider.providerProfileId,
+          category: "DRINKS",
+          status: "PUBLISHED",
+          currentPublishedVersion: 1,
+          createdByUserId: ownerId,
+          versions: {
+            create: {
+              version: 1,
+              status: "PUBLISHED",
+              content: {
+                title: "Legacy drinks package",
+                location: {
+                  city: "Lagos",
+                  state: "Lagos",
+                  country: "Nigeria"
+                },
+                attributes: { category: "DRINKS" }
+              },
+              createdByUserId: ownerId,
+              publishedAt: new Date()
+            }
+          }
+        }
+      });
+      const pool = await createInventoryPool({
+        organizationId,
+        offeringId: legacyOffering.id,
+        actorUserId: ownerId,
+        allocatedQuantity: 1,
+        reason: "Legacy policy failure fixture",
+        evidenceReference: "provider-inventory-register:legacy-policy"
+      });
+      const hold = await createInventoryHold({
+        offeringId: legacyOffering.id,
+        userId: ownerId,
+        quantity: 1,
+        idempotencyKey: `legacy-policy-${crypto.randomUUID()}`
+      });
+      let verifierCalled = false;
+      await expect(
+        confirmVybeBookingFromHold(
+          {
+            sourceType: "QUANTITY_POOL",
+            sourceHoldId: hold.id,
+            customerUserId: ownerId,
+            acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+          },
+          {
+            verify: async () => {
+              verifierCalled = true;
+              throw new Error("The verifier must not run without a policy");
+            }
+          }
+        )
+      ).rejects.toMatchObject({
+        code: "VYBE_BOOKING_CANCELLATION_POLICY_REQUIRED"
+      });
+      expect(verifierCalled).toBe(false);
+      expect(
+        await prisma.vybeInventoryHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "ACTIVE" });
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
+    });
+
+    it("rejects a cancellation policy supplied in accepted terms by the caller", async () => {
+      const pool = await createInventoryPool({
+        organizationId,
+        offeringId,
+        actorUserId: ownerId,
+        allocatedQuantity: 1,
+        reason: "Client policy rejection fixture",
+        evidenceReference: "provider-inventory-register:client-policy"
+      });
+      const hold = await createInventoryHold({
+        offeringId,
+        userId: ownerId,
+        quantity: 1,
+        idempotencyKey: `client-policy-${crypto.randomUUID()}`
+      });
+      let verifierCalled = false;
+      await expect(
+        confirmVybeBookingFromHold(
+          {
+            sourceType: "QUANTITY_POOL",
+            sourceHoldId: hold.id,
+            customerUserId: ownerId,
+            acceptedTermsSnapshot: {
+              version: "vybe-terms-v1",
+              cancellationPolicy: { policyVersion: "client-forged" }
+            }
+          },
+          {
+            verify: async () => {
+              verifierCalled = true;
+              throw new Error("The verifier must not run for client policy input");
+            }
+          }
+        )
+      ).rejects.toMatchObject({
+        code: "VYBE_BOOKING_POLICY_CLIENT_SUPPLIED"
+      });
+      expect(verifierCalled).toBe(false);
+      expect(
+        await prisma.vybeInventoryHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "ACTIVE" });
     });
 
     it("rolls back hold conversion and inventory commitment if booking creation fails", async () => {
