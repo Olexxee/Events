@@ -363,6 +363,74 @@ describe.skipIf(!enabled)(
       ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
     });
 
+    it("rolls back hold conversion and inventory commitment if booking creation fails", async () => {
+      const pool = await createInventoryPool({
+        organizationId,
+        offeringId,
+        actorUserId: ownerId,
+        allocatedQuantity: 3,
+        reason: "Booking rollback fixture",
+        evidenceReference: "provider-inventory-register:booking-rollback"
+      });
+      const firstHold = await createInventoryHold({
+        offeringId,
+        userId: ownerId,
+        quantity: 1,
+        idempotencyKey: `booking-rollback-first-${crypto.randomUUID()}`
+      });
+      const secondHold = await createInventoryHold({
+        offeringId,
+        userId: ownerId,
+        quantity: 1,
+        idempotencyKey: `booking-rollback-second-${crypto.randomUUID()}`
+      });
+      const reference = `rollback-order-${crypto.randomUUID()}`;
+      const orderItemReference = `commerce-item-${crypto.randomUUID()}`;
+      const verifier = {
+        verify: async () => ({
+          kind: "FREE_ORDER_ACCEPTED" as const,
+          reference,
+          verifiedAt: new Date(),
+          quote: {
+            quoteReference: `quote-${reference}`,
+            amountMinor: 0,
+            currency: "NGN"
+          }
+        })
+      };
+      const base = {
+        sourceType: "QUANTITY_POOL" as const,
+        customerUserId: ownerId,
+        acceptedTermsSnapshot: { version: "vybe-terms-v1" },
+        externalOrderItemReference: orderItemReference
+      };
+      await confirmVybeBookingFromHold(
+        { ...base, sourceHoldId: firstHold.id },
+        verifier
+      );
+      await expect(
+        confirmVybeBookingFromHold(
+          { ...base, sourceHoldId: secondHold.id },
+          verifier
+        )
+      ).rejects.toThrow();
+      expect(
+        await prisma.vybeInventoryHold.findUniqueOrThrow({
+          where: { id: secondHold.id }
+        })
+      ).toMatchObject({ status: "ACTIVE" });
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 1 });
+      expect(
+        await prisma.vybeBooking.count({
+          where: { inventoryHoldId: secondHold.id }
+        })
+      ).toBe(0);
+    });
+
     it("accepts a paid booking only with positive server-verified confirmation evidence", async () => {
       await createInventoryPool({
         organizationId,
