@@ -583,7 +583,7 @@ describe.skipIf(!enabled)(
       expect(occupancyAfter).toMatchObject({
         id: occupancyBefore.id,
         status: "RELEASED",
-        bookingId: booking.id
+        bookingId: null
       });
       expect(
         await prisma.vybeTimeSlotHold.findUniqueOrThrow({
