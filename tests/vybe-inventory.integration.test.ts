@@ -101,6 +101,16 @@ describe.skipIf(!enabled)(
                   state: "Lagos",
                   country: "Nigeria"
                 },
+                                cancellationPolicy: {
+                  policyVersion: "provider-cancellation-v1",
+                  customerCancellation: {
+                    allowed: true,
+                    cutoffMinutesBeforeService: null,
+                    timezone: "Africa/Lagos",
+                    displayText: "Customers may cancel this booking at any time."
+                  }
+                },
+
                 attributes: { category: "DRINKS" }
               },
               createdByUserId: ownerId,
