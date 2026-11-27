@@ -193,6 +193,7 @@ describe.skipIf(!enabled)("Vybe booking schema PostgreSQL integration", () => {
         userId: customer.id,
         idempotencyKey: `hold-${suffix}`,
         quantity: 1,
+        offeringVersion: 1,
         status: "CONVERTED",
         expiresAt: new Date("2027-04-12T17:55:00.000Z")
       }
@@ -209,11 +210,11 @@ describe.skipIf(!enabled)("Vybe booking schema PostgreSQL integration", () => {
           offeringVersion: 1,
           sourceType: "QUANTITY_POOL",
           inventoryHoldId: hold.id,
-          serviceStartsAt: new Date("2027-04-12T18:00:00.000Z"),
-          serviceEndsAt: new Date("2027-04-12T19:00:00.000Z"),
-          blockedStartsAt: new Date("2027-04-12T18:00:00.000Z"),
-          blockedEndsAt: new Date("2027-04-12T19:00:00.000Z"),
-          timezone: "Africa/Lagos",
+          serviceStartsAt: null,
+          serviceEndsAt: null,
+          blockedStartsAt: null,
+          blockedEndsAt: null,
+          timezone: null,
           quantity: 1,
           offeringSnapshot: { title: "Experience" },
           priceQuoteSnapshot: {
