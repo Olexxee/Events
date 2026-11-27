@@ -621,9 +621,12 @@ export async function cancelMyVybeBooking(input: {
     }
 
     const advisoryKey = `${input.customerUserId}:${idempotencyKey}`;
-    await tx.$queryRaw(
+    await tx.$queryRaw<Array<{ locked: number }>>(
       Prisma.sql`
-        SELECT pg_advisory_xact_lock(hashtextextended(${advisoryKey}, 0))
+        SELECT 1 AS locked
+          FROM (
+            SELECT pg_advisory_xact_lock(hashtextextended(${advisoryKey}, 0))
+          ) AS advisory_lock
       `
     );
 
