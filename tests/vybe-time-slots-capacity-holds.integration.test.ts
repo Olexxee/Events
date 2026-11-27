@@ -335,6 +335,17 @@ describe.skipIf(!enabled)(
         quantity: 2,
         status: "CONFIRMED"
       });
+      expect(results[0].acceptedTermsSnapshot).toMatchObject({
+        cancellationPolicy: {
+          policyVersion: "provider-cancellation-v1",
+          customerCancellation: {
+            allowed: true,
+            cutoffAt: "2027-06-15T16:00:00.000Z",
+            timezone: "Africa/Lagos"
+          },
+          acceptedAt: expect.any(String)
+        }
+      });
       expect(
         await prisma.vybeTimeSlotHold.findUniqueOrThrow({
           where: { id: hold.id }
