@@ -383,6 +383,13 @@ export async function createInventoryHold(input: {
       if (!user || user.status !== "ACTIVE")
         fail("ACCOUNT_INACTIVE", "An active account is required", 403);
       const offering = await assertOfferingCanTrade(tx, input.offeringId);
+      if (!offering.currentPublishedVersion) {
+        fail(
+          "VYBE_OFFERING_VERSION_REQUIRED",
+          "A published offering version is required for a booking hold",
+          409
+        );
+      }
       const pool = await tx.vybeInventoryPool.findUnique({
         where: { offeringId: input.offeringId }
       });
