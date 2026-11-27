@@ -1,5 +1,9 @@
 # Event Platform — Product Blueprint
 
+## Project handoff and session continuity
+
+The maintained [Project Handoff, Session Log and Integration Register](docs/PROJECT_HANDOFF.md) is the canonical place to record where each working session stopped, current implementation status, cross-domain integrations and dependencies, approved decisions, PR/CI evidence, risks and exact next actions. **Every session must append a closeout entry before stopping.** Read it before resuming work. Update it whenever implementation or integration status changes.
+
 > **Status:** Shared foundation, Identity & Access, organizer applications, Event marketplace core, Ticketing catalogue/holds, and Vybe provider, catalogue, quantity-pool inventory, and time-slot provider setup implemented; capacity-session and exclusive-resource time-slot holds implemented; booking lifecycle design approved in [docs/VYBE_BOOKING_DESIGN.md](docs/VYBE_BOOKING_DESIGN.md); staged category activation remains gated by operational readiness  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
