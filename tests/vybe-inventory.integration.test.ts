@@ -781,6 +781,74 @@ describe.skipIf(!enabled)(
           where: { id: pool.id }
         })
       ).toMatchObject({ committedQuantity: 0 });
+
+      await prisma.$transaction(async (tx) => {
+        await tx.vybeInventoryPool.update({
+          where: { id: pool.id },
+          data: { committedQuantity: 1 }
+        });
+        await tx.vybeInventoryHold.update({
+          where: { id: hold.id },
+          data: { status: "CONVERTED" }
+        });
+      });
+      const legacyVersion = await prisma.vybeOfferingVersion.findUniqueOrThrow({
+        where: {
+          offeringId_version: { offeringId: legacyOffering.id, version: 1 }
+        }
+      });
+      const legacyBooking = await prisma.vybeBooking.create({
+        data: {
+          publicReference: `LEGACY-${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`,
+          customerUserId: ownerId,
+          providerProfileId: provider.providerProfileId,
+          providerOrganizationId: organizationId,
+          offeringId: legacyOffering.id,
+          offeringVersion: 1,
+          sourceType: "QUANTITY_POOL",
+          inventoryHoldId: hold.id,
+          quantity: 1,
+          offeringSnapshot: {
+            schemaVersion: 1,
+            offeringId: legacyOffering.id,
+            offeringVersion: 1,
+            content: legacyVersion.content
+          },
+          priceQuoteSnapshot: {
+            schemaVersion: 1,
+            quoteReference: "legacy-policy-quote",
+            amountMinor: 1000,
+            currency: "NGN",
+            breakdown: [],
+            confirmation: {
+              kind: "FREE_ORDER_ACCEPTED",
+              reference: "legacy-policy-confirmation"
+            }
+          },
+          acceptedTermsSnapshot: { version: "legacy-terms-v1" }
+        }
+      });
+      const legacyCancellation = await cancelMyVybeBooking({
+        bookingId: legacyBooking.id,
+        customerUserId: ownerId,
+        idempotencyKey: `legacy-cancel-${crypto.randomUUID()}`,
+        reason: "Customer requested cancellation"
+      });
+      expect(legacyCancellation.cancellation.decision).toBe("REJECTED");
+      expect(legacyCancellation.cancellation.decisionCode).toBe(
+        "VYBE_BOOKING_CANCELLATION_POLICY_UNSUPPORTED"
+      );
+      expect(legacyCancellation.booking.status).toBe("CONFIRMED");
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 1 });
+      expect(
+        await prisma.vybeInventoryHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "CONVERTED" });
     });
 
     it("rejects a cancellation policy supplied in accepted terms by the caller", async () => {
