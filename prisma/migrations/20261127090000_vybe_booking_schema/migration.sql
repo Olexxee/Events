@@ -107,6 +107,7 @@ ALTER TABLE "vybe_bookings"
   ADD CONSTRAINT "vybe_bookings_provider_profile_fkey" FOREIGN KEY ("provider_profile_id") REFERENCES "vybe_provider_profiles"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   ADD CONSTRAINT "vybe_bookings_provider_organization_fkey" FOREIGN KEY ("provider_organization_id") REFERENCES "organizations"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   ADD CONSTRAINT "vybe_bookings_offering_fkey" FOREIGN KEY ("offering_id") REFERENCES "vybe_offerings"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT "vybe_bookings_resource_fkey" FOREIGN KEY ("resource_id") REFERENCES "vybe_time_slot_resources"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   ADD CONSTRAINT "vybe_bookings_inventory_hold_fkey" FOREIGN KEY ("inventory_hold_id") REFERENCES "vybe_inventory_holds"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
   ADD CONSTRAINT "vybe_bookings_time_slot_hold_fkey" FOREIGN KEY ("time_slot_hold_id") REFERENCES "vybe_time_slot_holds"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -170,6 +171,8 @@ DECLARE
   source_mode "vybe_time_slot_inventory_mode";
   source_profile UUID;
   source_org UUID;
+  source_status TEXT;
+  source_quantity INTEGER;
 BEGIN
   SELECT offering."provider_profile_id", profile."organization_id"
     INTO source_profile, source_org
@@ -183,26 +186,31 @@ BEGIN
   END IF;
 
   IF NEW."source_type" = 'QUANTITY_POOL' THEN
-    SELECT hold."user_id", pool."offering_id"
-      INTO source_user, source_offering
+    SELECT hold."user_id", pool."offering_id", hold."status"::text, hold."quantity"
+      INTO source_user, source_offering, source_status, source_quantity
       FROM "vybe_inventory_holds" hold
       JOIN "vybe_inventory_pools" pool ON pool."id" = hold."pool_id"
      WHERE hold."id" = NEW."inventory_hold_id";
   ELSE
-    SELECT hold."user_id", occurrence."offering_id", hold."resource_id", occurrence."inventory_mode"
-      INTO source_user, source_offering, source_resource, source_mode
+    SELECT hold."user_id", occurrence."offering_id", hold."resource_id", occurrence."inventory_mode",
+           hold."status"::text, hold."capacity_quantity"
+      INTO source_user, source_offering, source_resource, source_mode, source_status, source_quantity
       FROM "vybe_time_slot_holds" hold
       JOIN "vybe_time_slot_occurrences" occurrence ON occurrence."id" = hold."occurrence_id"
      WHERE hold."id" = NEW."time_slot_hold_id";
   END IF;
 
   IF source_user IS NULL OR source_user <> NEW."customer_user_id"
-     OR source_offering <> NEW."offering_id" THEN
+     OR source_offering <> NEW."offering_id" OR source_status <> 'CONVERTED' THEN
     RAISE EXCEPTION 'booking source hold owner or offering does not match' USING ERRCODE = '23514';
   END IF;
 
+  IF NEW."source_type" = 'QUANTITY_POOL' AND NEW."quantity" <> source_quantity THEN
+    RAISE EXCEPTION 'quantity-pool booking quantity must equal the converted hold' USING ERRCODE = '23514';
+  END IF;
+
   IF NEW."source_type" = 'CAPACITY_SESSION' AND
-     (source_mode <> 'CAPACITY' OR NEW."quantity" IS NULL) THEN
+     (source_mode <> 'CAPACITY' OR NEW."quantity" IS NULL OR NEW."quantity" <> source_quantity) THEN
     RAISE EXCEPTION 'capacity booking requires a capacity-session hold' USING ERRCODE = '23514';
   END IF;
 
@@ -244,11 +252,23 @@ BEGIN
     RAISE EXCEPTION 'occupancy must exactly represent its exclusive source hold' USING ERRCODE = '23514';
   END IF;
 
+  IF NEW."status" = 'COMMITTED' AND NOT EXISTS (
+    SELECT 1 FROM "vybe_bookings" booking
+     WHERE booking."id" = NEW."booking_id"
+       AND booking."source_type" = 'EXCLUSIVE_RESOURCE'
+       AND booking."time_slot_hold_id" = NEW."source_hold_id"
+       AND booking."resource_id" = NEW."resource_id"
+       AND booking."blocked_starts_at" = NEW."blocked_starts_at"
+       AND booking."blocked_ends_at" = NEW."blocked_ends_at"
+  ) THEN
+    RAISE EXCEPTION 'committed occupancy must reference its matching booking' USING ERRCODE = '23514';
+  END IF;
+
   RETURN NEW;
 END;
 $$;
 CREATE TRIGGER "vybe_resource_occupancy_source_guard"
-BEFORE INSERT OR UPDATE OF "resource_id", "occurrence_id", "source_hold_id", "blocked_starts_at", "blocked_ends_at"
+BEFORE INSERT OR UPDATE OF "resource_id", "occurrence_id", "source_hold_id", "booking_id", "status", "blocked_starts_at", "blocked_ends_at"
 ON "vybe_time_slot_resource_occupancies"
 FOR EACH ROW EXECUTE FUNCTION vybe_validate_resource_occupancy_source();
 
