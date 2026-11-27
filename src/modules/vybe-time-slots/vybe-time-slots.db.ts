@@ -1087,6 +1087,10 @@ async function expireResourceHolds(
     where: { id: { in: expired.map((hold) => hold.id) }, status: "ACTIVE" },
     data: { status: "EXPIRED" }
   });
+  await tx.vybeTimeSlotResourceOccupancy.updateMany({
+    where: { sourceHoldId: { in: expired.map((hold) => hold.id) }, status: "HELD" },
+    data: { status: "EXPIRED" }
+  });
   for (const hold of expired) {
     await recordTimeSlotHoldEvent(tx, {
       actorUserId: null,
@@ -1498,6 +1502,10 @@ export async function releaseTimeSlotResourceHold(input: {
     const updated = await tx.vybeTimeSlotHold.update({
       where: { id: current.id },
       data: { status }
+    });
+    await tx.vybeTimeSlotResourceOccupancy.updateMany({
+      where: { sourceHoldId: updated.id, status: "HELD" },
+      data: { status: status === "EXPIRED" ? "EXPIRED" : "RELEASED" }
     });
     await recordTimeSlotHoldEvent(tx, {
       actorUserId: status === "EXPIRED" ? null : input.userId,
