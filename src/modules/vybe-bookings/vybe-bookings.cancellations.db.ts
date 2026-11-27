@@ -286,7 +286,10 @@ async function lockAndValidateInventory(
   }
 
   if (initial.resourceId === null) {
-    if (initial.capacityQuantity === null || initial.capacityQuantity !== booking.quantity) {
+    if (
+      initial.capacityQuantity === null ||
+      initial.capacityQuantity !== booking.quantity
+    ) {
       fail(
         "VYBE_BOOKING_SOURCE_INVARIANT_BROKEN",
         "The capacity hold quantity no longer matches its booking"
@@ -301,12 +304,28 @@ async function lockAndValidateInventory(
     );
     const current = await tx.vybeTimeSlotHold.findUniqueOrThrow({
       where: { id: initial.id },
-      include: { occurrence: { include: { capacity: true } } }
+      include: {
+        occurrence: {
+          include: { capacity: true },
+          select: {
+            offeringId: true,
+            timezone: true,
+            resourceGroupId: true,
+            capacity: true
+          }
+        }
+      }
     });
     if (
       current.status !== "CONVERTED" ||
       current.capacityQuantity !== booking.quantity ||
       current.resourceId !== null ||
+      current.occurrence.offeringId !== booking.offeringId ||
+      current.occurrence.timezone !== booking.timezone ||
+      current.serviceStartsAt.getTime() !== booking.serviceStartsAt?.getTime() ||
+      current.serviceEndsAt.getTime() !== booking.serviceEndsAt?.getTime() ||
+      current.blockedStartsAt.getTime() !== booking.blockedStartsAt?.getTime() ||
+      current.blockedEndsAt.getTime() !== booking.blockedEndsAt?.getTime() ||
       !current.occurrence.capacity
     ) {
       fail(
@@ -322,20 +341,36 @@ async function lockAndValidateInventory(
     };
   }
 
-  if (booking.resourceId !== initial.resourceId || initial.capacityQuantity !== null) {
+  if (
+    booking.resourceId !== initial.resourceId ||
+    initial.capacityQuantity !== null ||
+    !booking.blockedStartsAt ||
+    !booking.blockedEndsAt
+  ) {
     fail(
       "VYBE_BOOKING_SOURCE_INVARIANT_BROKEN",
       "The exclusive-resource hold no longer matches its booking"
     );
   }
 
-  if (initial.occurrence.resourceGroupId) {
-    await tx.$queryRaw(
-      Prisma.sql`
-        SELECT "id" FROM "vybe_time_slot_resource_groups"
-         WHERE "id" = ${initial.occurrence.resourceGroupId}::uuid
-         FOR UPDATE
-      `
+  const resourceGroupId = initial.occurrence.resourceGroupId;
+  if (!resourceGroupId) {
+    fail(
+      "VYBE_BOOKING_SOURCE_INVARIANT_BROKEN",
+      "The exclusive-resource occurrence has no resource group"
+    );
+  }
+  const groupLock = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`
+      SELECT "id" FROM "vybe_time_slot_resource_groups"
+       WHERE "id" = ${resourceGroupId}::uuid
+       FOR UPDATE
+    `
+  );
+  if (groupLock.length === 0) {
+    fail(
+      "VYBE_BOOKING_INVENTORY_UNAVAILABLE",
+      "The booked resource group is unavailable"
     );
   }
   const resourceLock = await tx.$queryRaw<Array<{ id: string }>>(
@@ -351,6 +386,23 @@ async function lockAndValidateInventory(
       "The booked exclusive resource is unavailable"
     );
   }
+  const membershipLock = await tx.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`
+      SELECT "id"
+        FROM "vybe_time_slot_resource_group_members"
+       WHERE "resource_group_id" = ${resourceGroupId}::uuid
+         AND "resource_id" = ${initial.resourceId}::uuid
+         AND ("valid_from" IS NULL OR "valid_from" <= ${booking.blockedStartsAt}::timestamptz)
+         AND ("valid_until" IS NULL OR "valid_until" >= ${booking.blockedEndsAt}::timestamptz)
+       FOR UPDATE
+    `
+  );
+  if (membershipLock.length === 0) {
+    fail(
+      "VYBE_BOOKING_SOURCE_INVARIANT_BROKEN",
+      "The booked resource is no longer covered by its resource-group membership"
+    );
+  }
   await tx.$queryRaw(
     Prisma.sql`
       SELECT "id" FROM "vybe_time_slot_holds"
@@ -359,18 +411,41 @@ async function lockAndValidateInventory(
     `
   );
   const current = await tx.vybeTimeSlotHold.findUniqueOrThrow({
-    where: { id: initial.id }
+    where: { id: initial.id },
+    include: {
+      occurrence: {
+        select: {
+          offeringId: true,
+          timezone: true,
+          resourceGroupId: true
+        }
+      }
+    }
   });
   if (
     current.status !== "CONVERTED" ||
     current.resourceId !== booking.resourceId ||
-    current.capacityQuantity !== null
+    current.capacityQuantity !== null ||
+    current.occurrence.offeringId !== booking.offeringId ||
+    current.occurrence.timezone !== booking.timezone ||
+    current.occurrence.resourceGroupId !== resourceGroupId ||
+    current.serviceStartsAt.getTime() !== booking.serviceStartsAt?.getTime() ||
+    current.serviceEndsAt.getTime() !== booking.serviceEndsAt?.getTime() ||
+    current.blockedStartsAt.getTime() !== booking.blockedStartsAt?.getTime() ||
+    current.blockedEndsAt.getTime() !== booking.blockedEndsAt?.getTime()
   ) {
     fail(
       "VYBE_BOOKING_SOURCE_INVARIANT_BROKEN",
       "The converted exclusive-resource hold no longer matches its booking"
     );
   }
+  await tx.$queryRaw(
+    Prisma.sql`
+      SELECT "id" FROM "vybe_time_slot_resource_occupancies"
+       WHERE "source_hold_id" = ${current.id}::uuid
+       FOR UPDATE
+    `
+  );
   const occupancy = await tx.vybeTimeSlotResourceOccupancy.findUnique({
     where: { sourceHoldId: current.id }
   });
@@ -491,7 +566,8 @@ async function recordDecision(
     aggregateType: "vybe_booking",
     aggregateId: input.bookingId,
     eventType: "vybe.booking.cancellation_decided.v1",
-    deduplicationKey: `vybe.booking.cancellation:${input.cancellationId}:decided`,
+    deduplicationKey:
+      `vybe.booking.cancellation:${input.cancellationId}:decided`,
     payload
   });
   if (input.decision === "ACCEPTED") {
@@ -544,7 +620,9 @@ export async function cancelMyVybeBooking(input: {
 
     const advisoryKey = `${input.customerUserId}:${idempotencyKey}`;
     await tx.$queryRaw(
-      Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${advisoryKey}, 0))`
+      Prisma.sql`
+        SELECT pg_advisory_xact_lock(hashtextextended(${advisoryKey}, 0))
+      `
     );
 
     const prior = await tx.vybeBookingCancellation.findUnique({
@@ -559,7 +637,7 @@ export async function cancelMyVybeBooking(input: {
       if (prior.requestHash !== hash) {
         fail(
           "IDEMPOTENCY_KEY_REUSED",
-          "This cancellation idempotency key was already used with different request details"
+          "This cancellation key was used with different request details"
         );
       }
       const booking = await tx.vybeBooking.findFirst({
@@ -583,7 +661,12 @@ export async function cancelMyVybeBooking(input: {
       );
     }
 
-    const saveDecision = async (decision: CancellationDecision, decisionCode: string | null, policy: CancellationPolicySnapshot | null, decidedAt: Date) => {
+    const saveDecision = async (
+      decision: CancellationDecision,
+      decisionCode: string | null,
+      policy: CancellationPolicySnapshot | null,
+      decidedAt: Date
+    ) => {
       const cancellation = await tx.vybeBookingCancellation.create({
         data: {
           bookingId: booking.id,
@@ -657,7 +740,10 @@ export async function cancelMyVybeBooking(input: {
 
     const release = await lockAndValidateInventory(tx, booking);
     const decidedAt = await databaseNow(tx);
-    if (parsedPolicy.cutoffAt && decidedAt.getTime() >= parsedPolicy.cutoffAt.getTime()) {
+    if (
+      parsedPolicy.cutoffAt &&
+      decidedAt.getTime() >= parsedPolicy.cutoffAt.getTime()
+    ) {
       return saveDecision(
         "REJECTED",
         "VYBE_BOOKING_CANCELLATION_CUTOFF_PASSED",
@@ -668,7 +754,11 @@ export async function cancelMyVybeBooking(input: {
 
     await releaseInventory(tx, booking.id, release);
     const updated = await tx.vybeBooking.updateMany({
-      where: { id: booking.id, customerUserId: input.customerUserId, status: "CONFIRMED" },
+      where: {
+        id: booking.id,
+        customerUserId: input.customerUserId,
+        status: "CONFIRMED"
+      },
       data: { status: "CANCELLED", cancelledAt: decidedAt }
     });
     if (updated.count !== 1) {
@@ -697,7 +787,11 @@ export async function cancelMyVybeBooking(input: {
     });
     return {
       ...result,
-      booking: { ...booking, status: "CANCELLED" as const, cancelledAt: decidedAt }
+      booking: {
+        ...booking,
+        status: "CANCELLED" as const,
+        cancelledAt: decidedAt
+      }
     };
   });
 }
