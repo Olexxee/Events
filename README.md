@@ -1,5 +1,7 @@
 # Event Platform — Product Blueprint
 
+> **Engineering handoff:** Read [Project Handoff, Session Log and Integration Register](docs/PROJECT_HANDOFF.md) before starting work. Append a session closeout before stopping.
+
 > **Status:** Shared foundation, Identity & Access, organizer applications, Event marketplace core, Ticketing catalogue/holds, and Vybe provider, catalogue, quantity-pool inventory, and time-slot provider setup implemented; capacity-session and exclusive-resource time-slot holds implemented; booking lifecycle design approved in [docs/VYBE_BOOKING_DESIGN.md](docs/VYBE_BOOKING_DESIGN.md); staged category activation remains gated by operational readiness  
 > **Market:** Nigeria  
 > **Repository purpose:** Product requirements, business rules, architecture decisions, and implementation tracking.  
