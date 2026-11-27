@@ -476,7 +476,7 @@ describe.skipIf(!enabled)(
           occurrenceId: occurrence.id,
           userId: fixture.userId,
           idempotencyKey: `legacy-no-occupancy-${crypto.randomUUID()}`,
-          resourceId: fixture.resources[0],
+          resourceId: fixture.resources[0]!,
           expiresAt: new Date(Date.now() + 5 * 60 * 1000),
           serviceStartsAt: occurrence.serviceStartsAt,
           serviceEndsAt: occurrence.serviceEndsAt,
