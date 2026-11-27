@@ -1012,11 +1012,11 @@ model VybeBooking {
   inventoryHoldId            String?               @unique @map("inventory_hold_id") @db.Uuid
   timeSlotHoldId             String?               @unique @map("time_slot_hold_id") @db.Uuid
   status                     VybeBookingStatus     @default(CONFIRMED)
-  serviceStartsAt            DateTime              @map("service_starts_at") @db.Timestamptz(6)
-  serviceEndsAt              DateTime              @map("service_ends_at") @db.Timestamptz(6)
-  blockedStartsAt            DateTime              @map("blocked_starts_at") @db.Timestamptz(6)
-  blockedEndsAt              DateTime              @map("blocked_ends_at") @db.Timestamptz(6)
-  timezone                   String                @db.VarChar(80)
+  serviceStartsAt            DateTime?             @map("service_starts_at") @db.Timestamptz(6)
+  serviceEndsAt              DateTime?             @map("service_ends_at") @db.Timestamptz(6)
+  blockedStartsAt            DateTime?             @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt              DateTime?             @map("blocked_ends_at") @db.Timestamptz(6)
+  timezone                   String?               @db.VarChar(80)
   quantity                   Int?
   resourceId                 String?               @map("resource_id") @db.Uuid
   offeringSnapshot           Json                  @map("offering_snapshot")
@@ -1285,6 +1285,7 @@ model VybeInventoryHold {
   userId         String                 @map("user_id") @db.Uuid
   idempotencyKey String                 @map("idempotency_key") @db.VarChar(128)
   quantity       Int
+  offeringVersion Int                   @map("offering_version")
   status         VybeInventoryHoldStatus @default(ACTIVE)
   expiresAt      DateTime               @map("expires_at") @db.Timestamptz(6)
   createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
