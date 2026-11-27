@@ -13,7 +13,7 @@ import {
   getTimeSlotResourceAvailability,
   releaseTimeSlotHold
 } from "../src/modules/vybe-time-slots/vybe-time-slots.db.js";
-import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.db.js";
+import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.service.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
