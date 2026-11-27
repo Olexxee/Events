@@ -66,7 +66,8 @@ function customerBookingDto(record: NonNullable<BookingReadRecord>) {
       quantity: record.quantity
     },
     price: {
-      amountMinor: typeof quote.amountMinor === "number" ? quote.amountMinor : null,
+      amountMinor:
+        typeof quote.amountMinor === "number" ? quote.amountMinor : null,
       currency: typeof quote.currency === "string" ? quote.currency : null,
       breakdown: quote.breakdown ?? null
     },
