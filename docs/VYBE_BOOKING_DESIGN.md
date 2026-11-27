@@ -150,10 +150,15 @@ Required events include booking confirmed, cancellation requested/decided, booki
 
 Tests must assert database state and inventory totals after concurrency, not only HTTP responses.
 
-## 10. Delivery plan after approval
+## 10. Delivery plan
 
-- **A — Booking schema and integrity:** booking aggregate, immutable snapshots, source-hold uniqueness, status history, foreign keys/checks/indexes, committed exclusive-resource interval protection. No public routes.
-- **B — Hold-to-booking conversion:** transactional capacity and exclusive conversion, idempotency, audit/outbox, PostgreSQL concurrency tests. Use a fake trusted payment-verification contract in tests; no real Payments integration.
+- **A — Booking schema and integrity: merged in PR #36.** Booking aggregate, immutable snapshots, source-hold uniqueness, status history, database source guards, and shared exclusive-resource occupancy. The schema migration retains the legacy exclusion constraint.
+- **B — Hold-to-booking conversion: implemented in PR #37.** Quantity-pool, capacity-session, and exclusive-resource holds convert atomically with booking creation. Conversion is source-hold-idempotent, records audit/status history/outbox in the same transaction, and keeps exclusive occupancy HELD through COMMITTED. The internal service requires an injected trusted confirmation verifier; tests use a fake verifier. No public booking routes or real Payments integration.
+- **C — Customer booking read and cancellation:** owner-scoped reads, policy snapshots, cancellation decisions and inventory release.
+- **D — Provider operations:** provider booking views, scoped completion/no-show, provider/platform cancellation and notifications.
+- **E — Rescheduling and operational hardening:** replacement-first reschedule, reconciliation hooks, support interventions and production observability.
+
+Commerce order orchestration, real Payments integration, Finance, refunds execution, payouts, and accommodation room-night booking remain separate design/implementation gates. The verifier is an internal server-to-server contract only; no browser assertion or payment-provider redirect can confirm a booking.
 - **C — Customer booking read and cancellation:** owner-scoped reads, policy snapshots, cancellation decisions and inventory release.
 - **D — Provider operations:** provider booking views, scoped completion/no-show, provider/platform cancellation and notifications.
 - **E — Rescheduling and operational hardening:** replacement-first reschedule, reconciliation hooks, support interventions and production observability.
@@ -172,4 +177,19 @@ The product owner explicitly approved the following MVP policies:
 6. **MVP scope:** one booking per hold; no partial cancellation or split booking; accommodation room-night bookings remain excluded from this booking slice.
 7. **Provider continuity:** provider suspension/unpublishing blocks new transactions but does not automatically cancel existing confirmed bookings.
 
-**What this approval authorizes:** proceed to a physical schema and migration design review (pre-Slice A). It does not yet authorize migrations, application schema implementation, routes, checkout, Payments integration, Finance, refunds execution, or production payment collection.
+**Implementation status:** the physical schema and migration review was approved. Slice A is merged in PR #36. Slice B is implemented in PR #37 as an internal conversion service only. No public booking routes, checkout, real Payments integration, Finance, refund execution, or accommodation room-night booking are included.
+
+
+## 12. Slice B — hold-to-booking conversion
+
+The internal `vybe-bookings` service accepts only one of the three approved source-hold types. It requires an injected `VybeBookingConfirmationVerifier` contract that must return either a verified zero-value Commerce order or server-verified successful payment evidence plus the immutable quote snapshot. The service has no default verifier and is not mounted on an HTTP route.
+
+The verifier is an integration boundary, not payment execution. A future Payments/Commerce adapter must implement it using authenticated server-to-server evidence. Browser redirects, client-supplied status, and unverified provider callbacks are not acceptable. The verifier does not authorize capture; a late verified payment after hold expiry still cannot create a booking and must be handled by the future Commerce/Payments compensation protocol.
+
+For quantity-pool holds, the transaction locks the offering eligibility, pool, and hold; increments committed quantity; marks the hold CONVERTED; and inserts the booking. Quantity-pool holds now snapshot the offering version so catalogue edits cannot silently change the booking's historical product description. Existing holds receive a deterministic version backfill in the Slice B prerequisite migration.
+
+For capacity-session holds, the transaction locks the offering eligibility, occurrence, and hold; increments committed capacity by the held quantity; and marks the hold CONVERTED. For exclusive-resource holds, the transaction locks the offering eligibility, occurrence, resource, and hold; creates or reuses the shared occupancy row; inserts the booking; and changes the same occupancy row from HELD to COMMITTED. The GiST exclusion constraint therefore protects both temporary holds and committed bookings without a release/reinsert gap.
+
+Exclusive-resource hold creation, expiry, and release now maintain the shared occupancy relation in the same transaction. The legacy hold-table exclusion constraint remains active; removing it is a separate expand/contract migration after every deployed instance writes occupancy rows.
+
+The conversion service returns the existing booking for an exact source-hold retry and rejects changed customer, terms, order-item reference, quote, or confirmation evidence. Hold expiry wins if the hold is no longer valid at the locked transaction check; no booking or inventory commitment is created. Audit, status history, and outbox are transactionally coupled to successful confirmation.
