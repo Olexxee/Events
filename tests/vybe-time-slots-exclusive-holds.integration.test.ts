@@ -468,7 +468,66 @@ describe.skipIf(!enabled)(
         ).toBe(0);
       });
 
-      it("releases occupancy when an older hold writer only changes the source status", async () => {
+      it("protects active legacy holds without an occupancy row and bridges them on conversion", async () => {
+      const fixture = await createExclusiveFixture();
+      const occurrence = await fixture.createOccurrence();
+      const legacyHold = await prisma.vybeTimeSlotHold.create({
+        data: {
+          occurrenceId: occurrence.id,
+          userId: fixture.userId,
+          idempotencyKey: `legacy-no-occupancy-${crypto.randomUUID()}`,
+          resourceId: fixture.resources[0],
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+          serviceStartsAt: occurrence.serviceStartsAt,
+          serviceEndsAt: occurrence.serviceEndsAt,
+          blockedStartsAt: occurrence.blockedStartsAt,
+          blockedEndsAt: occurrence.blockedEndsAt
+        }
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUnique({
+          where: { sourceHoldId: legacyHold.id }
+        })
+      ).toBeNull();
+
+      const overlappingOccurrence = await fixture.createOccurrence();
+      await expect(
+        createTimeSlotResourceHold({
+          occurrenceId: overlappingOccurrence.id,
+          userId: fixture.userId,
+          idempotencyKey: `legacy-no-occupancy-contender-${crypto.randomUUID()}`
+        })
+      ).rejects.toMatchObject({ code: "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE" });
+
+      const reference = `legacy-hold-order-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "EXCLUSIVE_RESOURCE",
+          sourceHoldId: legacyHold.id,
+          customerUserId: fixture.userId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: legacyHold.id }
+        })
+      ).toMatchObject({ status: "COMMITTED", bookingId: booking.id });
+    });
+
+    it("releases occupancy when an older hold writer only changes the source status", async () => {
       const fixture = await createExclusiveFixture();
       const firstOccurrence = await fixture.createOccurrence();
       const hold = await createTimeSlotResourceHold({
