@@ -1122,6 +1122,24 @@ async function expireResourceHolds(
   now: Date
 ) {
   if (!resourceIds.length) return;
+  const resourceList = Prisma.join(
+    resourceIds.map((id) => Prisma.sql`${id}::uuid`)
+  );
+  // Reconcile occupancy rows left HELD by a prior application version that
+  // released or expired the source hold without knowing about this relation.
+  await tx.$executeRaw(Prisma.sql`
+    UPDATE vybe_time_slot_resource_occupancies occupancy
+       SET status = CASE source_hold.status::text
+         WHEN 'RELEASED' THEN 'RELEASED'::vybe_time_slot_resource_occupancy_status
+         ELSE 'EXPIRED'::vybe_time_slot_resource_occupancy_status
+       END,
+           updated_at = CURRENT_TIMESTAMP
+      FROM vybe_time_slot_holds source_hold
+     WHERE occupancy.source_hold_id = source_hold.id
+       AND occupancy.resource_id IN (${resourceList})
+       AND occupancy.status = 'HELD'
+       AND source_hold.status IN ('RELEASED', 'EXPIRED')
+  `);
   const expired = await tx.vybeTimeSlotHold.findMany({
     where: {
       resourceId: { in: resourceIds },
