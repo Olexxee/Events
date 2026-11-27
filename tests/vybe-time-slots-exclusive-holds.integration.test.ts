@@ -448,9 +448,10 @@ describe.skipIf(!enabled)(
           select: { resourceGroupId: true }
         })
       ).resourceGroupId!;
-      const membership = await prisma.vybeTimeSlotResourceGroupMember.findFirstOrThrow({
-        where: { resourceGroupId: groupId, resourceId: hold.resourceId! }
-      });
+      const membership =
+        await prisma.vybeTimeSlotResourceGroupMember.findFirstOrThrow({
+          where: { resourceGroupId: groupId, resourceId: hold.resourceId! }
+        });
       await expect(
         prisma.vybeTimeSlotResource.update({
           where: { id: hold.resourceId! },
