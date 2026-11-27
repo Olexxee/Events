@@ -565,18 +565,20 @@ async function recordDecision(
       action: "vybe.booking.cancellation_decided",
       resourceType: "vybe_booking",
       resourceId: input.bookingId,
-      outcome: input.decision === "ACCEPTED" ? "success" : "rejected",
+      outcome: input.decision === "REJECTED" ? "rejected" : "success",
       metadata: payload
     }
   });
-  await enqueueOutboxMessage(tx, {
-    aggregateType: "vybe_booking",
-    aggregateId: input.bookingId,
-    eventType: "vybe.booking.cancellation_decided.v1",
-    deduplicationKey:
-      `vybe.booking.cancellation:${input.cancellationId}:decided`,
-    payload
-  });
+  if (input.decision !== "ALREADY_CANCELLED") {
+    await enqueueOutboxMessage(tx, {
+      aggregateType: "vybe_booking",
+      aggregateId: input.bookingId,
+      eventType: "vybe.booking.cancellation_decided.v1",
+      deduplicationKey:
+        `vybe.booking.cancellation:${input.cancellationId}:decided`,
+      payload
+    });
+  }
   if (input.decision === "ACCEPTED") {
     await enqueueOutboxMessage(tx, {
       aggregateType: "vybe_booking",
