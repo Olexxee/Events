@@ -4,10 +4,7 @@ import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { enqueueOutboxMessage } from "../../shared/outbox/outbox.repository.js";
 
-type CancellationDecision =
-  | "ACCEPTED"
-  | "REJECTED"
-  | "ALREADY_CANCELLED";
+type CancellationDecision = "ACCEPTED" | "REJECTED" | "ALREADY_CANCELLED";
 
 type CancellationPolicySnapshot = {
   policyVersion: string;
@@ -105,10 +102,7 @@ function parsePolicy(value: Prisma.JsonValue): {
   };
 }
 
-function requestHash(input: {
-  bookingId: string;
-  reason: string;
-}): string {
+function requestHash(input: { bookingId: string; reason: string }): string {
   return createHash("sha256")
     .update(
       JSON.stringify({
@@ -574,8 +568,7 @@ async function recordDecision(
       aggregateType: "vybe_booking",
       aggregateId: input.bookingId,
       eventType: "vybe.booking.cancellation_decided.v1",
-      deduplicationKey:
-        `vybe.booking.cancellation:${input.cancellationId}:decided`,
+      deduplicationKey: `vybe.booking.cancellation:${input.cancellationId}:decided`,
       payload
     });
   }
