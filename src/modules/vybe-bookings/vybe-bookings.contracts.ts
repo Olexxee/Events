@@ -1,13 +1,10 @@
 import type { Prisma } from "@prisma/client";
 
 export type VybeBookingSourceType =
-  | "QUANTITY_POOL"
-  | "CAPACITY_SESSION"
-  | "EXCLUSIVE_RESOURCE";
+  "QUANTITY_POOL" | "CAPACITY_SESSION" | "EXCLUSIVE_RESOURCE";
 
 export type VybeBookingConfirmationKind =
-  | "FREE_ORDER_ACCEPTED"
-  | "PAYMENT_VERIFIED";
+  "FREE_ORDER_ACCEPTED" | "PAYMENT_VERIFIED";
 
 export interface VybeBookingConfirmationRequest {
   sourceType: VybeBookingSourceType;

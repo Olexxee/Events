@@ -96,11 +96,9 @@ function assertReplayMatches(
   const stored = booking.priceQuoteSnapshot as Record<string, unknown>;
   const incoming = confirmation as Record<string, unknown>;
   const storedConfirmation = stored.confirmation as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const incomingConfirmation = incoming.confirmation as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const sameCommercialEvidence =
     stored.quoteReference === incoming.quoteReference &&
     stored.amountMinor === incoming.amountMinor &&
@@ -112,7 +110,10 @@ function assertReplayMatches(
     booking.sourceType !== input.sourceType ||
     booking.externalOrderItemReference !==
       (input.externalOrderItemReference ?? null) ||
-    !isDeepStrictEqual(booking.acceptedTermsSnapshot, input.acceptedTermsSnapshot) ||
+    !isDeepStrictEqual(
+      booking.acceptedTermsSnapshot,
+      input.acceptedTermsSnapshot
+    ) ||
     !sameCommercialEvidence
   ) {
     fail(
@@ -260,9 +261,14 @@ export async function confirmVybeBookingFromHold(
           where: { id: input.sourceHoldId },
           include: { occurrence: { select: { offeringId: true } } }
         });
-  if (!initial) fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
+  if (!initial)
+    fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
   if (initial.userId !== input.customerUserId) {
-    fail("VYBE_BOOKING_HOLD_FORBIDDEN", "Only the hold owner may confirm this booking", 403);
+    fail(
+      "VYBE_BOOKING_HOLD_FORBIDDEN",
+      "Only the hold owner may confirm this booking",
+      403
+    );
   }
 
   const existingBooking =
@@ -301,20 +307,38 @@ export async function confirmVybeBookingFromHold(
     if (input.sourceType === "QUANTITY_POOL") {
       const source = await tx.vybeInventoryHold.findUnique({
         where: { id: input.sourceHoldId },
-        include: { pool: { select: { id: true, offeringId: true, status: true } } }
+        include: {
+          pool: { select: { id: true, offeringId: true, status: true } }
+        }
       });
-      if (!source) fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
+      if (!source)
+        fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
       if (source.userId !== input.customerUserId)
-        fail("VYBE_BOOKING_HOLD_FORBIDDEN", "Only the hold owner may confirm this booking", 403);
+        fail(
+          "VYBE_BOOKING_HOLD_FORBIDDEN",
+          "Only the hold owner may confirm this booking",
+          403
+        );
 
       const offeringLock = await tx.$queryRaw<Array<{ id: string }>>(
         Prisma.sql`SELECT id FROM vybe_offerings WHERE id = ${source.pool.offeringId}::uuid AND status = 'PUBLISHED' FOR SHARE`
       );
       if (!offeringLock.length)
-        fail("VYBE_OFFERING_NOT_BOOKABLE", "The offering is no longer bookable", 409);
-      const offering = await assertVybeOfferingCanTrade(tx, source.pool.offeringId);
-      await tx.$queryRaw(Prisma.sql`SELECT id FROM vybe_inventory_pools WHERE id = ${source.poolId}::uuid FOR UPDATE`);
-      await tx.$queryRaw(Prisma.sql`SELECT id FROM vybe_inventory_holds WHERE id = ${source.id}::uuid FOR UPDATE`);
+        fail(
+          "VYBE_OFFERING_NOT_BOOKABLE",
+          "The offering is no longer bookable",
+          409
+        );
+      const offering = await assertVybeOfferingCanTrade(
+        tx,
+        source.pool.offeringId
+      );
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM vybe_inventory_pools WHERE id = ${source.poolId}::uuid FOR UPDATE`
+      );
+      await tx.$queryRaw(
+        Prisma.sql`SELECT id FROM vybe_inventory_holds WHERE id = ${source.id}::uuid FOR UPDATE`
+      );
       const hold = await tx.vybeInventoryHold.findUniqueOrThrow({
         where: { id: source.id },
         include: { pool: true }
@@ -328,7 +352,10 @@ export async function confirmVybeBookingFromHold(
       }
       const lockedAt = new Date();
       if (hold.status !== "ACTIVE")
-        fail("VYBE_BOOKING_HOLD_NOT_ACTIVE", "The source hold is no longer active");
+        fail(
+          "VYBE_BOOKING_HOLD_NOT_ACTIVE",
+          "The source hold is no longer active"
+        );
       if (hold.expiresAt <= lockedAt) {
         await tx.vybeInventoryHold.update({
           where: { id: hold.id },
@@ -343,10 +370,16 @@ export async function confirmVybeBookingFromHold(
         return { expired: true as const };
       }
       if (hold.pool.status !== "ACTIVE")
-        fail("VYBE_INVENTORY_UNAVAILABLE", "The inventory pool is no longer active");
+        fail(
+          "VYBE_INVENTORY_UNAVAILABLE",
+          "The inventory pool is no longer active"
+        );
       const nextCommitted = hold.pool.committedQuantity + hold.quantity;
       if (nextCommitted > hold.pool.allocatedQuantity)
-        fail("VYBE_INVENTORY_COMMITMENT_CONFLICT", "The inventory pool no longer has enough uncommitted allocation");
+        fail(
+          "VYBE_INVENTORY_COMMITMENT_CONFLICT",
+          "The inventory pool no longer has enough uncommitted allocation"
+        );
       const offeringSnapshot = await loadOfferingVersion(
         tx,
         offering.id,
@@ -412,9 +445,14 @@ export async function confirmVybeBookingFromHold(
         }
       }
     });
-    if (!source) fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
+    if (!source)
+      fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
     if (source.userId !== input.customerUserId)
-      fail("VYBE_BOOKING_HOLD_FORBIDDEN", "Only the hold owner may confirm this booking", 403);
+      fail(
+        "VYBE_BOOKING_HOLD_FORBIDDEN",
+        "Only the hold owner may confirm this booking",
+        403
+      );
     const offering = await assertVybeOfferingAvailabilityAccess(
       tx,
       source.occurrence.offeringId
@@ -443,7 +481,10 @@ export async function confirmVybeBookingFromHold(
     }
     const lockedAt = new Date();
     if (hold.status !== "ACTIVE")
-      fail("VYBE_BOOKING_HOLD_NOT_ACTIVE", "The source hold is no longer active");
+      fail(
+        "VYBE_BOOKING_HOLD_NOT_ACTIVE",
+        "The source hold is no longer active"
+      );
     if (hold.expiresAt <= lockedAt) {
       await tx.vybeTimeSlotHold.update({
         where: { id: hold.id },
@@ -466,14 +507,27 @@ export async function confirmVybeBookingFromHold(
     if (hold.occurrence.status !== "ACTIVE")
       fail("VYBE_TIME_SLOT_UNAVAILABLE", "The time slot is no longer active");
     if (hold.occurrence.offeringId !== offering.id)
-      fail("VYBE_BOOKING_SOURCE_MISMATCH", "The hold no longer matches its offering");
+      fail(
+        "VYBE_BOOKING_SOURCE_MISMATCH",
+        "The hold no longer matches its offering"
+      );
     if (hold.capacityQuantity !== null) {
-      if (input.sourceType !== "CAPACITY_SESSION" || hold.resourceId !== null || !hold.occurrence.capacity)
-        fail("VYBE_BOOKING_SOURCE_MISMATCH", "The hold is not a capacity-session hold");
+      if (
+        input.sourceType !== "CAPACITY_SESSION" ||
+        hold.resourceId !== null ||
+        !hold.occurrence.capacity
+      )
+        fail(
+          "VYBE_BOOKING_SOURCE_MISMATCH",
+          "The hold is not a capacity-session hold"
+        );
       const nextCommitted =
         hold.occurrence.capacity.committedQuantity + hold.capacityQuantity;
       if (nextCommitted > hold.occurrence.capacity.capacity)
-        fail("VYBE_TIME_SLOT_CAPACITY_CONFLICT", "The time slot no longer has enough uncommitted capacity");
+        fail(
+          "VYBE_TIME_SLOT_CAPACITY_CONFLICT",
+          "The time slot no longer has enough uncommitted capacity"
+        );
       const offeringSnapshot = await loadOfferingVersion(
         tx,
         offering.id,
@@ -529,7 +583,10 @@ export async function confirmVybeBookingFromHold(
     }
 
     if (input.sourceType !== "EXCLUSIVE_RESOURCE" || !hold.resourceId)
-      fail("VYBE_BOOKING_SOURCE_MISMATCH", "The hold is not an exclusive-resource hold");
+      fail(
+        "VYBE_BOOKING_SOURCE_MISMATCH",
+        "The hold is not an exclusive-resource hold"
+      );
     const resource = await tx.vybeTimeSlotResource.findUnique({
       where: { id: hold.resourceId },
       select: { id: true, isActive: true, providerProfileId: true }
@@ -537,7 +594,12 @@ export async function confirmVybeBookingFromHold(
     const group = hold.occurrence.resourceGroupId
       ? await tx.vybeTimeSlotResourceGroup.findUnique({
           where: { id: hold.occurrence.resourceGroupId },
-          select: { id: true, providerProfileId: true, offeringId: true, isActive: true }
+          select: {
+            id: true,
+            providerProfileId: true,
+            offeringId: true,
+            isActive: true
+          }
         })
       : null;
     if (
@@ -547,7 +609,10 @@ export async function confirmVybeBookingFromHold(
       group.providerProfileId !== offering.providerProfileId ||
       resource.providerProfileId !== offering.providerProfileId
     ) {
-      fail("VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE", "The held resource is no longer eligible");
+      fail(
+        "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE",
+        "The held resource is no longer eligible"
+      );
     }
     const offeringSnapshot = await loadOfferingVersion(
       tx,
@@ -571,7 +636,10 @@ export async function confirmVybeBookingFromHold(
       });
     }
     if (occupancy.status !== "HELD")
-      fail("VYBE_BOOKING_OCCUPANCY_NOT_HELD", "The exclusive resource is no longer held");
+      fail(
+        "VYBE_BOOKING_OCCUPANCY_NOT_HELD",
+        "The exclusive resource is no longer held"
+      );
     await tx.vybeTimeSlotHold.update({
       where: { id: hold.id },
       data: { status: "CONVERTED" }

@@ -642,7 +642,10 @@ async function expireOccurrenceHolds(
     data: { status: "EXPIRED" }
   });
   await tx.vybeTimeSlotResourceOccupancy.updateMany({
-    where: { sourceHoldId: { in: expired.map((hold) => hold.id) }, status: "HELD" },
+    where: {
+      sourceHoldId: { in: expired.map((hold) => hold.id) },
+      status: "HELD"
+    },
     data: { status: "EXPIRED" }
   });
   for (const hold of expired) {
@@ -1133,7 +1136,10 @@ async function expireResourceHolds(
     data: { status: "EXPIRED" }
   });
   await tx.vybeTimeSlotResourceOccupancy.updateMany({
-    where: { sourceHoldId: { in: expired.map((hold) => hold.id) }, status: "HELD" },
+    where: {
+      sourceHoldId: { in: expired.map((hold) => hold.id) },
+      status: "HELD"
+    },
     data: { status: "EXPIRED" }
   });
   for (const hold of expired) {
@@ -1220,7 +1226,9 @@ export async function getTimeSlotResourceAvailability(occurrenceId: string) {
       },
       select: { resourceId: true }
     });
-    const resourceIds = [...new Set(members.map((member) => member.resourceId))];
+    const resourceIds = [
+      ...new Set(members.map((member) => member.resourceId))
+    ];
     const occupied = await findOccupiedResourceIds(
       tx,
       resourceIds,
