@@ -384,7 +384,15 @@ export async function confirmVybeBookingFromHold(
         })
       : await prisma.vybeTimeSlotHold.findUnique({
           where: { id: input.sourceHoldId },
-          include: { occurrence: { select: { offeringId: true } } }
+          include: {
+            occurrence: {
+              select: {
+                offeringId: true,
+                offeringVersion: true,
+                timezone: true
+              }
+            }
+          }
         });
   if (!initial)
     fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
@@ -417,6 +425,45 @@ export async function confirmVybeBookingFromHold(
       "Only an active, unexpired hold can become a booking"
     );
   }
+
+  const initialOfferingId =
+    input.sourceType === "QUANTITY_POOL"
+      ? initial.pool.offeringId
+      : initial.occurrence.offeringId;
+  const initialOfferingVersion =
+    input.sourceType === "QUANTITY_POOL"
+      ? initial.offeringVersion
+      : initial.occurrence.offeringVersion;
+  const preflightVersion = await prisma.vybeOfferingVersion.findUnique({
+    where: {
+      offeringId_version: {
+        offeringId: initialOfferingId,
+        version: initialOfferingVersion
+      }
+    },
+    select: { content: true, version: true }
+  });
+  if (!preflightVersion) {
+    fail(
+      "VYBE_BOOKING_OFFERING_VERSION_MISSING",
+      "The offering version associated with this hold is unavailable",
+      409
+    );
+  }
+  const preflightOfferingSnapshot = {
+    schemaVersion: 1,
+    offeringId: initialOfferingId,
+    offeringVersion: preflightVersion.version,
+    content: preflightVersion.content
+  } as Prisma.InputJsonObject;
+  const acceptedAt = new Date().toISOString();
+  buildAcceptedTermsSnapshot(
+    input.acceptedTermsSnapshot,
+    preflightOfferingSnapshot,
+    input.sourceType === "QUANTITY_POOL" ? null : initial.serviceStartsAt,
+    input.sourceType === "QUANTITY_POOL" ? null : initial.occurrence.timezone,
+    acceptedAt
+  );
 
   const verifiedConfirmation = await verifier.verify(input);
   const priceQuoteSnapshot = validateConfirmation(verifiedConfirmation);
@@ -509,6 +556,13 @@ export async function confirmVybeBookingFromHold(
         offering.id,
         hold.offeringVersion
       );
+      const bookingTermsSnapshot = buildAcceptedTermsSnapshot(
+        input.acceptedTermsSnapshot,
+        offeringSnapshot,
+        null,
+        null,
+        acceptedAt
+      );
       await tx.vybeInventoryHold.update({
         where: { id: hold.id },
         data: { status: "CONVERTED" }
@@ -537,7 +591,7 @@ export async function confirmVybeBookingFromHold(
           resourceId: null,
           offeringSnapshot,
           priceQuoteSnapshot,
-          acceptedTermsSnapshot: input.acceptedTermsSnapshot,
+          acceptedTermsSnapshot: bookingTermsSnapshot,
           externalOrderItemReference: input.externalOrderItemReference ?? null
         }
       });
@@ -686,6 +740,13 @@ export async function confirmVybeBookingFromHold(
         offering.id,
         hold.occurrence.offeringVersion
       );
+      const bookingTermsSnapshot = buildAcceptedTermsSnapshot(
+        input.acceptedTermsSnapshot,
+        offeringSnapshot,
+        hold.serviceStartsAt,
+        hold.occurrence.timezone,
+        acceptedAt
+      );
       await tx.vybeTimeSlotHold.update({
         where: { id: hold.id },
         data: { status: "CONVERTED" }
@@ -714,7 +775,7 @@ export async function confirmVybeBookingFromHold(
           resourceId: null,
           offeringSnapshot,
           priceQuoteSnapshot,
-          acceptedTermsSnapshot: input.acceptedTermsSnapshot,
+          acceptedTermsSnapshot: bookingTermsSnapshot,
           externalOrderItemReference: input.externalOrderItemReference ?? null
         }
       });
@@ -772,6 +833,13 @@ export async function confirmVybeBookingFromHold(
       offering.id,
       hold.occurrence.offeringVersion
     );
+    const bookingTermsSnapshot = buildAcceptedTermsSnapshot(
+      input.acceptedTermsSnapshot,
+      offeringSnapshot,
+      hold.serviceStartsAt,
+      hold.occurrence.timezone,
+      acceptedAt
+    );
     let occupancy = await tx.vybeTimeSlotResourceOccupancy.findUnique({
       where: { sourceHoldId: hold.id }
     });
@@ -817,7 +885,7 @@ export async function confirmVybeBookingFromHold(
         resourceId: hold.resourceId,
         offeringSnapshot,
         priceQuoteSnapshot,
-        acceptedTermsSnapshot: input.acceptedTermsSnapshot,
+        acceptedTermsSnapshot: bookingTermsSnapshot,
         externalOrderItemReference: input.externalOrderItemReference ?? null
       }
     });
