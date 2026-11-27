@@ -11,6 +11,7 @@ import {
   releaseTimeSlotCapacityHold
 } from "../src/modules/vybe-time-slots/vybe-time-slots.db.js";
 import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.service.js";
+import { cancelMyVybeBooking } from "../src/modules/vybe-bookings/vybe-bookings.cancellations.db.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -363,6 +364,55 @@ describe.skipIf(!enabled)(
       expect(
         await prisma.vybeBooking.count({ where: { timeSlotHoldId: hold.id } })
       ).toBe(1);
+    });
+
+    it("releases a capacity-session commitment when its booking is cancelled", async () => {
+      const fixture = await createCapacityFixture(5);
+      const hold = await createTimeSlotCapacityHold({
+        ...fixture,
+        quantity: 2,
+        idempotencyKey: `cancel-capacity-${crypto.randomUUID()}`
+      });
+      const reference = `cancel-capacity-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "CAPACITY_SESSION",
+          sourceHoldId: hold.id,
+          customerUserId: fixture.userId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+
+      const cancelled = await cancelMyVybeBooking({
+        bookingId: booking.id,
+        customerUserId: fixture.userId,
+        idempotencyKey: `cancel-capacity-request-${crypto.randomUUID()}`,
+        reason: "Schedule changed"
+      });
+      expect(cancelled.cancellation.decision).toBe("ACCEPTED");
+      expect(cancelled.booking.status).toBe("CANCELLED");
+      expect(
+        await prisma.vybeTimeSlotCapacity.findUniqueOrThrow({
+          where: { occurrenceId: fixture.occurrenceId }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
+      expect(
+        await prisma.vybeTimeSlotHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "CONVERTED" });
     });
 
     it("does not confirm a capacity hold after expiry wins the race", async () => {
