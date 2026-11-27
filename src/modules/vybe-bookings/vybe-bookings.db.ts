@@ -103,6 +103,8 @@ function assertReplayMatches(
     stored.quoteReference === incoming.quoteReference &&
     stored.amountMinor === incoming.amountMinor &&
     stored.currency === incoming.currency &&
+    isDeepStrictEqual(stored.breakdown, incoming.breakdown) &&
+    stored.schemaVersion === incoming.schemaVersion &&
     storedConfirmation?.kind === incomingConfirmation?.kind &&
     storedConfirmation?.reference === incomingConfirmation?.reference;
   if (
@@ -170,7 +172,6 @@ async function recordExpiredSourceHold(
   input: {
     sourceType: VybeBookingSourceType;
     sourceHoldId: string;
-    customerUserId: string;
     aggregateId: string;
   }
 ) {
@@ -202,7 +203,6 @@ async function recordExpiredSourceHold(
     deduplicationKey: `vybe.booking.hold:${input.sourceHoldId}:expired`,
     payload
   });
-  void input.customerUserId;
 }
 
 async function loadOfferingVersion(
@@ -364,7 +364,6 @@ export async function confirmVybeBookingFromHold(
         await recordExpiredSourceHold(tx, {
           sourceType: input.sourceType,
           sourceHoldId: hold.id,
-          customerUserId: input.customerUserId,
           aggregateId: hold.poolId
         });
         return { expired: true as const };
@@ -499,7 +498,6 @@ export async function confirmVybeBookingFromHold(
       await recordExpiredSourceHold(tx, {
         sourceType: input.sourceType,
         sourceHoldId: hold.id,
-        customerUserId: input.customerUserId,
         aggregateId: hold.occurrenceId
       });
       return { expired: true as const };
