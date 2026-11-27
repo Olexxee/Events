@@ -306,7 +306,6 @@ async function lockAndValidateInventory(
       where: { id: initial.id },
       include: {
         occurrence: {
-          include: { capacity: true },
           select: {
             offeringId: true,
             timezone: true,
