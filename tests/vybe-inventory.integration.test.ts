@@ -101,13 +101,14 @@ describe.skipIf(!enabled)(
                   state: "Lagos",
                   country: "Nigeria"
                 },
-                                cancellationPolicy: {
+                cancellationPolicy: {
                   policyVersion: "provider-cancellation-v1",
                   customerCancellation: {
                     allowed: true,
                     cutoffMinutesBeforeService: null,
                     timezone: "Africa/Lagos",
-                    displayText: "Customers may cancel this booking at any time."
+                    displayText:
+                      "Customers may cancel this booking at any time."
                   }
                 },
 
@@ -491,7 +492,9 @@ describe.skipIf(!enabled)(
           {
             verify: async () => {
               verifierCalled = true;
-              throw new Error("The verifier must not run for client policy input");
+              throw new Error(
+                "The verifier must not run for client policy input"
+              );
             }
           }
         )
