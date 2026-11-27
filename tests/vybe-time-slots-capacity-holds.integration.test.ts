@@ -27,7 +27,13 @@ describe.skipIf(!enabled)(
       await disconnectDatabase();
     });
 
-    async function createCapacityFixture(capacity: number) {
+    async function createCapacityFixture(
+      capacity: number,
+      policyOptions: {
+        allowed?: boolean;
+        cutoffMinutesBeforeService?: number | null;
+      } = {}
+    ) {
       const suffix = crypto.randomUUID();
       const user = await prisma.user.create({
         data: { email: `vybe-time-slot-hold-${suffix}@events.test` }
@@ -99,8 +105,11 @@ describe.skipIf(!enabled)(
                 cancellationPolicy: {
                   policyVersion: "provider-cancellation-v1",
                   customerCancellation: {
-                    allowed: true,
-                    cutoffMinutesBeforeService: 60,
+                    allowed: policyOptions.allowed ?? true,
+                    cutoffMinutesBeforeService:
+                      policyOptions.cutoffMinutesBeforeService === undefined
+                        ? 60
+                        : policyOptions.cutoffMinutesBeforeService,
                     timezone: "Africa/Lagos",
                     displayText:
                       "Customers may cancel up to 60 minutes before service."
@@ -413,6 +422,114 @@ describe.skipIf(!enabled)(
           where: { id: hold.id }
         })
       ).toMatchObject({ status: "CONVERTED" });
+    });
+
+    it("rejects cancellation after the immutable absolute cutoff without releasing capacity", async () => {
+      const fixture = await createCapacityFixture(5, {
+        cutoffMinutesBeforeService: 525600
+      });
+      const hold = await createTimeSlotCapacityHold({
+        ...fixture,
+        quantity: 2,
+        idempotencyKey: `cutoff-capacity-${crypto.randomUUID()}`
+      });
+      const reference = `cutoff-capacity-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "CAPACITY_SESSION",
+          sourceHoldId: hold.id,
+          customerUserId: fixture.userId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+
+      const result = await cancelMyVybeBooking({
+        bookingId: booking.id,
+        customerUserId: fixture.userId,
+        idempotencyKey: `cutoff-cancel-${crypto.randomUUID()}`,
+        reason: "Cancellation requested too late"
+      });
+      expect(result.cancellation.decision).toBe("REJECTED");
+      expect(result.cancellation.decisionCode).toBe(
+        "VYBE_BOOKING_CANCELLATION_CUTOFF_PASSED"
+      );
+      expect(result.booking.status).toBe("CONFIRMED");
+      expect(
+        await prisma.vybeTimeSlotCapacity.findUniqueOrThrow({
+          where: { occurrenceId: fixture.occurrenceId }
+        })
+      ).toMatchObject({ committedQuantity: 2 });
+      expect(
+        await prisma.vybeBookingCancellation.count({
+          where: {
+            bookingId: booking.id,
+            decision: "REJECTED",
+            decisionCode: "VYBE_BOOKING_CANCELLATION_CUTOFF_PASSED"
+          }
+        })
+      ).toBe(1);
+    });
+
+    it("rejects customer cancellation when the accepted policy disallows it", async () => {
+      const fixture = await createCapacityFixture(5, {
+        allowed: false,
+        cutoffMinutesBeforeService: null
+      });
+      const hold = await createTimeSlotCapacityHold({
+        ...fixture,
+        quantity: 1,
+        idempotencyKey: `disallowed-capacity-${crypto.randomUUID()}`
+      });
+      const reference = `disallowed-capacity-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "CAPACITY_SESSION",
+          sourceHoldId: hold.id,
+          customerUserId: fixture.userId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+
+      const result = await cancelMyVybeBooking({
+        bookingId: booking.id,
+        customerUserId: fixture.userId,
+        idempotencyKey: `disallowed-cancel-${crypto.randomUUID()}`,
+        reason: "Customer asked to cancel"
+      });
+      expect(result.cancellation.decision).toBe("REJECTED");
+      expect(result.cancellation.decisionCode).toBe(
+        "VYBE_BOOKING_CANCELLATION_NOT_ALLOWED"
+      );
+      expect(result.booking.status).toBe("CONFIRMED");
+      expect(
+        await prisma.vybeTimeSlotCapacity.findUniqueOrThrow({
+          where: { occurrenceId: fixture.occurrenceId }
+        })
+      ).toMatchObject({ committedQuantity: 1 });
     });
 
     it("does not confirm a capacity hold after expiry wins the race", async () => {
