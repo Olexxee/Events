@@ -1033,6 +1033,7 @@ model VybeBooking {
   providerProfile            VybeProviderProfile   @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
   providerOrganization       Organization          @relation(fields: [providerOrganizationId], references: [id], onDelete: Restrict)
   offering                   VybeOffering          @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  resource                   VybeTimeSlotResource? @relation("VybeBookingResource", fields: [resourceId], references: [id], onDelete: Restrict)
   inventoryHold              VybeInventoryHold?    @relation("VybeBookingInventoryHold", fields: [inventoryHoldId], references: [id], onDelete: Restrict)
   timeSlotHold               VybeTimeSlotHold?     @relation("VybeBookingTimeSlotHold", fields: [timeSlotHoldId], references: [id], onDelete: Restrict)
   occupancy                  VybeTimeSlotResourceOccupancy?
@@ -1327,7 +1328,6 @@ model VybeTimeSlotOccurrence {
   resourceGroup      VybeTimeSlotResourceGroup?   @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
   capacity           VybeTimeSlotCapacity?
   holds              VybeTimeSlotHold[]
-  bookings           VybeBooking[]
   occupancies         VybeTimeSlotResourceOccupancy[]
 
   @@index([offeringId, status, serviceStartsAt], map: "vybe_time_slot_occurrences_offering_status_start_idx")
@@ -1379,6 +1379,7 @@ model VybeTimeSlotResource {
   groups            VybeTimeSlotResourceGroupMember[]
   holds             VybeTimeSlotHold[]
   occupancies       VybeTimeSlotResourceOccupancy[]
+  bookings          VybeBooking[] @relation("VybeBookingResource")
 
   @@unique([providerProfileId, providerResourceKey], map: "vybe_time_slot_resources_provider_key")
   @@index([providerProfileId, isActive], map: "vybe_time_slot_resources_provider_active_idx")
