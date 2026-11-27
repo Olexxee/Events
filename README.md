@@ -35,39 +35,39 @@ The platform's initial market remains Nigeria. Product scope must be validated a
 
 ## 2. Confirmed business decisions
 
-| Area | Confirmed decision |
-|---|---|
-| Initial launch market | Osun State, Nigeria |
-| Initial geographic coverage | Statewide product coverage across Osun State; initial organizer/provider recruitment concentration remains to be selected |
-| Expansion direction | Broader Nigerian market after validating the Osun State launch |
-| Platform direction | Both a general event marketplace and an exclusive private-experiences offering |
-| Event categories at launch | Both public and private events |
-| Primary organizer customers | Independent organizers and professional event organizers |
-| Additional supported organizer segments | Corporate and institutional organizers; curated-experience operators |
-| Organizer access | Any registered user may apply for organizer access; approval is lightweight and does not require business/CAC registration for ordinary event organizing |
-| Organizer publishing | Approved organizers can publish without manual approval of every event; platform moderation, risk-based event review, limits, suspension, and takedown powers remain |
-| Payment handling | Platform collects customer payments centrally and reconciles organizer/partner obligations |
-| Monetization architecture | Deferred until the billing phase; do not encode a final charging model in the shared foundation |
-| Module charging | Each module may carry its own commercial rules; the eventual model may use module-level charges, organizer subscriptions/entitlements, or a combination |
-| Provider charging | Commercial charging rules and commission treatment remain open pending the billing phase |
-| Paid event promotion | Deferred; no paid placement or sponsored ranking at initial launch |
-| Refund governance | Events retains final authority over refunds governed by platform policy; organizers and providers may supply evidence but cannot independently override platform decisions |
-| Service delivery responsibility | Organizers and hospitality providers are responsible for delivering the events and services they offer; Events owns marketplace governance and dispute coordination |
-| Customer support | One centralized support system with domain-specific routing and escalation |
-| Financial source of truth | Events maintains the authoritative ledger, financial records, and settlement records |
-| Accommodation supply | Organizers and approved accommodation partners may supply rooms; every supplier must pass hospitality-specific approval before listing, separate from organizer/event-publishing verification. Existing organizer accounts can be reused without creating duplicate organizations. |
-| Connect scope | Connect is limited to attendees of the same event |
-| Connect model | Optional, consent-based social discovery and mutual introductions; it does not sell or guarantee access to another person |
-| Hospitality providers | Organizers and platform-approved hospitality partners; organizer verification does not grant hospitality approval. Organizers must pass the separate hospitality-provider approval before listing hospitality inventory, using their existing organization account. |
-| Hospitality checkout | Standalone hospitality bookings and combined ticket + hospitality checkout |
-| Connect eligibility | Verified ticket holders and organizer-approved guests, with explicit event-scoped opt-in |
-| Post-event Connect | Existing connections may continue for a defined period; exact duration remains open |
-| Private-event access | Organizer approval with platform admin oversight |
-| Hospitality reservation model | Every hospitality provider publishes reservable inventory; controlled/synchronized inventory is held during checkout and confirmed after verified payment, without per-booking provider approval. Provider confirmation is an explicitly disclosed exception when inventory cannot be guaranteed. |
-| Accommodation inventory | Customers reserve a defined room category/quantity pool; the provider may assign the physical room later. Price is attached to category specifications, not used as the sole category definition. Hotels may allocate selected room categories/quantities to the platform while continuing to sell unallocated inventory independently. |
-| Connect after cancellation | Ticket cancellation/refund immediately revokes event Connect eligibility |
-| Organizer settlements | Milestone releases with a final post-event balance; exact milestone configuration remains open |
-| Event cancellation and hospitality | Event cancellation triggers an item-by-item assessment of linked hospitality reservations, not automatic blanket cancellation. Event-dependent bookings normally follow the applicable event cancellation policy; independently valid bookings may remain active if the customer chooses and supplier terms allow. Partner-supplied bookings are coordinated under disclosed supplier terms. |
+| Area                                    | Confirmed decision                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial launch market                   | Osun State, Nigeria                                                                                                                                                                                                                                                                                                                                                                          |
+| Initial geographic coverage             | Statewide product coverage across Osun State; initial organizer/provider recruitment concentration remains to be selected                                                                                                                                                                                                                                                                    |
+| Expansion direction                     | Broader Nigerian market after validating the Osun State launch                                                                                                                                                                                                                                                                                                                               |
+| Platform direction                      | Both a general event marketplace and an exclusive private-experiences offering                                                                                                                                                                                                                                                                                                               |
+| Event categories at launch              | Both public and private events                                                                                                                                                                                                                                                                                                                                                               |
+| Primary organizer customers             | Independent organizers and professional event organizers                                                                                                                                                                                                                                                                                                                                     |
+| Additional supported organizer segments | Corporate and institutional organizers; curated-experience operators                                                                                                                                                                                                                                                                                                                         |
+| Organizer access                        | Any registered user may apply for organizer access; approval is lightweight and does not require business/CAC registration for ordinary event organizing                                                                                                                                                                                                                                     |
+| Organizer publishing                    | Approved organizers can publish without manual approval of every event; platform moderation, risk-based event review, limits, suspension, and takedown powers remain                                                                                                                                                                                                                         |
+| Payment handling                        | Platform collects customer payments centrally and reconciles organizer/partner obligations                                                                                                                                                                                                                                                                                                   |
+| Monetization architecture               | Deferred until the billing phase; do not encode a final charging model in the shared foundation                                                                                                                                                                                                                                                                                              |
+| Module charging                         | Each module may carry its own commercial rules; the eventual model may use module-level charges, organizer subscriptions/entitlements, or a combination                                                                                                                                                                                                                                      |
+| Provider charging                       | Commercial charging rules and commission treatment remain open pending the billing phase                                                                                                                                                                                                                                                                                                     |
+| Paid event promotion                    | Deferred; no paid placement or sponsored ranking at initial launch                                                                                                                                                                                                                                                                                                                           |
+| Refund governance                       | Events retains final authority over refunds governed by platform policy; organizers and providers may supply evidence but cannot independently override platform decisions                                                                                                                                                                                                                   |
+| Service delivery responsibility         | Organizers and hospitality providers are responsible for delivering the events and services they offer; Events owns marketplace governance and dispute coordination                                                                                                                                                                                                                          |
+| Customer support                        | One centralized support system with domain-specific routing and escalation                                                                                                                                                                                                                                                                                                                   |
+| Financial source of truth               | Events maintains the authoritative ledger, financial records, and settlement records                                                                                                                                                                                                                                                                                                         |
+| Accommodation supply                    | Organizers and approved accommodation partners may supply rooms; every supplier must pass hospitality-specific approval before listing, separate from organizer/event-publishing verification. Existing organizer accounts can be reused without creating duplicate organizations.                                                                                                           |
+| Connect scope                           | Connect is limited to attendees of the same event                                                                                                                                                                                                                                                                                                                                            |
+| Connect model                           | Optional, consent-based social discovery and mutual introductions; it does not sell or guarantee access to another person                                                                                                                                                                                                                                                                    |
+| Hospitality providers                   | Organizers and platform-approved hospitality partners; organizer verification does not grant hospitality approval. Organizers must pass the separate hospitality-provider approval before listing hospitality inventory, using their existing organization account.                                                                                                                          |
+| Hospitality checkout                    | Standalone hospitality bookings and combined ticket + hospitality checkout                                                                                                                                                                                                                                                                                                                   |
+| Connect eligibility                     | Verified ticket holders and organizer-approved guests, with explicit event-scoped opt-in                                                                                                                                                                                                                                                                                                     |
+| Post-event Connect                      | Existing connections may continue for a defined period; exact duration remains open                                                                                                                                                                                                                                                                                                          |
+| Private-event access                    | Organizer approval with platform admin oversight                                                                                                                                                                                                                                                                                                                                             |
+| Hospitality reservation model           | Every hospitality provider publishes reservable inventory; controlled/synchronized inventory is held during checkout and confirmed after verified payment, without per-booking provider approval. Provider confirmation is an explicitly disclosed exception when inventory cannot be guaranteed.                                                                                            |
+| Accommodation inventory                 | Customers reserve a defined room category/quantity pool; the provider may assign the physical room later. Price is attached to category specifications, not used as the sole category definition. Hotels may allocate selected room categories/quantities to the platform while continuing to sell unallocated inventory independently.                                                      |
+| Connect after cancellation              | Ticket cancellation/refund immediately revokes event Connect eligibility                                                                                                                                                                                                                                                                                                                     |
+| Organizer settlements                   | Milestone releases with a final post-event balance; exact milestone configuration remains open                                                                                                                                                                                                                                                                                               |
+| Event cancellation and hospitality      | Event cancellation triggers an item-by-item assessment of linked hospitality reservations, not automatic blanket cancellation. Event-dependent bookings normally follow the applicable event cancellation policy; independently valid bookings may remain active if the customer chooses and supplier terms allow. Partner-supplied bookings are coordinated under disclosed supplier terms. |
 
 ### 2.1 Monetization — deferred
 
@@ -141,15 +141,15 @@ Sold-out status is derived from ticket inventory rather than stored as the event
 
 An account may hold more than one role, subject to verification and authorization.
 
-| Role | Main responsibilities |
-|---|---|
-| Attendee | Discover events, buy tickets, manage bookings, attend events, optionally use Connect |
-| Organizer | Create and manage events, tickets, guests, event operations, and view financial statements |
-| Organizer staff | Perform explicitly assigned event operations such as check-in |
-| Hospitality partner | Fulfil assigned hospitality orders or reservations |
-| Platform admin | Organizer/event verification, moderation, support, operational oversight |
-| Platform finance/admin | Reconciliation, refunds, payout review, financial reporting |
-| Super admin | Platform-wide configuration and privileged administration |
+| Role                   | Main responsibilities                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| Attendee               | Discover events, buy tickets, manage bookings, attend events, optionally use Connect       |
+| Organizer              | Create and manage events, tickets, guests, event operations, and view financial statements |
+| Organizer staff        | Perform explicitly assigned event operations such as check-in                              |
+| Hospitality partner    | Fulfil assigned hospitality orders or reservations                                         |
+| Platform admin         | Organizer/event verification, moderation, support, operational oversight                   |
+| Platform finance/admin | Reconciliation, refunds, payout review, financial reporting                                |
+| Super admin            | Platform-wide configuration and privileged administration                                  |
 
 ### 5.1 Organizer onboarding
 
@@ -271,17 +271,17 @@ The platform owns the refund framework and administers refund decisions. Organiz
 
 Proposed scenarios to define in the detailed policy:
 
-| Scenario | Product requirement |
-|---|---|
-| Organizer cancels event | Provide the applicable full-refund path |
-| Platform cancels event | Provide the applicable full-refund path |
-| Material date or venue change | Notify affected buyers and provide defined options |
-| Event postponed | Define transfer, acceptance, and refund options |
-| Duplicate payment | Reverse the duplicate collection |
-| Payment fails | Do not issue ticket or confirm reservation |
-| Customer cancellation | Apply the disclosed ticket/add-on policy and applicable law |
-| Hospitality benefit unavailable | Define replacement or affected-benefit refund |
-| Chargeback/dispute | Record evidence, status, deadlines, and financial impact |
+| Scenario                        | Product requirement                                         |
+| ------------------------------- | ----------------------------------------------------------- |
+| Organizer cancels event         | Provide the applicable full-refund path                     |
+| Platform cancels event          | Provide the applicable full-refund path                     |
+| Material date or venue change   | Notify affected buyers and provide defined options          |
+| Event postponed                 | Define transfer, acceptance, and refund options             |
+| Duplicate payment               | Reverse the duplicate collection                            |
+| Payment fails                   | Do not issue ticket or confirm reservation                  |
+| Customer cancellation           | Apply the disclosed ticket/add-on policy and applicable law |
+| Hospitality benefit unavailable | Define replacement or affected-benefit refund               |
+| Chargeback/dispute              | Record evidence, status, deadlines, and financial impact    |
 
 The checkout must display the applicable terms before payment and retain the exact policy version accepted by the customer.
 
@@ -354,13 +354,13 @@ Private events may withhold the exact venue address until a defined post-purchas
 
 Proposed disclosure levels:
 
-| Information | Suggested disclosure |
-|---|---|
-| City | Before purchase |
-| General area/neighbourhood | Before purchase, where appropriate |
-| Exact venue address | After verified payment/eligibility |
-| Detailed access instructions | After confirmation, potentially nearer event time |
-| Sensitive entry code | Restricted to eligible attendees and only when needed |
+| Information                  | Suggested disclosure                                  |
+| ---------------------------- | ----------------------------------------------------- |
+| City                         | Before purchase                                       |
+| General area/neighbourhood   | Before purchase, where appropriate                    |
+| Exact venue address          | After verified payment/eligibility                    |
+| Detailed access instructions | After confirmation, potentially nearer event time     |
+| Sensitive entry code         | Restricted to eligible attendees and only when needed |
 
 This is a proposed policy, not a final legal or operational rule. Buyers must receive enough location information before purchase to make an informed decision.
 
@@ -624,22 +624,16 @@ A release should not be considered production-ready unless:
 
 **Document status:** Initial product blueprint. Confirmed decisions are recorded in Section 2. Recommendations and unresolved questions are explicitly marked throughout. Update this document as business decisions are made; do not silently convert proposals into approved requirements.
 
-
 ## Vybe accommodation inventory decision (VYBE-013)
 
 Unused room-category inventory allocated to Vybe may return to the provider's independent sales channels only at a provider-agreed release cutoff recorded for that allocation. The provider cannot reclaim quantities covered by active holds or confirmed bookings. A missing cutoff means the allocation is not bookable; no universal default is assumed. The full design gate and PostgreSQL verification requirements are in [docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md), Section 21. This decision authorizes design review only, not schema or implementation.
 
-
 **Accommodation physical schema review:** VYBE-014 is documented in [Section 22 of docs/VYBE_DESIGN.md](docs/VYBE_DESIGN.md#22-accommodation-physical-schema-review-and-implementation-plan-vybe-014). The recommended model uses property/room-category records, allocation-night lots with provider-agreed release cutoffs, lock-only room-night anchors, and atomic multi-night hold details. This remains a design approval gate: no Prisma models or migration are authorized until the physical model is approved.
-
 
 **Vybe accommodation inventory:** The approved physical model is implemented as Slice A in the Prisma schema and PostgreSQL migration. It establishes property/room-category records, allocation-night lots, lock anchors, hold records, evidence-backed adjustment history, composite ownership constraints and database guards. It does not yet expose accommodation APIs or create customer holds. See [Section 23 of the Vybe design](docs/VYBE_DESIGN.md#23-accommodation-room-night-schema-implementation-vybe-014-slice-a).
 
-
 **Vybe accommodation capacity invariant (VYBE-015):** each room category records a provider-evidenced physical unit count. PostgreSQL enforces that the sum of all active/paused allocation lots for a category and local stay date cannot exceed that count. Unknown physical capacity cannot be allocated, and capacity cannot be reduced below existing allocation totals. See [Section 24 of the Vybe design](docs/VYBE_DESIGN.md#24-category-level-physical-room-capacity-guard-vybe-015). This schema guard is required before accommodation provider supply workflows.
 
-
 **Vybe accommodation provider supply (VYBE-016):** provider-owned property and room-category setup, evidence-backed physical capacity, category/night allocation lots, append-only adjustments, and cutoff-governed allocation release are implemented in Slice B. Supply setup requires active category-scoped accommodation approval and approved location; global category activation remains a separate booking gate. Public discovery also suppresses published accommodation offerings until future room-night supply has been allocated. See [Section 25 of the Vybe design](docs/VYBE_DESIGN.md#25-accommodation-provider-supply-management-vybe-016-slice-b).
-
 
 **Vybe accommodation availability and holds (VYBE-017):** public availability is calculated across every requested local stay night and every eligible allocation lot. Customers can create idempotent, all-or-nothing 10-minute holds (policy-bounded 60–1800 seconds), inspect/release their own holds, and expired holds are synchronously cleaned before inventory-changing operations. PostgreSQL enforces complete per-night quantities and immutable hold snapshots; hold expiry can be shortened but never extended. Holds are not bookings and do not collect payment. See [Section 26 of the Vybe design](docs/VYBE_DESIGN.md#26-accommodation-availability-and-atomic-holds-vybe-017-slice-c).

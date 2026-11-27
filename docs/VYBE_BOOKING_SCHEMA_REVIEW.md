@@ -143,11 +143,11 @@ The exact ordering of migration and application releases must be finalized again
 
 ## 5. Inventory conversion contracts
 
-| Source | Lock anchor | Conversion mutation | Resulting protection |
-|---|---|---|---|
-| Quantity pool | Pool row, then source hold | Increment pool committed quantity; hold → CONVERTED | Existing pool check and row lock |
-| Time-slot capacity | Occurrence/capacity row, then source hold | Increment capacity committed quantity; hold → CONVERTED | Existing capacity bounds and occurrence lock |
-| Exclusive resource | Occurrence/resource in deterministic order, source hold, occupancy row | Hold → CONVERTED; occupancy HELD → COMMITTED with booking ID | GiST exclusion over both holds and bookings |
+| Source             | Lock anchor                                                            | Conversion mutation                                          | Resulting protection                         |
+| ------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------- |
+| Quantity pool      | Pool row, then source hold                                             | Increment pool committed quantity; hold → CONVERTED          | Existing pool check and row lock             |
+| Time-slot capacity | Occurrence/capacity row, then source hold                              | Increment capacity committed quantity; hold → CONVERTED      | Existing capacity bounds and occurrence lock |
+| Exclusive resource | Occurrence/resource in deterministic order, source hold, occupancy row | Hold → CONVERTED; occupancy HELD → COMMITTED with booking ID | GiST exclusion over both holds and bookings  |
 
 All three conversions create the booking, status-history row, audit record, and outbox event in one database transaction. Idempotency is anchored to the unique source hold: a retry returns the existing booking; a different request cannot create a second booking for that hold.
 
@@ -217,7 +217,6 @@ This document recommends the schema and rollout direction above. Before Slice A,
 5. Commerce-supplied immutable price quote snapshot; no price calculation in Vybe.
 
 Approval of this document would authorize Slice A schema/migration implementation only. It would not authorize checkout, payment integration, refunds, Finance, or accommodation booking.
-
 
 ## 11. Implementation notes — Slice A and B
 

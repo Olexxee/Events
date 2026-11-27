@@ -53,14 +53,14 @@ For the initial release, recommend **instant confirmation only** for inventory-b
 
 ### Transition authority
 
-| Transition | Authorized actor/system | Required guard |
-|---|---|---|
-| Hold → booking | Vybe booking service, invoked through an authenticated checkout contract | Hold is ACTIVE, unexpired, owned by customer, payload matches, offering/provider/category eligibility remains valid |
-| Confirm paid booking | Trusted server-to-server Payments/Commerce integration | Verified successful payment for the exact order/item and amount/currency; idempotent provider event |
-| Confirm free booking | Vybe/Commerce server contract | Zero-value order accepted and inventory conversion succeeds |
-| Cancel | Customer or authorized platform/provider actor, subject to policy | State and cutoff/policy permit it; reason and actor recorded |
-| Complete / no-show | Authorized provider staff or platform operations under scoped permission | Service interval and relevant operational rules permit transition |
-| Reschedule | Customer/provider workflow through Vybe | New inventory secured before old commitment is released; policy permits change |
+| Transition           | Authorized actor/system                                                  | Required guard                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Hold → booking       | Vybe booking service, invoked through an authenticated checkout contract | Hold is ACTIVE, unexpired, owned by customer, payload matches, offering/provider/category eligibility remains valid |
+| Confirm paid booking | Trusted server-to-server Payments/Commerce integration                   | Verified successful payment for the exact order/item and amount/currency; idempotent provider event                 |
+| Confirm free booking | Vybe/Commerce server contract                                            | Zero-value order accepted and inventory conversion succeeds                                                         |
+| Cancel               | Customer or authorized platform/provider actor, subject to policy        | State and cutoff/policy permit it; reason and actor recorded                                                        |
+| Complete / no-show   | Authorized provider staff or platform operations under scoped permission | Service interval and relevant operational rules permit transition                                                   |
+| Reschedule           | Customer/provider workflow through Vybe                                  | New inventory secured before old commitment is released; policy permits change                                      |
 
 The browser may request an action but cannot directly authorize any transition.
 
@@ -69,6 +69,7 @@ The browser may request an action but cannot directly authorize any transition.
 The conversion must occur in one PostgreSQL transaction and use the same serialization anchors and lock order as the relevant hold implementation.
 
 For a capacity hold:
+
 1. Lock the occurrence and capacity row using the established time-slot lock order.
 2. Lock and re-read the hold; synchronously transition it to EXPIRED if its expiry has passed.
 3. Require ACTIVE status, owner match, and exact request/idempotency match.
@@ -78,6 +79,7 @@ For a capacity hold:
 7. Commit all writes together.
 
 For an exclusive-resource hold:
+
 1. Lock the occurrence and concrete resource in the established deterministic order.
 2. Lock and re-read the hold; synchronously expire it if necessary.
 3. Require ACTIVE status, owner match, and exact request/idempotency match.
@@ -94,6 +96,7 @@ The source hold remains as immutable historical evidence with terminal status `C
 No payment provider code is added to Vybe.
 
 Proposed integration sequence for paid inventory:
+
 1. Customer selects inventory and creates a Vybe hold.
 2. Commerce creates/coordinates a pending order item referencing the hold and its expiry; the order is not proof of payment.
 3. Payments attempts collection and reports a verified, idempotent result through a trusted server contract.
@@ -109,6 +112,7 @@ For free bookings, use the same inventory conversion and idempotency guarantees 
 Cancellation policy must be snapshotted at booking time and expressed in the customer's local terms with an unambiguous timezone/instant cutoff.
 
 Proposed rules:
+
 - A cancellation decision and inventory release/commitment adjustment are one Vybe transaction.
 - Before the applicable cutoff, an eligible cancellation releases the committed inventory exactly once.
 - After the cutoff, cancellation may be disallowed or recorded as non-refundable according to the accepted policy; any refund decision/execution remains outside Vybe.
@@ -159,6 +163,7 @@ Tests must assert database state and inventory totals after concurrency, not onl
 - **E — Rescheduling and operational hardening:** replacement-first reschedule, reconciliation hooks, support interventions and production observability.
 
 Commerce order orchestration, real Payments integration, Finance, refunds execution, payouts, and accommodation room-night booking remain separate design/implementation gates. The verifier is an internal server-to-server contract only; no browser assertion or payment-provider redirect can confirm a booking.
+
 - **C — Customer booking read and cancellation:** owner-scoped reads, policy snapshots, cancellation decisions and inventory release.
 - **D — Provider operations:** provider booking views, scoped completion/no-show, provider/platform cancellation and notifications.
 - **E — Rescheduling and operational hardening:** replacement-first reschedule, reconciliation hooks, support interventions and production observability.
@@ -178,7 +183,6 @@ The product owner explicitly approved the following MVP policies:
 7. **Provider continuity:** provider suspension/unpublishing blocks new transactions but does not automatically cancel existing confirmed bookings.
 
 **Implementation status:** the physical schema and migration review was approved. Slice A is merged in PR #36. Slice B is implemented in PR #37 as an internal conversion service only. No public booking routes, checkout, real Payments integration, Finance, refund execution, or accommodation room-night booking are included.
-
 
 ## 12. Slice B — hold-to-booking conversion
 
