@@ -32,9 +32,10 @@ At the end of every working session:
 
 ### Verified repository snapshot
 
-- Main branch after backend PR cleanup on 2026-11-27: `09428a312b6c7314ce7b234d02ecef3fe1ecdec3`.
-- Merged pull requests: #1–#43.
+- Main branch after backend documentation merge on 2026-11-27: `a461459b4874a3060916863422c081687c49a9e0`.
+- Merged pull requests: #1–#43 and #45; PR #44 was closed without merging because its base became stale.
 - Main CI run [#402](https://github.com/Olexxee/Events/actions/runs/45989369454) passed.
+- Backend documentation refresh PR [#45](https://github.com/Olexxee/Events/pull/45) merged with exact-head CI [#406](https://github.com/Olexxee/Events/actions/runs/45994320701) passing.
 - PR #43 exact-head CI run [#403](https://github.com/Olexxee/Events/actions/runs/45989662103) passed for head `8c0054ca211c73663f506543ca283680733592bb`.
 - PR #43 is a proposal only. It does not authorize schema, migration, route or service implementation until its product-owner decisions are explicitly approved.
 
@@ -65,6 +66,7 @@ Initial market direction is Osun State, Nigeria, with wider Nigerian expansion a
 | Finance | Not implemented | Separate ledger/reconciliation/settlement domain |
 | Connect | Not implemented | Design and policy work still required |
 | Notifications / support / trust operations | Partial foundations only | Delivery and operational workflows remain |
+| Frontend | Application shell implemented | No authentication, customer/provider journeys or backend API integration yet |
 
 ## 3. Product and architecture invariants
 
@@ -123,7 +125,8 @@ This table tracks real integration maturity, not merely whether two modules exis
 | Vybe inventory ↔ Vybe bookings | Implemented | Quantity-pool, capacity-session and exclusive-resource hold conversion | Continue lifecycle regression and operational coverage |
 | Vybe accommodation supply ↔ availability/holds | Implemented | Allocation, per-night availability and atomic multi-night holds | Room-night booking is a separate future design/approval gate |
 | Vybe bookings ↔ customer cancellation | Implemented | Customer read, immutable policy snapshot, atomic cancellation and inventory release | Provider/platform cancellation remains a separate design gate |
-| Vybe bookings ↔ provider/platform cancellation | Proposed only | [PR #43 design proposal](https://github.com/Olexxee/Events/pull/43) | Explicitly approve decisions, then implement and test |
+| Vybe bookings ↔ provider/platform cancellation | Design proposal merged; implementation not approved | [PR #43 design proposal](https://github.com/Olexxee/Events/pull/43) | Explicitly approve all nine product decisions, then implement and test |
+| Frontend ↔ backend API | Not integrated | React + TypeScript + Vite application shell merged in [frontend PR #1](https://github.com/Olexxee/event-frontend/pull/1) | Define typed API client, authentication/session behavior, error handling and end-to-end journeys against approved backend contracts |
 | Ticketing / Vybe ↔ Payments | Not integrated | Architectural boundary and payment-verification requirements documented | Payments contracts, verified payment events and late-payment handling |
 | Commerce ↔ Payments | Not implemented | Ownership boundary defined | Checkout/payment orchestration and reconciliation contract |
 | Payments ↔ Finance | Not implemented | Independent ownership direction | Payment settlement facts, ledger posting and reconciliation contracts |
@@ -168,7 +171,7 @@ Never claim two modules are integrated merely because they share a database or i
 
 ## 7. Pull request and CI ledger
 
-The project has merged PRs #1–#43. The following recent PRs are especially relevant to the current handoff:
+The backend repository has merged PRs #1–#43 and #45; PR #44 was closed without merge. The following recent PRs are especially relevant to the current handoff:
 
 | PR | Scope | Status / evidence |
 |---|---|---|
@@ -181,7 +184,8 @@ The project has merged PRs #1–#43. The following recent PRs are especially rel
 | [#40](https://github.com/Olexxee/Events/pull/40) | Immutable cancellation policy snapshot | Merged |
 | [#41](https://github.com/Olexxee/Events/pull/41) | Atomic customer cancellation and inventory release | Merged |
 | [#42](https://github.com/Olexxee/Events/pull/42) | Cancellation concurrency and regression hardening | Merged |
-| [#43](https://github.com/Olexxee/Events/pull/43) | Provider/platform cancellation design gate | Merged; exact-head CI run [#403 passed](https://github.com/Olexxee/Events/actions/runs/45989662103) |
+| [#43](https://github.com/Olexxee/Events/pull/43) | Provider/platform cancellation design gate | Merged as proposal; exact-head CI run [#403 passed](https://github.com/Olexxee/Events/actions/runs/45989662103) |
+| [#45](https://github.com/Olexxee/Events/pull/45) | Refresh project handoff and integration register | Merged; exact-head CI run [#406 passed](https://github.com/Olexxee/Events/actions/runs/45994320701) |
 
 For older PRs, use the [repository pull request history](https://github.com/Olexxee/Events/pulls?q=is%3Apr). Do not infer a PR's current state or CI result from this historical table; re-check GitHub before relying on it.
 
@@ -189,14 +193,15 @@ For older PRs, use the [repository pull request history](https://github.com/Olex
 
 **Logging policy:** Append one entry whenever a working session ends or pauses. The initial entries below are a reconstructed baseline from available project handoff context and repository evidence; they are not a claim that every historical chat session has been recovered.
 
-### 2026-11-27 — Backend PR cleanup and frontend foundation kickoff
+### 2026-11-27 — Backend PR cleanup and frontend foundation
 
-- **Focus:** Merge eligible backend documentation PRs and begin the separate frontend repository.
-- **Starting main SHA:** `7bd484c5c7f4166fc69c266f26d73f27ba67e835`.
-- **Completed:** PR #43 merged as a design proposal; its exact-head CI run [#403](https://github.com/Olexxee/Events/actions/runs/45989662103) passed. The nine product decisions in its Section 9 remain unapproved; no implementation is authorized. PR #44's exact-head CI run [#404](https://github.com/Olexxee/Events/actions/runs/45993128522) passed, but merging PR #43 changed the README base and made PR #44 non-mergeable. Its documentation changes are being replayed onto the updated main branch rather than force-merging a stale branch.
-- **Backend merge:** PR #43 merge commit `09428a312b6c7314ce7b234d02ecef3fe1ecdec3`.
-- **Stopped at:** Refreshing the handoff documentation against the post-merge main branch and initializing the empty `Olexxee/event-frontend` repository.
-- **Next:** Complete the refreshed handoff PR, then create the frontend foundation PR. Keep backend design decisions and frontend API contracts aligned.
+- **Focus:** Close the outstanding backend documentation work and establish the separate frontend repository.
+- **Starting backend main SHA:** `7bd484c5c7f4166fc69c266f26d73f27ba67e835`.
+- **Backend PRs:** PR #43 merged as a provider/platform cancellation design proposal (merge SHA `09428a312b6c7314ce7b234d02ecef3fe1ecdec3`); exact-head CI [#403](https://github.com/Olexxee/Events/actions/runs/45989662103) passed. PR #45 refreshed this handoff and merged (merge SHA `a461459b4874a3060916863422c081687c49a9e0`); exact-head CI [#406](https://github.com/Olexxee/Events/actions/runs/45994320701) passed. PR #44 was closed without merge because PR #43 changed the base README and made #44 non-mergeable; its documentation was replayed on the updated main branch in #45. No backend PRs remain open.
+- **Frontend:** Initialized [Olexxee/event-frontend](https://github.com/Olexxee/event-frontend) with React 19, strict TypeScript and Vite. The responsive application shell introduces Events, Vybe and Connect without pretending their workflows or backend integrations are complete. [Frontend PR #1](https://github.com/Olexxee/event-frontend/pull/1) merged at `70316991fee4fb9ddaba4a1bee7bacf123ad485b`; exact-head CI [run](https://github.com/Olexxee/event-frontend/actions/runs/45994608488) passed after adding the Vite client type declaration.
+- **Decisions still pending:** The nine provider/platform cancellation product decisions in PR #43 Section 9 remain unapproved. The frontend theme is provisional; customer/provider journeys and API contracts remain to be designed.
+- **Stopped at:** Frontend foundation is in place; no customer journeys or backend API integration have been started.
+- **Exact next action:** Define the first end-to-end user journey and its API contract before implementing frontend routing, authentication or data access. Keep frontend feature work aligned with backend domain ownership.
 
 ### 2026-11-26 — Vybe customer cancellation implementation and hardening
 
@@ -226,13 +231,13 @@ For older PRs, use the [repository pull request history](https://github.com/Olex
 ### After the immediate work
 
 4. Implement provider/platform cancellation only after the design decisions are approved.
-6. Audit remaining Vybe provider operations and category activation readiness.
-7. Complete Ticketing issuance, transfer, QR admission and check-in.
-8. Design Commerce as the cross-domain checkout/order coordinator.
-9. Design and implement independent Payments after Commerce contracts are stable.
-10. Design Finance independently from Payments.
-11. Plan Connect and operational support/trust workflows.
-12. Establish frontend applications and end-to-end customer/provider/admin journeys.
+5. Audit remaining Vybe provider operations and category activation readiness.
+6. Complete Ticketing issuance, transfer, QR admission and check-in.
+7. Design Commerce as the cross-domain checkout/order coordinator.
+8. Design and implement independent Payments after Commerce contracts are stable.
+9. Design Finance independently from Payments.
+10. Plan Connect and operational support/trust workflows.
+11. Define the first frontend end-to-end journey and its backend API contract before adding feature workflows.
 
 ## 10. Session closeout template
 
