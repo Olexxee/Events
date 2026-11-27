@@ -285,7 +285,6 @@ export async function confirmVybeBookingFromHold(
 
   const verifiedConfirmation = await verifier.verify(input);
   const priceQuoteSnapshot = validateConfirmation(verifiedConfirmation);
-  const now = new Date();
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
       where: { id: input.customerUserId },
@@ -323,9 +322,10 @@ export async function confirmVybeBookingFromHold(
         assertReplayMatches(replay, input, priceQuoteSnapshot);
         return { booking: replay };
       }
+      const lockedAt = new Date();
       if (hold.status !== "ACTIVE")
         fail("VYBE_BOOKING_HOLD_NOT_ACTIVE", "The source hold is no longer active");
-      if (hold.expiresAt <= now) {
+      if (hold.expiresAt <= lockedAt) {
         await tx.vybeInventoryHold.update({
           where: { id: hold.id },
           data: { status: "EXPIRED" }
@@ -437,9 +437,10 @@ export async function confirmVybeBookingFromHold(
       assertReplayMatches(replay, input, priceQuoteSnapshot);
       return { booking: replay };
     }
+    const lockedAt = new Date();
     if (hold.status !== "ACTIVE")
       fail("VYBE_BOOKING_HOLD_NOT_ACTIVE", "The source hold is no longer active");
-    if (hold.expiresAt <= now) {
+    if (hold.expiresAt <= lockedAt) {
       await tx.vybeTimeSlotHold.update({
         where: { id: hold.id },
         data: { status: "EXPIRED" }
