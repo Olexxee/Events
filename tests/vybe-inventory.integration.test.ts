@@ -454,6 +454,9 @@ describe.skipIf(!enabled)(
 
       const replay = await cancelMyVybeBooking(request);
       expect(replay.replayed).toBe(true);
+      await expect(
+        cancelMyVybeBooking({ ...request, reason: "Different request payload" })
+      ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
       expect(replay.cancellation.id).toBe(cancelled.cancellation.id);
       expect(
         await prisma.vybeInventoryPool.findUniqueOrThrow({
@@ -500,6 +503,207 @@ describe.skipIf(!enabled)(
           }
         })
       ).toBe(outboxBeforeAlreadyCancelled);
+    });
+
+    it("serializes concurrent retries with the same cancellation idempotency key", async () => {
+      const pool = await createInventoryPool({
+        organizationId,
+        offeringId,
+        actorUserId: ownerId,
+        allocatedQuantity: 1,
+        reason: "Concurrent cancellation fixture",
+        evidenceReference: "provider-inventory-register:concurrent-cancellation"
+      });
+      const hold = await createInventoryHold({
+        offeringId,
+        userId: ownerId,
+        quantity: 1,
+        idempotencyKey: `concurrent-cancel-hold-${crypto.randomUUID()}`
+      });
+      const reference = `concurrent-cancel-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "QUANTITY_POOL",
+          sourceHoldId: hold.id,
+          customerUserId: ownerId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+      const request = {
+        bookingId: booking.id,
+        customerUserId: ownerId,
+        idempotencyKey: `concurrent-cancel-key-${crypto.randomUUID()}`,
+        reason: "Plans changed"
+      };
+
+      const results = await Promise.all([
+        cancelMyVybeBooking(request),
+        cancelMyVybeBooking(request)
+      ]);
+      expect(results.map((result) => result.cancellation.decision)).toEqual([
+        "ACCEPTED",
+        "ACCEPTED"
+      ]);
+      expect(results.map((result) => result.replayed).sort()).toEqual([
+        false,
+        true
+      ]);
+      expect(results[0].cancellation.id).toBe(results[1].cancellation.id);
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
+      expect(
+        await prisma.vybeBookingCancellation.count({
+          where: { bookingId: booking.id, decision: "ACCEPTED" }
+        })
+      ).toBe(1);
+    });
+
+    it("allows only one accepted cancellation when concurrent requests use different keys", async () => {
+      const pool = await createInventoryPool({
+        organizationId,
+        offeringId,
+        actorUserId: ownerId,
+        allocatedQuantity: 1,
+        reason: "Concurrent distinct-key cancellation fixture",
+        evidenceReference: "provider-inventory-register:concurrent-distinct-key"
+      });
+      const hold = await createInventoryHold({
+        offeringId,
+        userId: ownerId,
+        quantity: 1,
+        idempotencyKey: `concurrent-distinct-hold-${crypto.randomUUID()}`
+      });
+      const reference = `concurrent-distinct-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "QUANTITY_POOL",
+          sourceHoldId: hold.id,
+          customerUserId: ownerId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+
+      const results = await Promise.all([
+        cancelMyVybeBooking({
+          bookingId: booking.id,
+          customerUserId: ownerId,
+          idempotencyKey: `distinct-cancel-a-${crypto.randomUUID()}`,
+          reason: "Plans changed"
+        }),
+        cancelMyVybeBooking({
+          bookingId: booking.id,
+          customerUserId: ownerId,
+          idempotencyKey: `distinct-cancel-b-${crypto.randomUUID()}`,
+          reason: "Plans changed"
+        })
+      ]);
+      expect(
+        results.map((result) => result.cancellation.decision).sort()
+      ).toEqual(["ACCEPTED", "ALREADY_CANCELLED"]);
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
+      expect(
+        await prisma.vybeBookingCancellation.count({
+          where: { bookingId: booking.id, decision: "ACCEPTED" }
+        })
+      ).toBe(1);
+    });
+
+    it("returns the same not-found response for unknown and not-owned bookings", async () => {
+      const pool = await createInventoryPool({
+        organizationId,
+        offeringId,
+        actorUserId: ownerId,
+        allocatedQuantity: 1,
+        reason: "Booking ownership fixture",
+        evidenceReference: "provider-inventory-register:booking-ownership"
+      });
+      const hold = await createInventoryHold({
+        offeringId,
+        userId: ownerId,
+        quantity: 1,
+        idempotencyKey: `booking-ownership-${crypto.randomUUID()}`
+      });
+      const reference = `booking-ownership-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "QUANTITY_POOL",
+          sourceHoldId: hold.id,
+          customerUserId: ownerId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+      const otherUser = await prisma.user.create({
+        data: { email: `vybe-other-customer-${crypto.randomUUID()}@events.test` }
+      });
+
+      const notOwned = cancelMyVybeBooking({
+        bookingId: booking.id,
+        customerUserId: otherUser.id,
+        idempotencyKey: `not-owned-${crypto.randomUUID()}`,
+        reason: "Attempted access"
+      });
+      const unknown = cancelMyVybeBooking({
+        bookingId: crypto.randomUUID(),
+        customerUserId: ownerId,
+        idempotencyKey: `unknown-booking-${crypto.randomUUID()}`,
+        reason: "Unknown booking"
+      });
+      await expect(notOwned).rejects.toMatchObject({
+        code: "VYBE_BOOKING_NOT_FOUND",
+        statusCode: 404
+      });
+      await expect(unknown).rejects.toMatchObject({
+        code: "VYBE_BOOKING_NOT_FOUND",
+        statusCode: 404
+      });
+      expect(
+        await prisma.vybeInventoryPool.findUniqueOrThrow({
+          where: { id: pool.id }
+        })
+      ).toMatchObject({ committedQuantity: 1 });
     });
 
     it("fails closed when the immutable offering version has no structured cancellation policy", async () => {
