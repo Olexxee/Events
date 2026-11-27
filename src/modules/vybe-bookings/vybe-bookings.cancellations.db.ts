@@ -516,7 +516,7 @@ async function releaseInventory(
       sourceHoldId: release.sourceHoldId,
       status: "COMMITTED"
     },
-    data: { status: "RELEASED" }
+    data: { status: "RELEASED", bookingId: null }
   });
   if (updated.count !== 1) {
     fail(
