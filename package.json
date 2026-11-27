@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --write src/modules/vybe-bookings/vybe-bookings.cancellations.db.ts && git --no-pager diff -- src/modules/vybe-bookings/vybe-bookings.cancellations.db.ts && exit 1",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"vitest.config.ts\" \"eslint.config.js\" \"tsconfig.json\" \"package.json\" \".github/workflows/*.yml\"",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate:deploy": "prisma migrate deploy",
