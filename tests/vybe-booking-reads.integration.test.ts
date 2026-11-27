@@ -131,7 +131,18 @@ describe.skipIf(!enabled)(
           title: "Private dining experience",
           category: "DINING"
         },
-        price: { amountMinor: 250000, currency: "NGN" }
+        price: { amountMinor: 250000, currency: "NGN" },
+        acceptedTerms: {
+          cancellationPolicy: {
+            policyVersion: "provider-cancellation-v1",
+            acceptedAt: "2026-11-27T10:00:00.000Z",
+            customerCancellation: {
+              allowed: true,
+              cutoffAt: null,
+              timezone: "Africa/Lagos"
+            }
+          }
+        }
       });
       expect(foreign.bookings).toHaveLength(0);
       expect(JSON.stringify(own.bookings[0])).not.toContain(
