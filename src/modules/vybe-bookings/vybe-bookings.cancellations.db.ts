@@ -321,9 +321,11 @@ async function lockAndValidateInventory(
       current.resourceId !== null ||
       current.occurrence.offeringId !== booking.offeringId ||
       current.occurrence.timezone !== booking.timezone ||
-      current.serviceStartsAt.getTime() !== booking.serviceStartsAt?.getTime() ||
+      current.serviceStartsAt.getTime() !==
+        booking.serviceStartsAt?.getTime() ||
       current.serviceEndsAt.getTime() !== booking.serviceEndsAt?.getTime() ||
-      current.blockedStartsAt.getTime() !== booking.blockedStartsAt?.getTime() ||
+      current.blockedStartsAt.getTime() !==
+        booking.blockedStartsAt?.getTime() ||
       current.blockedEndsAt.getTime() !== booking.blockedEndsAt?.getTime() ||
       !current.occurrence.capacity
     ) {
@@ -391,15 +393,21 @@ async function lockAndValidateInventory(
         FROM "vybe_time_slot_resource_group_members"
        WHERE "resource_group_id" = ${resourceGroupId}::uuid
          AND "resource_id" = ${initial.resourceId}::uuid
-         AND ("valid_from" IS NULL OR "valid_from" <= ${booking.blockedStartsAt}::timestamptz)
-         AND ("valid_until" IS NULL OR "valid_until" >= ${booking.blockedEndsAt}::timestamptz)
+         AND (
+           "valid_from" IS NULL
+           OR "valid_from" <= ${booking.blockedStartsAt}::timestamptz
+         )
+         AND (
+           "valid_until" IS NULL
+           OR "valid_until" >= ${booking.blockedEndsAt}::timestamptz
+         )
        FOR UPDATE
     `
   );
   if (membershipLock.length === 0) {
     fail(
       "VYBE_BOOKING_SOURCE_INVARIANT_BROKEN",
-      "The booked resource is no longer covered by its resource-group membership"
+      "The booked resource is not covered by its group membership"
     );
   }
   await tx.$queryRaw(
