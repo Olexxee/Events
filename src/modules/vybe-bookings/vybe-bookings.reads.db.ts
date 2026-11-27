@@ -51,9 +51,7 @@ function customerBookingDto(record: NonNullable<BookingReadRecord>) {
     status: record.status,
     offering: {
       title:
-        typeof content.title === "string"
-          ? content.title
-          : "Vybe experience",
+        typeof content.title === "string" ? content.title : "Vybe experience",
       description:
         typeof content.description === "string" ? content.description : null,
       category: typeof content.category === "string" ? content.category : null,
