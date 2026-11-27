@@ -342,3 +342,41 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+
+-- Legacy application instances do not write occupancy rows. This database guard
+-- still prevents them from creating an ACTIVE hold over a committed booking
+-- while the expand phase retains the old hold-table exclusion constraint.
+CREATE OR REPLACE FUNCTION vybe_prevent_hold_over_committed_occupancy()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW."resource_id" IS NOT NULL AND EXISTS (
+    SELECT 1
+      FROM "vybe_time_slot_resource_occupancies" occupancy
+     WHERE occupancy."resource_id" = NEW."resource_id"
+       AND occupancy."status" = 'COMMITTED'
+       AND tstzrange(
+         occupancy."blocked_starts_at",
+         occupancy."blocked_ends_at",
+         '[)'
+       ) && tstzrange(
+         NEW."blocked_starts_at",
+         NEW."blocked_ends_at",
+         '[)'
+       )
+  ) THEN
+    RAISE EXCEPTION 'time-slot hold overlaps a committed booking occupancy'
+      USING ERRCODE = '23P01',
+            CONSTRAINT = 'vybe_time_slot_holds_committed_occupancy_guard';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "vybe_time_slot_holds_committed_occupancy_guard"
+BEFORE INSERT OR UPDATE OF "resource_id", "blocked_starts_at", "blocked_ends_at"
+ON "vybe_time_slot_holds"
+FOR EACH ROW
+EXECUTE FUNCTION vybe_prevent_hold_over_committed_occupancy();
