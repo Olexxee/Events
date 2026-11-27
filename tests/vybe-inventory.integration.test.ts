@@ -462,7 +462,7 @@ describe.skipIf(!enabled)(
     });
 
     it("rejects a cancellation policy supplied in accepted terms by the caller", async () => {
-      const pool = await createInventoryPool({
+      await createInventoryPool({
         organizationId,
         offeringId,
         actorUserId: ownerId,
