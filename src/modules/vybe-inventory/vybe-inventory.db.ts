@@ -15,7 +15,7 @@ async function lockPool(tx: Prisma.TransactionClient, poolId: string) {
   );
 }
 
-async function assertOfferingCanTrade(
+export async function assertOfferingCanTrade(
   tx: Prisma.TransactionClient,
   offeringId: string
 ) {
@@ -443,6 +443,7 @@ export async function createInventoryHold(input: {
           userId: input.userId,
           idempotencyKey: input.idempotencyKey,
           quantity: input.quantity,
+          offeringVersion: offering.currentPublishedVersion,
           expiresAt: new Date(now.getTime() + holdDurationSeconds * 1000)
         }
       });
