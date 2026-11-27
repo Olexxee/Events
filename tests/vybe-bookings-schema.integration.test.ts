@@ -157,6 +157,12 @@ describe.skipIf(!enabled)("Vybe booking schema PostgreSQL integration", () => {
         where: { id: occupancy.id }
       })
     ).toMatchObject({ status: "COMMITTED", bookingId: booking.id });
+    await expect(
+      prisma.vybeBooking.update({
+        where: { id: booking.id },
+        data: { offeringSnapshot: { title: "Mutated snapshot" } }
+      })
+    ).rejects.toThrow();
   });
 
   it("rejects bookings whose source hold belongs to another customer", async () => {
