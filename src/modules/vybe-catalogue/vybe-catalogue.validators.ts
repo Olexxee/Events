@@ -10,6 +10,51 @@ const category = z.enum([
   "OTHER_SERVICES"
 ]);
 const clockTime = z.string().regex(/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/);
+const ianaTimezone = z
+  .string()
+  .trim()
+  .min(1)
+  .max(80)
+  .refine((value) => {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: value });
+      return true;
+    } catch {
+      return false;
+    }
+  }, "A valid IANA timezone is required");
+
+const cancellationPolicy = z
+  .object({
+    policyVersion: z.string().trim().min(1).max(80),
+    customerCancellation: z
+      .object({
+        allowed: z.boolean(),
+        cutoffMinutesBeforeService: z
+          .number()
+          .int()
+          .min(0)
+          .max(525600)
+          .nullable(),
+        timezone: ianaTimezone,
+        displayText: z.string().trim().min(20).max(1000)
+      })
+      .strict()
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (
+      !value.customerCancellation.allowed &&
+      value.customerCancellation.cutoffMinutesBeforeService !== null
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["customerCancellation", "cutoffMinutesBeforeService"],
+        message: "A disallowed cancellation policy cannot have a cutoff"
+      });
+    }
+  });
+
 const location = z
   .object({
     city: z.string().trim().min(2).max(100),
@@ -119,6 +164,7 @@ const content = z
       })
       .strict(),
     cancellationTerms: z.string().trim().min(20).max(2000),
+    cancellationPolicy: cancellationPolicy.optional(),
     fulfilmentTerms: z.string().trim().min(20).max(2000),
     attributes
   })
