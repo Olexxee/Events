@@ -126,31 +126,21 @@ describe.skipIf(!enabled)("Vybe booking schema PostgreSQL integration", () => {
       data: { status: "COMMITTED", bookingId: booking.id }
     });
 
-    const secondHold = await prisma.vybeTimeSlotHold.create({
-      data: {
-        occurrenceId: occurrence.id,
-        userId: user.id,
-        idempotencyKey: `second-${suffix}`,
-        resourceId: resource.id,
-        expiresAt: new Date("2027-04-12T17:56:00.000Z"),
-        serviceStartsAt: new Date("2027-04-12T18:30:00.000Z"),
-        serviceEndsAt: new Date("2027-04-12T19:30:00.000Z"),
-        blockedStartsAt: new Date("2027-04-12T18:30:00.000Z"),
-        blockedEndsAt: new Date("2027-04-12T19:30:00.000Z")
-      }
-    });
-
     await expect(
-      prisma.vybeTimeSlotResourceOccupancy.create({
+      prisma.vybeTimeSlotHold.create({
         data: {
-          resourceId: resource.id,
           occurrenceId: occurrence.id,
-          sourceHoldId: secondHold.id,
-          blockedStartsAt: secondHold.blockedStartsAt,
-          blockedEndsAt: secondHold.blockedEndsAt
+          userId: user.id,
+          idempotencyKey: `second-${suffix}`,
+          resourceId: resource.id,
+          expiresAt: new Date("2027-04-12T17:56:00.000Z"),
+          serviceStartsAt: new Date("2027-04-12T18:30:00.000Z"),
+          serviceEndsAt: new Date("2027-04-12T19:30:00.000Z"),
+          blockedStartsAt: new Date("2027-04-12T18:30:00.000Z"),
+          blockedEndsAt: new Date("2027-04-12T19:30:00.000Z")
         }
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/overlaps a committed booking occupancy/);
 
     expect(
       await prisma.vybeTimeSlotResourceOccupancy.findUnique({
