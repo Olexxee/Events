@@ -442,6 +442,32 @@ describe.skipIf(!enabled)(
           where: { id: hold.id }
         })
       ).toMatchObject({ status: "CONVERTED" });
+      const groupId = (
+        await prisma.vybeTimeSlotOccurrence.findUniqueOrThrow({
+          where: { id: occurrence.id },
+          select: { resourceGroupId: true }
+        })
+      ).resourceGroupId!;
+      const membership = await prisma.vybeTimeSlotResourceGroupMember.findFirstOrThrow({
+        where: { resourceGroupId: groupId, resourceId: hold.resourceId! }
+      });
+      await expect(
+        prisma.vybeTimeSlotResource.update({
+          where: { id: hold.resourceId! },
+          data: { isActive: false }
+        })
+      ).rejects.toThrow();
+      await expect(
+        prisma.vybeTimeSlotResourceGroup.update({
+          where: { id: groupId },
+          data: { isActive: false }
+        })
+      ).rejects.toThrow();
+      await expect(
+        prisma.vybeTimeSlotResourceGroupMember.delete({
+          where: { id: membership.id }
+        })
+      ).rejects.toThrow();
       expect(
         await getTimeSlotResourceAvailability(occurrence.id)
       ).toMatchObject({
