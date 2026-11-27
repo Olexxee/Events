@@ -349,6 +349,15 @@ describe.skipIf(!enabled)(
           }
         })
       ).toBe(1);
+      await expect(
+        confirmVybeBookingFromHold(
+          {
+            ...input,
+            acceptedTermsSnapshot: { version: "different-terms-v2" }
+          },
+          verifier
+        )
+      ).rejects.toMatchObject({ code: "IDEMPOTENCY_KEY_REUSED" });
     });
 
     it("expires a quantity hold instead of confirming it after its deadline", async () => {
