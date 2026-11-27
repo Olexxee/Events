@@ -458,7 +458,7 @@ describe.skipIf(!enabled)(
             userId: fixture.userId,
             idempotencyKey: `overlap-after-booking-${crypto.randomUUID()}`
           })
-        ).rejects.toMatchObject({ code: "VYBE_TIME_SLOT_RESOURCE_RACE" });
+        ).rejects.toMatchObject({ code: "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE" });
         expect(
           await prisma.vybeTimeSlotHold.count({
             where: { occurrenceId: overlappingOccurrence.id, status: "ACTIVE" }
