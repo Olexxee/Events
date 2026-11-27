@@ -126,37 +126,33 @@ describe.skipIf(!enabled)("Vybe booking schema PostgreSQL integration", () => {
       data: { status: "COMMITTED", bookingId: booking.id }
     });
 
-    const secondHold = await prisma.vybeTimeSlotHold.create({
-      data: {
-        occurrenceId: occurrence.id,
-        userId: user.id,
-        idempotencyKey: `second-${suffix}`,
-        resourceId: resource.id,
-        expiresAt: new Date("2027-04-12T17:56:00.000Z"),
-        serviceStartsAt: new Date("2027-04-12T18:30:00.000Z"),
-        serviceEndsAt: new Date("2027-04-12T19:30:00.000Z"),
-        blockedStartsAt: new Date("2027-04-12T18:30:00.000Z"),
-        blockedEndsAt: new Date("2027-04-12T19:30:00.000Z")
-      }
-    });
-
     await expect(
-      prisma.vybeTimeSlotResourceOccupancy.create({
+      prisma.vybeTimeSlotHold.create({
         data: {
-          resourceId: resource.id,
           occurrenceId: occurrence.id,
-          sourceHoldId: secondHold.id,
-          blockedStartsAt: secondHold.blockedStartsAt,
-          blockedEndsAt: secondHold.blockedEndsAt
+          userId: user.id,
+          idempotencyKey: `second-${suffix}`,
+          resourceId: resource.id,
+          expiresAt: new Date("2027-04-12T17:56:00.000Z"),
+          serviceStartsAt: new Date("2027-04-12T18:30:00.000Z"),
+          serviceEndsAt: new Date("2027-04-12T19:30:00.000Z"),
+          blockedStartsAt: new Date("2027-04-12T18:30:00.000Z"),
+          blockedEndsAt: new Date("2027-04-12T19:30:00.000Z")
         }
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/overlaps a committed booking occupancy/);
 
     expect(
       await prisma.vybeTimeSlotResourceOccupancy.findUnique({
         where: { id: occupancy.id }
       })
     ).toMatchObject({ status: "COMMITTED", bookingId: booking.id });
+    await expect(
+      prisma.vybeBooking.update({
+        where: { id: booking.id },
+        data: { offeringSnapshot: { title: "Mutated snapshot" } }
+      })
+    ).rejects.toThrow();
   });
 
   it("rejects bookings whose source hold belongs to another customer", async () => {
@@ -193,6 +189,7 @@ describe.skipIf(!enabled)("Vybe booking schema PostgreSQL integration", () => {
         userId: customer.id,
         idempotencyKey: `hold-${suffix}`,
         quantity: 1,
+        offeringVersion: 1,
         status: "CONVERTED",
         expiresAt: new Date("2027-04-12T17:55:00.000Z")
       }
@@ -209,11 +206,11 @@ describe.skipIf(!enabled)("Vybe booking schema PostgreSQL integration", () => {
           offeringVersion: 1,
           sourceType: "QUANTITY_POOL",
           inventoryHoldId: hold.id,
-          serviceStartsAt: new Date("2027-04-12T18:00:00.000Z"),
-          serviceEndsAt: new Date("2027-04-12T19:00:00.000Z"),
-          blockedStartsAt: new Date("2027-04-12T18:00:00.000Z"),
-          blockedEndsAt: new Date("2027-04-12T19:00:00.000Z"),
-          timezone: "Africa/Lagos",
+          serviceStartsAt: null,
+          serviceEndsAt: null,
+          blockedStartsAt: null,
+          blockedEndsAt: null,
+          timezone: null,
           quantity: 1,
           offeringSnapshot: { title: "Experience" },
           priceQuoteSnapshot: {

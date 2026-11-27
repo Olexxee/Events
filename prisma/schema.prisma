@@ -371,47 +371,47 @@ model AuditLog {
 }
 
 model User {
-  id                String                   @id @default(uuid()) @db.Uuid
-  email             String                   @unique @db.VarChar(320)
-  emailVerifiedAt   DateTime?                @map("email_verified_at") @db.Timestamptz(6)
-  status            UserStatus               @default(ACTIVE)
-  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
-  passwordCredential PasswordCredential?
-  profile           UserProfile?
-  sessions          Session[]
-  memberships       OrganizationMembership[]
-  platformRoles     PlatformRoleAssignment[]
-  createdOrganizations Organization[]        @relation("OrganizationCreator")
-  organizerApplicationsSubmitted OrganizerApplication[] @relation("OrganizerApplicationApplicant")
-  organizerApplicationsReviewed  OrganizerApplication[] @relation("OrganizerApplicationReviewer")
-  eventInvitationsReceived EventInvitation[] @relation("EventInvitationRecipient")
-  eventInvitationsIssued EventInvitation[] @relation("EventInvitationIssuer")
-  eventAccessRequests EventAccessRequest[]
-  eventAccessGrants EventAccessGrant[]
-  eventAccessHoldsCreated EventAccessHold[] @relation("EventAccessHoldActor")
-  eventAccessHoldsReleased EventAccessHold[] @relation("EventAccessHoldReleaser")
-  ticketTypesCreated TicketType[] @relation("TicketTypeCreator")
-  ticketHolds TicketHold[]
-  vybeInventoryHolds VybeInventoryHold[]
-  vybeTimeSlotHolds VybeTimeSlotHold[]
-  vybeBookingsAsCustomer VybeBooking[] @relation("VybeBookingCustomer")
-  vybeBookingStatusChanges VybeBookingStatusHistory[] @relation("VybeBookingStatusActor")
-  vybeInventoryAllocations VybeInventoryAllocation[]
-  vybeAccommodationAllocationsCreated VybeAccommodationAllocation[] @relation("VybeAccommodationAllocationCreator")
-  vybeAccommodationAdjustments VybeAccommodationAllocationAdjustment[]
-  vybeAccommodationHolds VybeAccommodationHold[]
-  vybeApplicationsSubmitted VybeProviderApplication[] @relation("VybeApplicationApplicant")
-  vybeProviderReviews VybeProviderReview[]
-  vybeEvidenceReviewed VybeProviderEvidence[] @relation("VybeEvidenceReviewer")
-  vybeApprovalsGranted VybeProviderApproval[] @relation("VybeApprovalGrantor")
-  vybeApprovalsSuspended VybeProviderApproval[] @relation("VybeApprovalSuspender")
-  vybeApprovalsRevoked VybeProviderApproval[] @relation("VybeApprovalRevoker")
-  vybeOfferingsCreated VybeOffering[] @relation("VybeOfferingCreator")
-  vybeOfferingVersionsCreated VybeOfferingVersion[] @relation("VybeOfferingVersionCreator")
-  vybeCategoryActivations VybeCategoryActivation[] @relation("VybeCategoryActivationActor")
-  eventAccessRequestsDecided EventAccessRequest[] @relation("EventAccessRequestDecider")
-  eventAccessGrantsRevoked EventAccessGrant[] @relation("EventAccessGrantRevoker")
+  id                                  String                                  @id @default(uuid()) @db.Uuid
+  email                               String                                  @unique @db.VarChar(320)
+  emailVerifiedAt                     DateTime?                               @map("email_verified_at") @db.Timestamptz(6)
+  status                              UserStatus                              @default(ACTIVE)
+  createdAt                           DateTime                                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                           DateTime                                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  passwordCredential                  PasswordCredential?
+  profile                             UserProfile?
+  sessions                            Session[]
+  memberships                         OrganizationMembership[]
+  platformRoles                       PlatformRoleAssignment[]
+  createdOrganizations                Organization[]                          @relation("OrganizationCreator")
+  organizerApplicationsSubmitted      OrganizerApplication[]                  @relation("OrganizerApplicationApplicant")
+  organizerApplicationsReviewed       OrganizerApplication[]                  @relation("OrganizerApplicationReviewer")
+  eventInvitationsReceived            EventInvitation[]                       @relation("EventInvitationRecipient")
+  eventInvitationsIssued              EventInvitation[]                       @relation("EventInvitationIssuer")
+  eventAccessRequests                 EventAccessRequest[]
+  eventAccessGrants                   EventAccessGrant[]
+  eventAccessHoldsCreated             EventAccessHold[]                       @relation("EventAccessHoldActor")
+  eventAccessHoldsReleased            EventAccessHold[]                       @relation("EventAccessHoldReleaser")
+  ticketTypesCreated                  TicketType[]                            @relation("TicketTypeCreator")
+  ticketHolds                         TicketHold[]
+  vybeInventoryHolds                  VybeInventoryHold[]
+  vybeTimeSlotHolds                   VybeTimeSlotHold[]
+  vybeBookingsAsCustomer              VybeBooking[]                           @relation("VybeBookingCustomer")
+  vybeBookingStatusChanges            VybeBookingStatusHistory[]              @relation("VybeBookingStatusActor")
+  vybeInventoryAllocations            VybeInventoryAllocation[]
+  vybeAccommodationAllocationsCreated VybeAccommodationAllocation[]           @relation("VybeAccommodationAllocationCreator")
+  vybeAccommodationAdjustments        VybeAccommodationAllocationAdjustment[]
+  vybeAccommodationHolds              VybeAccommodationHold[]
+  vybeApplicationsSubmitted           VybeProviderApplication[]               @relation("VybeApplicationApplicant")
+  vybeProviderReviews                 VybeProviderReview[]
+  vybeEvidenceReviewed                VybeProviderEvidence[]                  @relation("VybeEvidenceReviewer")
+  vybeApprovalsGranted                VybeProviderApproval[]                  @relation("VybeApprovalGrantor")
+  vybeApprovalsSuspended              VybeProviderApproval[]                  @relation("VybeApprovalSuspender")
+  vybeApprovalsRevoked                VybeProviderApproval[]                  @relation("VybeApprovalRevoker")
+  vybeOfferingsCreated                VybeOffering[]                          @relation("VybeOfferingCreator")
+  vybeOfferingVersionsCreated         VybeOfferingVersion[]                   @relation("VybeOfferingVersionCreator")
+  vybeCategoryActivations             VybeCategoryActivation[]                @relation("VybeCategoryActivationActor")
+  eventAccessRequestsDecided          EventAccessRequest[]                    @relation("EventAccessRequestDecider")
+  eventAccessGrantsRevoked            EventAccessGrant[]                      @relation("EventAccessGrantRevoker")
 
   @@index([status, createdAt])
   @@map("users")
@@ -430,13 +430,13 @@ model UserProfile {
 }
 
 model PasswordCredential {
-  id               String   @id @default(uuid()) @db.Uuid
-  userId           String   @unique @map("user_id") @db.Uuid
-  passwordHash     String   @map("password_hash") @db.VarChar(255)
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  passwordHash      String   @map("password_hash") @db.VarChar(255)
   passwordChangedAt DateTime @default(now()) @map("password_changed_at") @db.Timestamptz(6)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user             User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@map("password_credentials")
 }
@@ -464,23 +464,23 @@ model Session {
 }
 
 model Organization {
-  id          String                     @id @default(uuid()) @db.Uuid
-  name        String                     @db.VarChar(160)
-  slug        String                     @unique @db.VarChar(180)
-  status      OrganizationStatus         @default(ACTIVE)
-  createdById String                     @map("created_by_id") @db.Uuid
-  createdAt   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  createdBy   User                       @relation("OrganizationCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  memberships OrganizationMembership[]
-  organizerApplications OrganizerApplication[]
-  events               Event[]
-  eventInvitations EventInvitation[]
-  eventAccessRequests EventAccessRequest[]
-  eventAccessGrants EventAccessGrant[]
-  vybeProviderProfile VybeProviderProfile?
+  id                       String                    @id @default(uuid()) @db.Uuid
+  name                     String                    @db.VarChar(160)
+  slug                     String                    @unique @db.VarChar(180)
+  status                   OrganizationStatus        @default(ACTIVE)
+  createdById              String                    @map("created_by_id") @db.Uuid
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy                User                      @relation("OrganizationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  memberships              OrganizationMembership[]
+  organizerApplications    OrganizerApplication[]
+  events                   Event[]
+  eventInvitations         EventInvitation[]
+  eventAccessRequests      EventAccessRequest[]
+  eventAccessGrants        EventAccessGrant[]
+  vybeProviderProfile      VybeProviderProfile?
   vybeProviderApplications VybeProviderApplication[]
-  vybeBookings VybeBooking[]
+  vybeBookings             VybeBooking[]
 
   @@index([status, createdAt])
   @@map("organizations")
@@ -490,7 +490,7 @@ model OrganizationMembership {
   id             String                       @id @default(uuid()) @db.Uuid
   organizationId String                       @map("organization_id") @db.Uuid
   userId         String                       @map("user_id") @db.Uuid
-  role           OrganizationMembershipRole  @default(MEMBER)
+  role           OrganizationMembershipRole   @default(MEMBER)
   status         OrganizationMembershipStatus @default(ACTIVE)
   createdAt      DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -538,7 +538,6 @@ model OrganizerApplication {
   @@index([organizationId, status])
   @@map("organizer_applications")
 }
-
 
 model EventCategory {
   id          String   @id @default(uuid()) @db.Uuid
@@ -638,24 +637,23 @@ model EventRevision {
   @@map("event_revisions")
 }
 
-
 model EventInvitation {
-  id             String                @id @default(uuid()) @db.Uuid
-  eventId        String                @map("event_id") @db.Uuid
-  organizationId String                @map("organization_id") @db.Uuid
-  recipientUserId String               @map("recipient_user_id") @db.Uuid
-  issuedByUserId String                @map("issued_by_user_id") @db.Uuid
-  tokenDigest    String                @unique @map("token_digest") @db.Char(64)
-  status         EventInvitationStatus @default(PENDING)
-  expiresAt      DateTime              @map("expires_at") @db.Timestamptz(6)
-  acceptedAt     DateTime?             @map("accepted_at") @db.Timestamptz(6)
-  declinedAt     DateTime?             @map("declined_at") @db.Timestamptz(6)
-  revokedAt      DateTime?             @map("revoked_at") @db.Timestamptz(6)
-  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  event          Event                 @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  recipient      User                  @relation("EventInvitationRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
-  issuer         User                  @relation("EventInvitationIssuer", fields: [issuedByUserId], references: [id], onDelete: Restrict)
+  id              String                @id @default(uuid()) @db.Uuid
+  eventId         String                @map("event_id") @db.Uuid
+  organizationId  String                @map("organization_id") @db.Uuid
+  recipientUserId String                @map("recipient_user_id") @db.Uuid
+  issuedByUserId  String                @map("issued_by_user_id") @db.Uuid
+  tokenDigest     String                @unique @map("token_digest") @db.Char(64)
+  status          EventInvitationStatus @default(PENDING)
+  expiresAt       DateTime              @map("expires_at") @db.Timestamptz(6)
+  acceptedAt      DateTime?             @map("accepted_at") @db.Timestamptz(6)
+  declinedAt      DateTime?             @map("declined_at") @db.Timestamptz(6)
+  revokedAt       DateTime?             @map("revoked_at") @db.Timestamptz(6)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  event           Event                 @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  recipient       User                  @relation("EventInvitationRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  issuer          User                  @relation("EventInvitationIssuer", fields: [issuedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, recipientUserId, status])
   @@index([status, expiresAt])
@@ -663,22 +661,22 @@ model EventInvitation {
 }
 
 model EventAccessRequest {
-  id             String                   @id @default(uuid()) @db.Uuid
-  eventId        String                   @map("event_id") @db.Uuid
-  organizationId String                   @map("organization_id") @db.Uuid
-  requesterUserId String                  @map("requester_user_id") @db.Uuid
-  status         EventAccessRequestStatus @default(SUBMITTED)
-  message        String?                  @db.VarChar(500)
-  decisionReason String?                  @map("decision_reason") @db.VarChar(1000)
-  decidedByUserId String?                 @map("decided_by_user_id") @db.Uuid
-  decidedAt      DateTime?                @map("decided_at") @db.Timestamptz(6)
-  withdrawnAt    DateTime?                @map("withdrawn_at") @db.Timestamptz(6)
-  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
-  event          Event                    @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  requester      User                     @relation(fields: [requesterUserId], references: [id], onDelete: Restrict)
-  decider        User?                    @relation("EventAccessRequestDecider", fields: [decidedByUserId], references: [id], onDelete: Restrict)
+  id              String                   @id @default(uuid()) @db.Uuid
+  eventId         String                   @map("event_id") @db.Uuid
+  organizationId  String                   @map("organization_id") @db.Uuid
+  requesterUserId String                   @map("requester_user_id") @db.Uuid
+  status          EventAccessRequestStatus @default(SUBMITTED)
+  message         String?                  @db.VarChar(500)
+  decisionReason  String?                  @map("decision_reason") @db.VarChar(1000)
+  decidedByUserId String?                  @map("decided_by_user_id") @db.Uuid
+  decidedAt       DateTime?                @map("decided_at") @db.Timestamptz(6)
+  withdrawnAt     DateTime?                @map("withdrawn_at") @db.Timestamptz(6)
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  event           Event                    @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  organization    Organization             @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  requester       User                     @relation(fields: [requesterUserId], references: [id], onDelete: Restrict)
+  decider         User?                    @relation("EventAccessRequestDecider", fields: [decidedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, status, createdAt])
   @@index([requesterUserId, createdAt])
@@ -686,24 +684,24 @@ model EventAccessRequest {
 }
 
 model EventAccessGrant {
-  id             String                  @id @default(uuid()) @db.Uuid
-  eventId        String                  @map("event_id") @db.Uuid
-  organizationId String                  @map("organization_id") @db.Uuid
-  userId         String                  @map("user_id") @db.Uuid
-  source         EventAccessGrantSource
-  sourceId       String                  @map("source_id") @db.Uuid
-  status         EventAccessGrantStatus  @default(ACTIVE)
-  canViewDetails Boolean                 @default(true) @map("can_view_details")
-  canCheckout    Boolean                 @default(true) @map("can_checkout")
-  expiresAt      DateTime                @map("expires_at") @db.Timestamptz(6)
-  revokedAt      DateTime?               @map("revoked_at") @db.Timestamptz(6)
+  id              String                 @id @default(uuid()) @db.Uuid
+  eventId         String                 @map("event_id") @db.Uuid
+  organizationId  String                 @map("organization_id") @db.Uuid
+  userId          String                 @map("user_id") @db.Uuid
+  source          EventAccessGrantSource
+  sourceId        String                 @map("source_id") @db.Uuid
+  status          EventAccessGrantStatus @default(ACTIVE)
+  canViewDetails  Boolean                @default(true) @map("can_view_details")
+  canCheckout     Boolean                @default(true) @map("can_checkout")
+  expiresAt       DateTime               @map("expires_at") @db.Timestamptz(6)
+  revokedAt       DateTime?              @map("revoked_at") @db.Timestamptz(6)
   revokedByUserId String?                @map("revoked_by_user_id") @db.Uuid
-  revokeReason   String?                 @map("revoke_reason") @db.VarChar(1000)
-  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
-  event          Event                   @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  user           User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  revoker        User?                   @relation("EventAccessGrantRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
+  revokeReason    String?                @map("revoke_reason") @db.VarChar(1000)
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  event           Event                  @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user            User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  revoker         User?                  @relation("EventAccessGrantRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, userId, status, expiresAt])
   @@index([organizationId, createdAt])
@@ -711,42 +709,41 @@ model EventAccessGrant {
 }
 
 model EventAccessHold {
-  id             String    @id @default(uuid()) @db.Uuid
-  eventId        String    @unique @map("event_id") @db.Uuid
-  reason         String    @db.VarChar(1000)
-  createdByUserId String   @map("created_by_user_id") @db.Uuid
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  releasedAt     DateTime? @map("released_at") @db.Timestamptz(6)
-  releasedByUserId String? @map("released_by_user_id") @db.Uuid
-  event          Event     @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  actor          User      @relation("EventAccessHoldActor", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  releaser       User?     @relation("EventAccessHoldReleaser", fields: [releasedByUserId], references: [id], onDelete: Restrict)
+  id               String    @id @default(uuid()) @db.Uuid
+  eventId          String    @unique @map("event_id") @db.Uuid
+  reason           String    @db.VarChar(1000)
+  createdByUserId  String    @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  releasedAt       DateTime? @map("released_at") @db.Timestamptz(6)
+  releasedByUserId String?   @map("released_by_user_id") @db.Uuid
+  event            Event     @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  actor            User      @relation("EventAccessHoldActor", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  releaser         User?     @relation("EventAccessHoldReleaser", fields: [releasedByUserId], references: [id], onDelete: Restrict)
 
   @@index([eventId, releasedAt])
   @@index([releasedAt, createdAt])
   @@map("event_access_holds")
 }
 
-
 model TicketType {
-  id              String           @id @default(uuid()) @db.Uuid
-  eventId         String           @map("event_id") @db.Uuid
-  createdByUserId String           @map("created_by_user_id") @db.Uuid
-  name            String           @db.VarChar(120)
-  description     String?          @db.VarChar(2000)
-  admissionClass  String?          @map("admission_class") @db.VarChar(120)
-  status          TicketTypeStatus @default(ACTIVE)
+  id              String              @id @default(uuid()) @db.Uuid
+  eventId         String              @map("event_id") @db.Uuid
+  createdByUserId String              @map("created_by_user_id") @db.Uuid
+  name            String              @db.VarChar(120)
+  description     String?             @db.VarChar(2000)
+  admissionClass  String?             @map("admission_class") @db.VarChar(120)
+  status          TicketTypeStatus    @default(ACTIVE)
   capacity        Int
-  issuedQuantity  Int              @default(0) @map("issued_quantity")
-  salesStartsAt   DateTime?        @map("sales_starts_at") @db.Timestamptz(6)
-  salesEndsAt     DateTime?        @map("sales_ends_at") @db.Timestamptz(6)
-  minPerOrder     Int              @default(1) @map("min_per_order")
-  maxPerOrder     Int              @default(10) @map("max_per_order")
-  currentVersion  Int              @default(1) @map("current_version")
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  event           Event            @relation(fields: [eventId], references: [id], onDelete: Restrict)
-  creator         User             @relation("TicketTypeCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  issuedQuantity  Int                 @default(0) @map("issued_quantity")
+  salesStartsAt   DateTime?           @map("sales_starts_at") @db.Timestamptz(6)
+  salesEndsAt     DateTime?           @map("sales_ends_at") @db.Timestamptz(6)
+  minPerOrder     Int                 @default(1) @map("min_per_order")
+  maxPerOrder     Int                 @default(10) @map("max_per_order")
+  currentVersion  Int                 @default(1) @map("current_version")
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  event           Event               @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  creator         User                @relation("TicketTypeCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   versions        TicketTypeVersion[]
   holdLines       TicketHoldLine[]
 
@@ -756,19 +753,19 @@ model TicketType {
 }
 
 model TicketTypeVersion {
-  id             String     @id @default(uuid()) @db.Uuid
-  ticketTypeId   String     @map("ticket_type_id") @db.Uuid
-  version        Int
-  name           String     @db.VarChar(120)
-  description    String?    @db.VarChar(2000)
-  admissionClass String?    @map("admission_class") @db.VarChar(120)
-  unitPriceMinor BigInt     @map("unit_price_minor")
-  currency       String     @db.Char(3)
-  benefits       Json       @default("[]")
-  transferable   Boolean    @default(false)
-  createdByUserId String    @map("created_by_user_id") @db.Uuid
-  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  ticketType     TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  id              String     @id @default(uuid()) @db.Uuid
+  ticketTypeId    String     @map("ticket_type_id") @db.Uuid
+  version         Int
+  name            String     @db.VarChar(120)
+  description     String?    @db.VarChar(2000)
+  admissionClass  String?    @map("admission_class") @db.VarChar(120)
+  unitPriceMinor  BigInt     @map("unit_price_minor")
+  currency        String     @db.Char(3)
+  benefits        Json       @default("[]")
+  transferable    Boolean    @default(false)
+  createdByUserId String     @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  ticketType      TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
 
   @@unique([ticketTypeId, version])
   @@index([ticketTypeId, createdAt])
@@ -796,58 +793,57 @@ model TicketHold {
 }
 
 model TicketHoldLine {
-  id             String            @id @default(uuid()) @db.Uuid
-  holdId         String            @map("hold_id") @db.Uuid
-  ticketTypeId   String            @map("ticket_type_id") @db.Uuid
+  id             String     @id @default(uuid()) @db.Uuid
+  holdId         String     @map("hold_id") @db.Uuid
+  ticketTypeId   String     @map("ticket_type_id") @db.Uuid
   quantity       Int
-  typeVersion    Int               @map("type_version")
-  unitPriceMinor BigInt            @map("unit_price_minor")
-  currency       String            @db.Char(3)
-  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  hold           TicketHold        @relation(fields: [holdId], references: [id], onDelete: Restrict)
-  ticketType     TicketType        @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
+  typeVersion    Int        @map("type_version")
+  unitPriceMinor BigInt     @map("unit_price_minor")
+  currency       String     @db.Char(3)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  hold           TicketHold @relation(fields: [holdId], references: [id], onDelete: Restrict)
+  ticketType     TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Restrict)
 
   @@unique([holdId, ticketTypeId])
   @@index([ticketTypeId, holdId])
   @@map("ticket_hold_lines")
 }
 
-
 model VybeProviderProfile {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @unique @map("organization_id") @db.Uuid
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  approvals      VybeProviderApproval[]
-  offerings      VybeOffering[]
-  timeSlotResources VybeTimeSlotResource[]
-  timeSlotResourceGroups VybeTimeSlotResourceGroup[]
-  accommodationProperties VybeAccommodationProperty[]
+  id                          String                          @id @default(uuid()) @db.Uuid
+  organizationId              String                          @unique @map("organization_id") @db.Uuid
+  createdAt                   DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization                Organization                    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  approvals                   VybeProviderApproval[]
+  offerings                   VybeOffering[]
+  timeSlotResources           VybeTimeSlotResource[]
+  timeSlotResourceGroups      VybeTimeSlotResourceGroup[]
+  accommodationProperties     VybeAccommodationProperty[]
   accommodationRoomCategories VybeAccommodationRoomCategory[]
-  bookings VybeBooking[]
+  bookings                    VybeBooking[]
 
   @@map("vybe_provider_profiles")
 }
 
 model VybeProviderApplication {
-  id                       String   @id @default(uuid()) @db.Uuid
-  organizationId           String   @map("organization_id") @db.Uuid
-  applicantUserId          String   @map("applicant_user_id") @db.Uuid
+  id                       String                            @id @default(uuid()) @db.Uuid
+  organizationId           String                            @map("organization_id") @db.Uuid
+  applicantUserId          String                            @map("applicant_user_id") @db.Uuid
   category                 VybeCategory
-  serviceDescription       String   @map("service_description") @db.VarChar(1500)
-  supplyAuthorityStatement String   @map("supply_authority_statement") @db.VarChar(2000)
-  supplyAuthorityAttested  Boolean  @default(false) @map("supply_authority_attested")
-  termsVersion             String   @map("terms_version") @db.VarChar(40)
-  termsAcceptedAt          DateTime @map("terms_accepted_at") @db.Timestamptz(6)
-  status                   VybeProviderApplicationStatus @default(SUBMITTED)
-  submittedAt              DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
-  reviewedAt               DateTime? @map("reviewed_at") @db.Timestamptz(6)
-  decisionReason           String?  @map("decision_reason") @db.VarChar(1000)
-  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  organization             Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  applicant                User @relation("VybeApplicationApplicant", fields: [applicantUserId], references: [id], onDelete: Restrict)
+  serviceDescription       String                            @map("service_description") @db.VarChar(1500)
+  supplyAuthorityStatement String                            @map("supply_authority_statement") @db.VarChar(2000)
+  supplyAuthorityAttested  Boolean                           @default(false) @map("supply_authority_attested")
+  termsVersion             String                            @map("terms_version") @db.VarChar(40)
+  termsAcceptedAt          DateTime                          @map("terms_accepted_at") @db.Timestamptz(6)
+  status                   VybeProviderApplicationStatus     @default(SUBMITTED)
+  submittedAt              DateTime                          @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt               DateTime?                         @map("reviewed_at") @db.Timestamptz(6)
+  decisionReason           String?                           @map("decision_reason") @db.VarChar(1000)
+  createdAt                DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime                          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  organization             Organization                      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  applicant                User                              @relation("VybeApplicationApplicant", fields: [applicantUserId], references: [id], onDelete: Restrict)
   locations                VybeProviderApplicationLocation[]
   evidence                 VybeProviderEvidence[]
   reviews                  VybeProviderReview[]
@@ -860,12 +856,12 @@ model VybeProviderApplication {
 }
 
 model VybeProviderApplicationLocation {
-  id            String   @id @default(uuid()) @db.Uuid
-  applicationId String   @map("application_id") @db.Uuid
-  city          String   @db.VarChar(100)
-  state         String   @db.VarChar(100)
-  country       String   @db.VarChar(100)
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id            String                  @id @default(uuid()) @db.Uuid
+  applicationId String                  @map("application_id") @db.Uuid
+  city          String                  @db.VarChar(100)
+  state         String                  @db.VarChar(100)
+  country       String                  @db.VarChar(100)
+  createdAt     DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   application   VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
 
   @@unique([applicationId, city, state, country], map: "vybe_provider_application_locations_scope_key")
@@ -874,32 +870,32 @@ model VybeProviderApplicationLocation {
 }
 
 model VybeProviderEvidence {
-  id               String   @id @default(uuid()) @db.Uuid
-  applicationId    String   @map("application_id") @db.Uuid
-  evidenceType     String   @map("evidence_type") @db.VarChar(100)
-  requirementReason String  @map("requirement_reason") @db.VarChar(1000)
-  storageReference String   @map("storage_reference") @db.VarChar(1000)
-  status           VybeEvidenceStatus @default(PENDING)
-  reviewedByUserId String?  @map("reviewed_by_user_id") @db.Uuid
-  reviewedAt       DateTime? @map("reviewed_at") @db.Timestamptz(6)
-  reviewReason     String?  @map("review_reason") @db.VarChar(1000)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  application      VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
-  reviewer         User? @relation("VybeEvidenceReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  id                String                  @id @default(uuid()) @db.Uuid
+  applicationId     String                  @map("application_id") @db.Uuid
+  evidenceType      String                  @map("evidence_type") @db.VarChar(100)
+  requirementReason String                  @map("requirement_reason") @db.VarChar(1000)
+  storageReference  String                  @map("storage_reference") @db.VarChar(1000)
+  status            VybeEvidenceStatus      @default(PENDING)
+  reviewedByUserId  String?                 @map("reviewed_by_user_id") @db.Uuid
+  reviewedAt        DateTime?               @map("reviewed_at") @db.Timestamptz(6)
+  reviewReason      String?                 @map("review_reason") @db.VarChar(1000)
+  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  application       VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  reviewer          User?                   @relation("VybeEvidenceReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
 
   @@index([applicationId, status], map: "vybe_provider_evidence_application_status_idx")
   @@map("vybe_provider_evidence")
 }
 
 model VybeProviderReview {
-  id            String   @id @default(uuid()) @db.Uuid
-  applicationId String   @map("application_id") @db.Uuid
-  reviewerUserId String  @map("reviewer_user_id") @db.Uuid
-  action        VybeProviderReviewAction
-  reason        String   @db.VarChar(1000)
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  application  VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
-  reviewer     User @relation(fields: [reviewerUserId], references: [id], onDelete: Restrict)
+  id             String                   @id @default(uuid()) @db.Uuid
+  applicationId  String                   @map("application_id") @db.Uuid
+  reviewerUserId String                   @map("reviewer_user_id") @db.Uuid
+  action         VybeProviderReviewAction
+  reason         String                   @db.VarChar(1000)
+  createdAt      DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  application    VybeProviderApplication  @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  reviewer       User                     @relation(fields: [reviewerUserId], references: [id], onDelete: Restrict)
 
   @@index([applicationId, createdAt], map: "vybe_provider_reviews_application_created_idx")
   @@index([reviewerUserId, createdAt], map: "vybe_provider_reviews_reviewer_created_idx")
@@ -907,47 +903,46 @@ model VybeProviderReview {
 }
 
 model VybeProviderApproval {
-  id                String   @id @default(uuid()) @db.Uuid
-  applicationId     String   @unique @map("application_id") @db.Uuid
-  providerProfileId String   @map("provider_profile_id") @db.Uuid
+  id                String                     @id @default(uuid()) @db.Uuid
+  applicationId     String                     @unique @map("application_id") @db.Uuid
+  providerProfileId String                     @map("provider_profile_id") @db.Uuid
   category          VybeCategory
   status            VybeProviderApprovalStatus @default(ACTIVE)
-  locations         Json     @default("[]")
-  conditions        Json     @default("[]")
-  approvedByUserId  String   @map("approved_by_user_id") @db.Uuid
-  approvedAt        DateTime @default(now()) @map("approved_at") @db.Timestamptz(6)
-  expiresAt         DateTime? @map("expires_at") @db.Timestamptz(6)
-  suspendedAt       DateTime? @map("suspended_at") @db.Timestamptz(6)
-  suspendedByUserId String?  @map("suspended_by_user_id") @db.Uuid
-  suspensionReason  String?  @map("suspension_reason") @db.VarChar(1000)
-  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(6)
-  revokedByUserId   String?  @map("revoked_by_user_id") @db.Uuid
-  revocationReason  String?  @map("revocation_reason") @db.VarChar(1000)
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  application       VybeProviderApplication @relation(fields: [applicationId], references: [id], onDelete: Restrict)
-  providerProfile   VybeProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
-  grantor           User @relation("VybeApprovalGrantor", fields: [approvedByUserId], references: [id], onDelete: Restrict)
-  suspender         User? @relation("VybeApprovalSuspender", fields: [suspendedByUserId], references: [id], onDelete: Restrict)
-  revoker           User? @relation("VybeApprovalRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
+  locations         Json                       @default("[]")
+  conditions        Json                       @default("[]")
+  approvedByUserId  String                     @map("approved_by_user_id") @db.Uuid
+  approvedAt        DateTime                   @default(now()) @map("approved_at") @db.Timestamptz(6)
+  expiresAt         DateTime?                  @map("expires_at") @db.Timestamptz(6)
+  suspendedAt       DateTime?                  @map("suspended_at") @db.Timestamptz(6)
+  suspendedByUserId String?                    @map("suspended_by_user_id") @db.Uuid
+  suspensionReason  String?                    @map("suspension_reason") @db.VarChar(1000)
+  revokedAt         DateTime?                  @map("revoked_at") @db.Timestamptz(6)
+  revokedByUserId   String?                    @map("revoked_by_user_id") @db.Uuid
+  revocationReason  String?                    @map("revocation_reason") @db.VarChar(1000)
+  createdAt         DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  application       VybeProviderApplication    @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  providerProfile   VybeProviderProfile        @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  grantor           User                       @relation("VybeApprovalGrantor", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+  suspender         User?                      @relation("VybeApprovalSuspender", fields: [suspendedByUserId], references: [id], onDelete: Restrict)
+  revoker           User?                      @relation("VybeApprovalRevoker", fields: [revokedByUserId], references: [id], onDelete: Restrict)
 
   @@index([providerProfileId, category, status], map: "vybe_provider_approvals_profile_category_status_idx")
   @@index([category, status, expiresAt], map: "vybe_provider_approvals_category_status_expiry_idx")
   @@map("vybe_provider_approvals")
 }
 
-
 model VybeOffering {
-  id                       String   @id @default(uuid()) @db.Uuid
-  providerProfileId        String   @map("provider_profile_id") @db.Uuid
-  category                 VybeCategory
-  status                   VybeOfferingStatus @default(DRAFT)
-  currentPublishedVersion  Int?     @map("current_published_version")
-  createdByUserId          String   @map("created_by_user_id") @db.Uuid
-  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  providerProfile           VybeProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
-  creator                   User @relation("VybeOfferingCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  id                        String                         @id @default(uuid()) @db.Uuid
+  providerProfileId         String                         @map("provider_profile_id") @db.Uuid
+  category                  VybeCategory
+  status                    VybeOfferingStatus             @default(DRAFT)
+  currentPublishedVersion   Int?                           @map("current_published_version")
+  createdByUserId           String                         @map("created_by_user_id") @db.Uuid
+  createdAt                 DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile           VybeProviderProfile            @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  creator                   User                           @relation("VybeOfferingCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   versions                  VybeOfferingVersion[]
   inventoryPool             VybeInventoryPool?
   timeSlotOccurrences       VybeTimeSlotOccurrence[]
@@ -962,22 +957,21 @@ model VybeOffering {
 }
 
 model VybeOfferingVersion {
-  id              String   @id @default(uuid()) @db.Uuid
-  offeringId      String   @map("offering_id") @db.Uuid
+  id              String                    @id @default(uuid()) @db.Uuid
+  offeringId      String                    @map("offering_id") @db.Uuid
   version         Int
   status          VybeOfferingVersionStatus @default(DRAFT)
   content         Json
-  createdByUserId String   @map("created_by_user_id") @db.Uuid
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  publishedAt     DateTime? @map("published_at") @db.Timestamptz(6)
-  offering        VybeOffering @relation(fields: [offeringId], references: [id], onDelete: Restrict)
-  creator         User @relation("VybeOfferingVersionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  createdByUserId String                    @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  publishedAt     DateTime?                 @map("published_at") @db.Timestamptz(6)
+  offering        VybeOffering              @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  creator         User                      @relation("VybeOfferingVersionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
 
   @@unique([offeringId, version], map: "vybe_offering_versions_offering_version_key")
   @@index([offeringId, status, version], map: "vybe_offering_versions_offering_status_version_idx")
   @@map("vybe_offering_versions")
 }
-
 
 model VybeTimeSlotResourceOccupancy {
   id              String                              @id @default(uuid()) @db.Uuid
@@ -1001,41 +995,41 @@ model VybeTimeSlotResourceOccupancy {
 }
 
 model VybeBooking {
-  id                         String                @id @default(uuid()) @db.Uuid
-  publicReference            String                @unique @map("public_reference") @db.VarChar(32)
-  customerUserId             String                @map("customer_user_id") @db.Uuid
-  providerProfileId          String                @map("provider_profile_id") @db.Uuid
-  providerOrganizationId     String                @map("provider_organization_id") @db.Uuid
-  offeringId                 String                @map("offering_id") @db.Uuid
-  offeringVersion            Int                   @map("offering_version")
-  sourceType                 VybeBookingSourceType @map("source_type")
-  inventoryHoldId            String?               @unique @map("inventory_hold_id") @db.Uuid
-  timeSlotHoldId             String?               @unique @map("time_slot_hold_id") @db.Uuid
-  status                     VybeBookingStatus     @default(CONFIRMED)
-  serviceStartsAt            DateTime              @map("service_starts_at") @db.Timestamptz(6)
-  serviceEndsAt              DateTime              @map("service_ends_at") @db.Timestamptz(6)
-  blockedStartsAt            DateTime              @map("blocked_starts_at") @db.Timestamptz(6)
-  blockedEndsAt              DateTime              @map("blocked_ends_at") @db.Timestamptz(6)
-  timezone                   String                @db.VarChar(80)
+  id                         String                         @id @default(uuid()) @db.Uuid
+  publicReference            String                         @unique @map("public_reference") @db.VarChar(32)
+  customerUserId             String                         @map("customer_user_id") @db.Uuid
+  providerProfileId          String                         @map("provider_profile_id") @db.Uuid
+  providerOrganizationId     String                         @map("provider_organization_id") @db.Uuid
+  offeringId                 String                         @map("offering_id") @db.Uuid
+  offeringVersion            Int                            @map("offering_version")
+  sourceType                 VybeBookingSourceType          @map("source_type")
+  inventoryHoldId            String?                        @unique @map("inventory_hold_id") @db.Uuid
+  timeSlotHoldId             String?                        @unique @map("time_slot_hold_id") @db.Uuid
+  status                     VybeBookingStatus              @default(CONFIRMED)
+  serviceStartsAt            DateTime?                      @map("service_starts_at") @db.Timestamptz(6)
+  serviceEndsAt              DateTime?                      @map("service_ends_at") @db.Timestamptz(6)
+  blockedStartsAt            DateTime?                      @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt              DateTime?                      @map("blocked_ends_at") @db.Timestamptz(6)
+  timezone                   String?                        @db.VarChar(80)
   quantity                   Int?
-  resourceId                 String?               @map("resource_id") @db.Uuid
-  offeringSnapshot           Json                  @map("offering_snapshot")
-  priceQuoteSnapshot         Json                  @map("price_quote_snapshot")
-  acceptedTermsSnapshot      Json                  @map("accepted_terms_snapshot")
-  externalOrderItemReference String?               @unique @map("external_order_item_reference") @db.VarChar(180)
-  confirmedAt                DateTime              @default(now()) @map("confirmed_at") @db.Timestamptz(6)
-  cancelledAt                DateTime?             @map("cancelled_at") @db.Timestamptz(6)
-  completedAt                DateTime?             @map("completed_at") @db.Timestamptz(6)
-  noShowAt                   DateTime?             @map("no_show_at") @db.Timestamptz(6)
-  createdAt                  DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                  DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
-  customer                   User                  @relation("VybeBookingCustomer", fields: [customerUserId], references: [id], onDelete: Restrict)
-  providerProfile            VybeProviderProfile   @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
-  providerOrganization       Organization          @relation(fields: [providerOrganizationId], references: [id], onDelete: Restrict)
-  offering                   VybeOffering          @relation(fields: [offeringId], references: [id], onDelete: Restrict)
-  resource                   VybeTimeSlotResource? @relation("VybeBookingResource", fields: [resourceId], references: [id], onDelete: Restrict)
-  inventoryHold              VybeInventoryHold?    @relation("VybeBookingInventoryHold", fields: [inventoryHoldId], references: [id], onDelete: Restrict)
-  timeSlotHold               VybeTimeSlotHold?     @relation("VybeBookingTimeSlotHold", fields: [timeSlotHoldId], references: [id], onDelete: Restrict)
+  resourceId                 String?                        @map("resource_id") @db.Uuid
+  offeringSnapshot           Json                           @map("offering_snapshot")
+  priceQuoteSnapshot         Json                           @map("price_quote_snapshot")
+  acceptedTermsSnapshot      Json                           @map("accepted_terms_snapshot")
+  externalOrderItemReference String?                        @unique @map("external_order_item_reference") @db.VarChar(180)
+  confirmedAt                DateTime                       @default(now()) @map("confirmed_at") @db.Timestamptz(6)
+  cancelledAt                DateTime?                      @map("cancelled_at") @db.Timestamptz(6)
+  completedAt                DateTime?                      @map("completed_at") @db.Timestamptz(6)
+  noShowAt                   DateTime?                      @map("no_show_at") @db.Timestamptz(6)
+  createdAt                  DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  customer                   User                           @relation("VybeBookingCustomer", fields: [customerUserId], references: [id], onDelete: Restrict)
+  providerProfile            VybeProviderProfile            @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  providerOrganization       Organization                   @relation(fields: [providerOrganizationId], references: [id], onDelete: Restrict)
+  offering                   VybeOffering                   @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  resource                   VybeTimeSlotResource?          @relation("VybeBookingResource", fields: [resourceId], references: [id], onDelete: Restrict)
+  inventoryHold              VybeInventoryHold?             @relation("VybeBookingInventoryHold", fields: [inventoryHoldId], references: [id], onDelete: Restrict)
+  timeSlotHold               VybeTimeSlotHold?              @relation("VybeBookingTimeSlotHold", fields: [timeSlotHoldId], references: [id], onDelete: Restrict)
   occupancy                  VybeTimeSlotResourceOccupancy?
   statusHistory              VybeBookingStatusHistory[]
 
@@ -1065,21 +1059,21 @@ model VybeBookingStatusHistory {
 }
 
 model VybeAccommodationProperty {
-  id                String                           @id @default(uuid()) @db.Uuid
-  providerProfileId String                           @map("provider_profile_id") @db.Uuid
-  providerPropertyKey String                         @map("provider_property_key") @db.VarChar(120)
-  name              String                           @db.VarChar(180)
-  addressLine       String?                          @map("address_line") @db.VarChar(300)
-  city              String                           @db.VarChar(100)
-  state             String                           @db.VarChar(100)
-  country           String                           @db.VarChar(100)
-  postalCode        String?                          @map("postal_code") @db.VarChar(32)
-  timezone          String                           @db.VarChar(80)
-  status            VybeAccommodationPropertyStatus  @default(ACTIVE)
-  createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  providerProfile   VybeProviderProfile              @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_properties_provider_fkey")
-  roomCategories    VybeAccommodationRoomCategory[]
+  id                  String                          @id @default(uuid()) @db.Uuid
+  providerProfileId   String                          @map("provider_profile_id") @db.Uuid
+  providerPropertyKey String                          @map("provider_property_key") @db.VarChar(120)
+  name                String                          @db.VarChar(180)
+  addressLine         String?                         @map("address_line") @db.VarChar(300)
+  city                String                          @db.VarChar(100)
+  state               String                          @db.VarChar(100)
+  country             String                          @db.VarChar(100)
+  postalCode          String?                         @map("postal_code") @db.VarChar(32)
+  timezone            String                          @db.VarChar(80)
+  status              VybeAccommodationPropertyStatus @default(ACTIVE)
+  createdAt           DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile     VybeProviderProfile             @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_properties_provider_fkey")
+  roomCategories      VybeAccommodationRoomCategory[]
 
   @@unique([providerProfileId, providerPropertyKey], map: "vybe_accommodation_properties_provider_key")
   @@unique([id, providerProfileId], map: "vybe_accommodation_properties_id_provider_key")
@@ -1088,26 +1082,26 @@ model VybeAccommodationProperty {
 }
 
 model VybeAccommodationRoomCategory {
-  id                String                                  @id @default(uuid()) @db.Uuid
-  providerProfileId String                                  @map("provider_profile_id") @db.Uuid
-  propertyId        String                                  @map("property_id") @db.Uuid
-  providerCategoryKey String                                @map("provider_category_key") @db.VarChar(120)
-  name              String                                  @db.VarChar(160)
-  description       String?                                 @db.VarChar(1000)
-  maxOccupancy      Int                                     @map("max_occupancy")
-  physicalUnitCount Int?                                    @map("physical_unit_count")
-  physicalUnitCountEvidenceReference String?                 @map("physical_unit_count_evidence_reference") @db.VarChar(1000)
-  specifications    Json                                    @default("{}")
-  status            VybeAccommodationRoomCategoryStatus    @default(ACTIVE)
-  offeringId        String                                  @unique @map("offering_id") @db.Uuid
-  createdAt         DateTime                                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                                @updatedAt @map("updated_at") @db.Timestamptz(6)
-  providerProfile   VybeProviderProfile                     @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_room_categories_provider_fkey")
-  property          VybeAccommodationProperty               @relation(fields: [propertyId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_property_provider_fkey")
-  offering          VybeOffering                             @relation(fields: [offeringId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_offering_provider_fkey")
-  allocations       VybeAccommodationAllocation[]
-  nightLocks        VybeAccommodationNightLock[]
-  holds             VybeAccommodationHold[]
+  id                                 String                              @id @default(uuid()) @db.Uuid
+  providerProfileId                  String                              @map("provider_profile_id") @db.Uuid
+  propertyId                         String                              @map("property_id") @db.Uuid
+  providerCategoryKey                String                              @map("provider_category_key") @db.VarChar(120)
+  name                               String                              @db.VarChar(160)
+  description                        String?                             @db.VarChar(1000)
+  maxOccupancy                       Int                                 @map("max_occupancy")
+  physicalUnitCount                  Int?                                @map("physical_unit_count")
+  physicalUnitCountEvidenceReference String?                             @map("physical_unit_count_evidence_reference") @db.VarChar(1000)
+  specifications                     Json                                @default("{}")
+  status                             VybeAccommodationRoomCategoryStatus @default(ACTIVE)
+  offeringId                         String                              @unique @map("offering_id") @db.Uuid
+  createdAt                          DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                          DateTime                            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile                    VybeProviderProfile                 @relation(fields: [providerProfileId], references: [id], onDelete: Restrict, map: "vybe_accommodation_room_categories_provider_fkey")
+  property                           VybeAccommodationProperty           @relation(fields: [propertyId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_property_provider_fkey")
+  offering                           VybeOffering                        @relation(fields: [offeringId, providerProfileId], references: [id, providerProfileId], onDelete: Restrict, map: "vybe_accommodation_room_categories_offering_provider_fkey")
+  allocations                        VybeAccommodationAllocation[]
+  nightLocks                         VybeAccommodationNightLock[]
+  holds                              VybeAccommodationHold[]
 
   @@unique([propertyId, providerCategoryKey], map: "vybe_accommodation_room_categories_property_key")
   @@unique([offeringId, providerProfileId], map: "vybe_accommodation_room_categories_offering_provider_key")
@@ -1117,22 +1111,22 @@ model VybeAccommodationRoomCategory {
 }
 
 model VybeAccommodationAllocation {
-  id                    String                               @id @default(uuid()) @db.Uuid
-  roomCategoryId        String                               @map("room_category_id") @db.Uuid
-  startDate             DateTime                             @map("start_date") @db.Date
-  endDate               DateTime                             @map("end_date") @db.Date
-  releaseCutoffAt       DateTime                             @map("release_cutoff_at") @db.Timestamptz(6)
-  releaseCutoffLocal    String                               @map("release_cutoff_local") @db.VarChar(40)
-  releaseCutoffTimezone String                               @map("release_cutoff_timezone") @db.VarChar(80)
-  agreementReference    String                               @map("agreement_reference") @db.VarChar(500)
-  termsVersion          String                               @map("terms_version") @db.VarChar(80)
-  evidenceReference     String                               @map("evidence_reference") @db.VarChar(1000)
-  status                VybeAccommodationAllocationStatus    @default(ACTIVE)
-  createdByUserId       String                               @map("created_by_user_id") @db.Uuid
-  createdAt             DateTime                             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime                             @updatedAt @map("updated_at") @db.Timestamptz(6)
-  roomCategory          VybeAccommodationRoomCategory        @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_category_fkey")
-  createdBy             User                                 @relation("VybeAccommodationAllocationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_creator_fkey")
+  id                    String                             @id @default(uuid()) @db.Uuid
+  roomCategoryId        String                             @map("room_category_id") @db.Uuid
+  startDate             DateTime                           @map("start_date") @db.Date
+  endDate               DateTime                           @map("end_date") @db.Date
+  releaseCutoffAt       DateTime                           @map("release_cutoff_at") @db.Timestamptz(6)
+  releaseCutoffLocal    String                             @map("release_cutoff_local") @db.VarChar(40)
+  releaseCutoffTimezone String                             @map("release_cutoff_timezone") @db.VarChar(80)
+  agreementReference    String                             @map("agreement_reference") @db.VarChar(500)
+  termsVersion          String                             @map("terms_version") @db.VarChar(80)
+  evidenceReference     String                             @map("evidence_reference") @db.VarChar(1000)
+  status                VybeAccommodationAllocationStatus  @default(ACTIVE)
+  createdByUserId       String                             @map("created_by_user_id") @db.Uuid
+  createdAt             DateTime                           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  roomCategory          VybeAccommodationRoomCategory      @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_category_fkey")
+  createdBy             User                               @relation("VybeAccommodationAllocationCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocations_creator_fkey")
   nights                VybeAccommodationAllocationNight[]
 
   @@unique([id, roomCategoryId], map: "vybe_accommodation_allocations_id_category_key")
@@ -1141,11 +1135,11 @@ model VybeAccommodationAllocation {
 }
 
 model VybeAccommodationNightLock {
-  id             String                              @id @default(uuid()) @db.Uuid
-  roomCategoryId String                              @map("room_category_id") @db.Uuid
-  stayDate       DateTime                            @map("stay_date") @db.Date
-  createdAt      DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
-  roomCategory   VybeAccommodationRoomCategory       @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_night_locks_category_fkey")
+  id               String                             @id @default(uuid()) @db.Uuid
+  roomCategoryId   String                             @map("room_category_id") @db.Uuid
+  stayDate         DateTime                           @map("stay_date") @db.Date
+  createdAt        DateTime                           @default(now()) @map("created_at") @db.Timestamptz(6)
+  roomCategory     VybeAccommodationRoomCategory      @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_night_locks_category_fkey")
   allocationNights VybeAccommodationAllocationNight[]
 
   @@unique([roomCategoryId, stayDate], map: "vybe_accommodation_night_locks_category_date_key")
@@ -1153,16 +1147,16 @@ model VybeAccommodationNightLock {
 }
 
 model VybeAccommodationAllocationNight {
-  id                String                           @id @default(uuid()) @db.Uuid
-  allocationId      String                           @map("allocation_id") @db.Uuid
-  roomCategoryId    String                           @map("room_category_id") @db.Uuid
-  stayDate          DateTime                         @map("stay_date") @db.Date
-  allocatedQuantity Int                              @map("allocated_quantity")
-  committedQuantity Int                              @default(0) @map("committed_quantity")
-  createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  allocation        VybeAccommodationAllocation       @relation(fields: [allocationId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_allocation_category_fkey")
-  nightLock         VybeAccommodationNightLock        @relation(fields: [roomCategoryId, stayDate], references: [roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_lock_fkey")
+  id                String                                  @id @default(uuid()) @db.Uuid
+  allocationId      String                                  @map("allocation_id") @db.Uuid
+  roomCategoryId    String                                  @map("room_category_id") @db.Uuid
+  stayDate          DateTime                                @map("stay_date") @db.Date
+  allocatedQuantity Int                                     @map("allocated_quantity")
+  committedQuantity Int                                     @default(0) @map("committed_quantity")
+  createdAt         DateTime                                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  allocation        VybeAccommodationAllocation             @relation(fields: [allocationId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_allocation_category_fkey")
+  nightLock         VybeAccommodationNightLock              @relation(fields: [roomCategoryId, stayDate], references: [roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_allocation_nights_lock_fkey")
   holdNights        VybeAccommodationHoldNight[]
   adjustments       VybeAccommodationAllocationAdjustment[]
 
@@ -1173,15 +1167,15 @@ model VybeAccommodationAllocationNight {
 }
 
 model VybeAccommodationAllocationAdjustment {
-  id               String                              @id @default(uuid()) @db.Uuid
-  allocationNightId String                             @map("allocation_night_id") @db.Uuid
-  actorUserId      String                              @map("actor_user_id") @db.Uuid
-  quantityDelta    Int                                 @map("quantity_delta")
-  reason           String                              @db.VarChar(1000)
-  evidenceReference String                             @map("evidence_reference") @db.VarChar(1000)
-  createdAt        DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
-  allocationNight  VybeAccommodationAllocationNight    @relation(fields: [allocationNightId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_night_fkey")
-  actor            User                                @relation(fields: [actorUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_actor_fkey")
+  id                String                           @id @default(uuid()) @db.Uuid
+  allocationNightId String                           @map("allocation_night_id") @db.Uuid
+  actorUserId       String                           @map("actor_user_id") @db.Uuid
+  quantityDelta     Int                              @map("quantity_delta")
+  reason            String                           @db.VarChar(1000)
+  evidenceReference String                           @map("evidence_reference") @db.VarChar(1000)
+  createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
+  allocationNight   VybeAccommodationAllocationNight @relation(fields: [allocationNightId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_night_fkey")
+  actor             User                             @relation(fields: [actorUserId], references: [id], onDelete: Restrict, map: "vybe_accommodation_allocation_adjustments_actor_fkey")
 
   @@index([allocationNightId, createdAt], map: "vybe_accommodation_adjustments_night_created_idx")
   @@index([actorUserId, createdAt], map: "vybe_accommodation_adjustments_actor_created_idx")
@@ -1189,21 +1183,21 @@ model VybeAccommodationAllocationAdjustment {
 }
 
 model VybeAccommodationHold {
-  id             String                          @id @default(uuid()) @db.Uuid
-  roomCategoryId String                          @map("room_category_id") @db.Uuid
-  userId         String                          @map("user_id") @db.Uuid
-  idempotencyKey String                          @map("idempotency_key") @db.VarChar(128)
-  requestHash    String                          @map("request_hash") @db.Char(64)
-  checkInDate    DateTime                        @map("check_in_date") @db.Date
-  checkOutDate   DateTime                        @map("check_out_date") @db.Date
-  roomQuantity   Int                             @map("room_quantity")
-  status         VybeAccommodationHoldStatus     @default(ACTIVE)
-  expiresAt      DateTime                        @map("expires_at") @db.Timestamptz(6)
+  id             String                        @id @default(uuid()) @db.Uuid
+  roomCategoryId String                        @map("room_category_id") @db.Uuid
+  userId         String                        @map("user_id") @db.Uuid
+  idempotencyKey String                        @map("idempotency_key") @db.VarChar(128)
+  requestHash    String                        @map("request_hash") @db.Char(64)
+  checkInDate    DateTime                      @map("check_in_date") @db.Date
+  checkOutDate   DateTime                      @map("check_out_date") @db.Date
+  roomQuantity   Int                           @map("room_quantity")
+  status         VybeAccommodationHoldStatus   @default(ACTIVE)
+  expiresAt      DateTime                      @map("expires_at") @db.Timestamptz(6)
   snapshot       Json
-  createdAt      DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
-  roomCategory   VybeAccommodationRoomCategory   @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_category_fkey")
-  user           User                            @relation(fields: [userId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_user_fkey")
+  createdAt      DateTime                      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  roomCategory   VybeAccommodationRoomCategory @relation(fields: [roomCategoryId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_category_fkey")
+  user           User                          @relation(fields: [userId], references: [id], onDelete: Restrict, map: "vybe_accommodation_holds_user_fkey")
   nights         VybeAccommodationHoldNight[]
 
   @@unique([userId, idempotencyKey], map: "vybe_accommodation_holds_user_idempotency_key")
@@ -1214,18 +1208,18 @@ model VybeAccommodationHold {
 }
 
 model VybeAccommodationHoldNight {
-  id                         String                              @id @default(uuid()) @db.Uuid
-  holdId                     String                              @map("hold_id") @db.Uuid
-  allocationNightId          String                              @map("allocation_night_id") @db.Uuid
-  roomCategoryId             String                              @map("room_category_id") @db.Uuid
-  stayDate                   DateTime                            @map("stay_date") @db.Date
-  quantity                   Int
-  releaseCutoffAtSnapshot    DateTime                            @map("release_cutoff_at_snapshot") @db.Timestamptz(6)
-  releaseCutoffLocalSnapshot String                             @map("release_cutoff_local_snapshot") @db.VarChar(40)
-  releaseCutoffTimezoneSnapshot String                          @map("release_cutoff_timezone_snapshot") @db.VarChar(80)
-  createdAt                  DateTime                            @default(now()) @map("created_at") @db.Timestamptz(6)
-  hold                       VybeAccommodationHold               @relation(fields: [holdId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_hold_nights_hold_category_fkey")
-  allocationNight            VybeAccommodationAllocationNight    @relation(fields: [allocationNightId, roomCategoryId, stayDate], references: [id, roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_hold_nights_allocation_category_date_fkey")
+  id                            String                           @id @default(uuid()) @db.Uuid
+  holdId                        String                           @map("hold_id") @db.Uuid
+  allocationNightId             String                           @map("allocation_night_id") @db.Uuid
+  roomCategoryId                String                           @map("room_category_id") @db.Uuid
+  stayDate                      DateTime                         @map("stay_date") @db.Date
+  quantity                      Int
+  releaseCutoffAtSnapshot       DateTime                         @map("release_cutoff_at_snapshot") @db.Timestamptz(6)
+  releaseCutoffLocalSnapshot    String                           @map("release_cutoff_local_snapshot") @db.VarChar(40)
+  releaseCutoffTimezoneSnapshot String                           @map("release_cutoff_timezone_snapshot") @db.VarChar(80)
+  createdAt                     DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
+  hold                          VybeAccommodationHold            @relation(fields: [holdId, roomCategoryId], references: [id, roomCategoryId], onDelete: Restrict, map: "vybe_accommodation_hold_nights_hold_category_fkey")
+  allocationNight               VybeAccommodationAllocationNight @relation(fields: [allocationNightId, roomCategoryId, stayDate], references: [id, roomCategoryId, stayDate], onDelete: Restrict, map: "vybe_accommodation_hold_nights_allocation_category_date_fkey")
 
   @@unique([holdId, allocationNightId], map: "vybe_accommodation_hold_nights_hold_allocation_key")
   @@index([allocationNightId], map: "vybe_accommodation_hold_nights_allocation_idx")
@@ -1234,45 +1228,45 @@ model VybeAccommodationHoldNight {
 }
 
 model VybeCategoryActivation {
-  id                 String   @id @default(uuid()) @db.Uuid
-  category           VybeCategory @unique
-  isActive           Boolean  @default(false) @map("is_active")
-  checklist          Json     @default("[]")
-  reason             String?
-  activatedByUserId  String?  @map("activated_by_user_id") @db.Uuid
-  activatedAt        DateTime? @map("activated_at") @db.Timestamptz(6)
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  activatedBy        User? @relation("VybeCategoryActivationActor", fields: [activatedByUserId], references: [id], onDelete: Restrict)
+  id                String       @id @default(uuid()) @db.Uuid
+  category          VybeCategory @unique
+  isActive          Boolean      @default(false) @map("is_active")
+  checklist         Json         @default("[]")
+  reason            String?
+  activatedByUserId String?      @map("activated_by_user_id") @db.Uuid
+  activatedAt       DateTime?    @map("activated_at") @db.Timestamptz(6)
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  activatedBy       User?        @relation("VybeCategoryActivationActor", fields: [activatedByUserId], references: [id], onDelete: Restrict)
 
   @@map("vybe_category_activations")
 }
 
 model VybeInventoryPool {
-  id                 String                    @id @default(uuid()) @db.Uuid
-  offeringId         String                    @unique @map("offering_id") @db.Uuid
-  status             VybeInventoryPoolStatus   @default(ACTIVE)
-  allocatedQuantity  Int                       @default(0) @map("allocated_quantity")
-  committedQuantity  Int                       @default(0) @map("committed_quantity")
-  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  offering           VybeOffering              @relation(fields: [offeringId], references: [id], onDelete: Restrict)
-  allocations        VybeInventoryAllocation[]
-  holds              VybeInventoryHold[]
+  id                String                    @id @default(uuid()) @db.Uuid
+  offeringId        String                    @unique @map("offering_id") @db.Uuid
+  status            VybeInventoryPoolStatus   @default(ACTIVE)
+  allocatedQuantity Int                       @default(0) @map("allocated_quantity")
+  committedQuantity Int                       @default(0) @map("committed_quantity")
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  offering          VybeOffering              @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  allocations       VybeInventoryAllocation[]
+  holds             VybeInventoryHold[]
 
   @@index([status, updatedAt])
   @@map("vybe_inventory_pools")
 }
 
 model VybeInventoryAllocation {
-  id          String            @id @default(uuid()) @db.Uuid
-  poolId      String            @map("pool_id") @db.Uuid
-  actorUserId String            @map("actor_user_id") @db.Uuid
-  quantityDelta Int             @map("quantity_delta")
-  reason      String            @db.VarChar(1000)
-  evidenceReference String      @map("evidence_reference") @db.VarChar(1000)
-  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  pool        VybeInventoryPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
-  actor       User              @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+  id                String            @id @default(uuid()) @db.Uuid
+  poolId            String            @map("pool_id") @db.Uuid
+  actorUserId       String            @map("actor_user_id") @db.Uuid
+  quantityDelta     Int               @map("quantity_delta")
+  reason            String            @db.VarChar(1000)
+  evidenceReference String            @map("evidence_reference") @db.VarChar(1000)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  pool              VybeInventoryPool @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  actor             User              @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
 
   @@index([poolId, createdAt])
   @@index([actorUserId, createdAt])
@@ -1280,18 +1274,19 @@ model VybeInventoryAllocation {
 }
 
 model VybeInventoryHold {
-  id             String                 @id @default(uuid()) @db.Uuid
-  poolId         String                 @map("pool_id") @db.Uuid
-  userId         String                 @map("user_id") @db.Uuid
-  idempotencyKey String                 @map("idempotency_key") @db.VarChar(128)
-  quantity       Int
-  status         VybeInventoryHoldStatus @default(ACTIVE)
-  expiresAt      DateTime               @map("expires_at") @db.Timestamptz(6)
-  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
-  pool           VybeInventoryPool      @relation(fields: [poolId], references: [id], onDelete: Restrict)
-  user           User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
-  booking        VybeBooking?            @relation("VybeBookingInventoryHold")
+  id              String                  @id @default(uuid()) @db.Uuid
+  poolId          String                  @map("pool_id") @db.Uuid
+  userId          String                  @map("user_id") @db.Uuid
+  idempotencyKey  String                  @map("idempotency_key") @db.VarChar(128)
+  quantity        Int
+  offeringVersion Int                     @map("offering_version")
+  status          VybeInventoryHoldStatus @default(ACTIVE)
+  expiresAt       DateTime                @map("expires_at") @db.Timestamptz(6)
+  createdAt       DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  pool            VybeInventoryPool       @relation(fields: [poolId], references: [id], onDelete: Restrict)
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  booking         VybeBooking?            @relation("VybeBookingInventoryHold")
 
   @@unique([userId, idempotencyKey], map: "vybe_inventory_holds_user_idempotency_key")
   @@index([poolId, status, expiresAt], map: "vybe_inventory_holds_pool_status_expiry_idx")
@@ -1300,35 +1295,35 @@ model VybeInventoryHold {
 }
 
 model VybeInventoryPolicy {
-  id                  String      @id @default(uuid()) @db.Uuid
+  id                  String       @id @default(uuid()) @db.Uuid
   category            VybeCategory @unique
-  holdDurationSeconds Int         @default(600) @map("hold_duration_seconds")
-  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  holdDurationSeconds Int          @default(600) @map("hold_duration_seconds")
+  updatedAt           DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("vybe_inventory_policies")
 }
 
 model VybeTimeSlotOccurrence {
-  id                 String                       @id @default(uuid()) @db.Uuid
-  offeringId         String                       @map("offering_id") @db.Uuid
-  offeringVersion    Int                          @map("offering_version")
-  inventoryMode      VybeTimeSlotInventoryMode    @map("inventory_mode")
-  timezone           String                       @db.VarChar(80)
-  serviceStartsAt    DateTime                     @map("service_starts_at") @db.Timestamptz(6)
-  serviceEndsAt      DateTime                     @map("service_ends_at") @db.Timestamptz(6)
-  preBufferSeconds   Int                          @default(0) @map("pre_buffer_seconds")
-  postBufferSeconds  Int                          @default(0) @map("post_buffer_seconds")
-  blockedStartsAt    DateTime                     @map("blocked_starts_at") @db.Timestamptz(6)
-  blockedEndsAt      DateTime                     @map("blocked_ends_at") @db.Timestamptz(6)
-  status             VybeTimeSlotOccurrenceStatus @default(ACTIVE)
-  resourceGroupId    String?                      @map("resource_group_id") @db.Uuid
-  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  offering           VybeOffering                 @relation(fields: [offeringId], references: [id], onDelete: Restrict)
-  resourceGroup      VybeTimeSlotResourceGroup?   @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
-  capacity           VybeTimeSlotCapacity?
-  holds              VybeTimeSlotHold[]
-  occupancies         VybeTimeSlotResourceOccupancy[]
+  id                String                          @id @default(uuid()) @db.Uuid
+  offeringId        String                          @map("offering_id") @db.Uuid
+  offeringVersion   Int                             @map("offering_version")
+  inventoryMode     VybeTimeSlotInventoryMode       @map("inventory_mode")
+  timezone          String                          @db.VarChar(80)
+  serviceStartsAt   DateTime                        @map("service_starts_at") @db.Timestamptz(6)
+  serviceEndsAt     DateTime                        @map("service_ends_at") @db.Timestamptz(6)
+  preBufferSeconds  Int                             @default(0) @map("pre_buffer_seconds")
+  postBufferSeconds Int                             @default(0) @map("post_buffer_seconds")
+  blockedStartsAt   DateTime                        @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt     DateTime                        @map("blocked_ends_at") @db.Timestamptz(6)
+  status            VybeTimeSlotOccurrenceStatus    @default(ACTIVE)
+  resourceGroupId   String?                         @map("resource_group_id") @db.Uuid
+  createdAt         DateTime                        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  offering          VybeOffering                    @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  resourceGroup     VybeTimeSlotResourceGroup?      @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
+  capacity          VybeTimeSlotCapacity?
+  holds             VybeTimeSlotHold[]
+  occupancies       VybeTimeSlotResourceOccupancy[]
 
   @@index([offeringId, status, serviceStartsAt], map: "vybe_time_slot_occurrences_offering_status_start_idx")
   @@index([resourceGroupId, status, serviceStartsAt], map: "vybe_time_slot_occurrences_group_status_start_idx")
@@ -1336,29 +1331,29 @@ model VybeTimeSlotOccurrence {
 }
 
 model VybeTimeSlotCapacity {
-  id                String                  @id @default(uuid()) @db.Uuid
-  occurrenceId      String                  @unique @map("occurrence_id") @db.Uuid
+  id                String                 @id @default(uuid()) @db.Uuid
+  occurrenceId      String                 @unique @map("occurrence_id") @db.Uuid
   capacity          Int
-  committedQuantity Int                     @default(0) @map("committed_quantity")
-  createdAt         DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
-  occurrence        VybeTimeSlotOccurrence  @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
+  committedQuantity Int                    @default(0) @map("committed_quantity")
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  occurrence        VybeTimeSlotOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
 
   @@map("vybe_time_slot_capacities")
 }
 
 model VybeTimeSlotResourceGroup {
-  id                String                    @id @default(uuid()) @db.Uuid
-  providerProfileId String                    @map("provider_profile_id") @db.Uuid
-  offeringId        String                    @map("offering_id") @db.Uuid
-  name              String                    @db.VarChar(120)
-  isActive          Boolean                   @default(true) @map("is_active")
-  validFrom         DateTime?                 @map("valid_from") @db.Timestamptz(6)
-  validUntil        DateTime?                 @map("valid_until") @db.Timestamptz(6)
-  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  providerProfile   VybeProviderProfile       @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
-  offering          VybeOffering              @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  id                String                            @id @default(uuid()) @db.Uuid
+  providerProfileId String                            @map("provider_profile_id") @db.Uuid
+  offeringId        String                            @map("offering_id") @db.Uuid
+  name              String                            @db.VarChar(120)
+  isActive          Boolean                           @default(true) @map("is_active")
+  validFrom         DateTime?                         @map("valid_from") @db.Timestamptz(6)
+  validUntil        DateTime?                         @map("valid_until") @db.Timestamptz(6)
+  createdAt         DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile   VybeProviderProfile               @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  offering          VybeOffering                      @relation(fields: [offeringId], references: [id], onDelete: Restrict)
   members           VybeTimeSlotResourceGroupMember[]
   occurrences       VybeTimeSlotOccurrence[]
 
@@ -1368,18 +1363,18 @@ model VybeTimeSlotResourceGroup {
 }
 
 model VybeTimeSlotResource {
-  id                String                           @id @default(uuid()) @db.Uuid
-  providerProfileId String                           @map("provider_profile_id") @db.Uuid
-  providerResourceKey String                         @map("provider_resource_key") @db.VarChar(120)
-  name              String                           @db.VarChar(160)
-  isActive          Boolean                          @default(true) @map("is_active")
-  createdAt         DateTime                         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime                         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  providerProfile   VybeProviderProfile              @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
-  groups            VybeTimeSlotResourceGroupMember[]
-  holds             VybeTimeSlotHold[]
-  occupancies       VybeTimeSlotResourceOccupancy[]
-  bookings          VybeBooking[] @relation("VybeBookingResource")
+  id                  String                            @id @default(uuid()) @db.Uuid
+  providerProfileId   String                            @map("provider_profile_id") @db.Uuid
+  providerResourceKey String                            @map("provider_resource_key") @db.VarChar(120)
+  name                String                            @db.VarChar(160)
+  isActive            Boolean                           @default(true) @map("is_active")
+  createdAt           DateTime                          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  providerProfile     VybeProviderProfile               @relation(fields: [providerProfileId], references: [id], onDelete: Restrict)
+  groups              VybeTimeSlotResourceGroupMember[]
+  holds               VybeTimeSlotHold[]
+  occupancies         VybeTimeSlotResourceOccupancy[]
+  bookings            VybeBooking[]                     @relation("VybeBookingResource")
 
   @@unique([providerProfileId, providerResourceKey], map: "vybe_time_slot_resources_provider_key")
   @@index([providerProfileId, isActive], map: "vybe_time_slot_resources_provider_active_idx")
@@ -1387,14 +1382,14 @@ model VybeTimeSlotResource {
 }
 
 model VybeTimeSlotResourceGroupMember {
-  id             String                    @id @default(uuid()) @db.Uuid
-  resourceGroupId String                   @map("resource_group_id") @db.Uuid
-  resourceId     String                    @map("resource_id") @db.Uuid
-  validFrom      DateTime?                 @map("valid_from") @db.Timestamptz(6)
-  validUntil     DateTime?                 @map("valid_until") @db.Timestamptz(6)
-  createdAt      DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
-  resourceGroup  VybeTimeSlotResourceGroup @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
-  resource       VybeTimeSlotResource      @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  id              String                    @id @default(uuid()) @db.Uuid
+  resourceGroupId String                    @map("resource_group_id") @db.Uuid
+  resourceId      String                    @map("resource_id") @db.Uuid
+  validFrom       DateTime?                 @map("valid_from") @db.Timestamptz(6)
+  validUntil      DateTime?                 @map("valid_until") @db.Timestamptz(6)
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  resourceGroup   VybeTimeSlotResourceGroup @relation(fields: [resourceGroupId], references: [id], onDelete: Restrict)
+  resource        VybeTimeSlotResource      @relation(fields: [resourceId], references: [id], onDelete: Restrict)
 
   @@unique([resourceGroupId, resourceId], map: "vybe_time_slot_resource_group_members_group_resource_key")
   @@index([resourceId, validFrom, validUntil], map: "vybe_time_slot_resource_group_members_resource_validity_idx")
@@ -1402,25 +1397,25 @@ model VybeTimeSlotResourceGroupMember {
 }
 
 model VybeTimeSlotHold {
-  id                 String                  @id @default(uuid()) @db.Uuid
-  occurrenceId       String                  @map("occurrence_id") @db.Uuid
-  userId             String                  @map("user_id") @db.Uuid
-  idempotencyKey     String                  @map("idempotency_key") @db.VarChar(128)
-  capacityQuantity   Int?                    @map("capacity_quantity")
-  resourceId         String?                 @map("resource_id") @db.Uuid
-  status             VybeTimeSlotHoldStatus  @default(ACTIVE)
-  expiresAt          DateTime                @map("expires_at") @db.Timestamptz(6)
-  serviceStartsAt    DateTime                @map("service_starts_at") @db.Timestamptz(6)
-  serviceEndsAt      DateTime                @map("service_ends_at") @db.Timestamptz(6)
-  blockedStartsAt    DateTime                @map("blocked_starts_at") @db.Timestamptz(6)
-  blockedEndsAt      DateTime                @map("blocked_ends_at") @db.Timestamptz(6)
-  createdAt          DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
-  occurrence         VybeTimeSlotOccurrence  @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
-  user               User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
-  resource           VybeTimeSlotResource?   @relation(fields: [resourceId], references: [id], onDelete: Restrict)
-  booking            VybeBooking?             @relation("VybeBookingTimeSlotHold")
-  occupancy          VybeTimeSlotResourceOccupancy?
+  id               String                         @id @default(uuid()) @db.Uuid
+  occurrenceId     String                         @map("occurrence_id") @db.Uuid
+  userId           String                         @map("user_id") @db.Uuid
+  idempotencyKey   String                         @map("idempotency_key") @db.VarChar(128)
+  capacityQuantity Int?                           @map("capacity_quantity")
+  resourceId       String?                        @map("resource_id") @db.Uuid
+  status           VybeTimeSlotHoldStatus         @default(ACTIVE)
+  expiresAt        DateTime                       @map("expires_at") @db.Timestamptz(6)
+  serviceStartsAt  DateTime                       @map("service_starts_at") @db.Timestamptz(6)
+  serviceEndsAt    DateTime                       @map("service_ends_at") @db.Timestamptz(6)
+  blockedStartsAt  DateTime                       @map("blocked_starts_at") @db.Timestamptz(6)
+  blockedEndsAt    DateTime                       @map("blocked_ends_at") @db.Timestamptz(6)
+  createdAt        DateTime                       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  occurrence       VybeTimeSlotOccurrence         @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
+  user             User                           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  resource         VybeTimeSlotResource?          @relation(fields: [resourceId], references: [id], onDelete: Restrict)
+  booking          VybeBooking?                   @relation("VybeBookingTimeSlotHold")
+  occupancy        VybeTimeSlotResourceOccupancy?
 
   @@unique([userId, idempotencyKey], map: "vybe_time_slot_holds_user_idempotency_key")
   @@index([occurrenceId, status, expiresAt], map: "vybe_time_slot_holds_occurrence_status_expiry_idx")

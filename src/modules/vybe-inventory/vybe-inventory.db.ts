@@ -15,7 +15,7 @@ async function lockPool(tx: Prisma.TransactionClient, poolId: string) {
   );
 }
 
-async function assertOfferingCanTrade(
+export async function assertOfferingCanTrade(
   tx: Prisma.TransactionClient,
   offeringId: string
 ) {
@@ -383,6 +383,13 @@ export async function createInventoryHold(input: {
       if (!user || user.status !== "ACTIVE")
         fail("ACCOUNT_INACTIVE", "An active account is required", 403);
       const offering = await assertOfferingCanTrade(tx, input.offeringId);
+      if (!offering.currentPublishedVersion) {
+        fail(
+          "VYBE_OFFERING_VERSION_REQUIRED",
+          "A published offering version is required for a booking hold",
+          409
+        );
+      }
       const pool = await tx.vybeInventoryPool.findUnique({
         where: { offeringId: input.offeringId }
       });
@@ -443,6 +450,7 @@ export async function createInventoryHold(input: {
           userId: input.userId,
           idempotencyKey: input.idempotencyKey,
           quantity: input.quantity,
+          offeringVersion: offering.currentPublishedVersion,
           expiresAt: new Date(now.getTime() + holdDurationSeconds * 1000)
         }
       });

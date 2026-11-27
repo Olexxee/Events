@@ -1,6 +1,6 @@
 # Vybe — Booking Physical Schema and Migration Review
 
-**Status:** Proposed physical design; review required before Slice A  
+**Status:** Approved; Slice A merged in PR #36; Slice B implemented in PR #37  
 **Related decisions:** [Booking lifecycle design](VYBE_BOOKING_DESIGN.md)  
 **Baseline:** `main` at `3cb29e6bf247d0fac8a24b279eb396766bf26b74`  
 **Scope:** Schema and migration design only. No Prisma models, migrations, routes, services, or payment integrations are introduced by this document.
@@ -143,11 +143,11 @@ The exact ordering of migration and application releases must be finalized again
 
 ## 5. Inventory conversion contracts
 
-| Source | Lock anchor | Conversion mutation | Resulting protection |
-|---|---|---|---|
-| Quantity pool | Pool row, then source hold | Increment pool committed quantity; hold → CONVERTED | Existing pool check and row lock |
-| Time-slot capacity | Occurrence/capacity row, then source hold | Increment capacity committed quantity; hold → CONVERTED | Existing capacity bounds and occurrence lock |
-| Exclusive resource | Occurrence/resource in deterministic order, source hold, occupancy row | Hold → CONVERTED; occupancy HELD → COMMITTED with booking ID | GiST exclusion over both holds and bookings |
+| Source             | Lock anchor                                                            | Conversion mutation                                          | Resulting protection                         |
+| ------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------- |
+| Quantity pool      | Pool row, then source hold                                             | Increment pool committed quantity; hold → CONVERTED          | Existing pool check and row lock             |
+| Time-slot capacity | Occurrence/capacity row, then source hold                              | Increment capacity committed quantity; hold → CONVERTED      | Existing capacity bounds and occurrence lock |
+| Exclusive resource | Occurrence/resource in deterministic order, source hold, occupancy row | Hold → CONVERTED; occupancy HELD → COMMITTED with booking ID | GiST exclusion over both holds and bookings  |
 
 All three conversions create the booking, status-history row, audit record, and outbox event in one database transaction. Idempotency is anchored to the unique source hold: a retry returns the existing booking; a different request cannot create a second booking for that hold.
 
@@ -217,3 +217,13 @@ This document recommends the schema and rollout direction above. Before Slice A,
 5. Commerce-supplied immutable price quote snapshot; no price calculation in Vybe.
 
 Approval of this document would authorize Slice A schema/migration implementation only. It would not authorize checkout, payment integration, refunds, Finance, or accommodation booking.
+
+## 11. Implementation notes — Slice A and B
+
+- Slice A was implemented and merged in PR #36. The initial occupancy backfill deliberately included all rows still marked ACTIVE, even if their expiry timestamp had passed, so the old exclusion constraint was never bypassed by a time-only filter. Slice B's synchronous expiry paths now transition both the source hold and its occupancy row to EXPIRED before that resource can be allocated again.
+- Slice B adds an immutable `offeringVersion` snapshot to quantity-pool holds. Existing holds are backfilled from the offering's current published version, falling back to its latest published version; migration fails if no valid version can be found.
+- Quantity-pool bookings have no service interval or timezone. Their schedule fields are nullable and database checks require schedule fields only for time-slot-backed bookings.
+- The shared occupancy relation is populated on new exclusive holds, updated on expiry/release, and retained through booking confirmation. The legacy hold-table exclusion remains active pending a later controlled contract migration.
+- Slice B introduces only an internal confirmation-verifier port. It does not expose a route, implement a real Payments adapter, initiate collection/capture, or implement checkout.
+
+- A database trigger now synchronizes HELD occupancy to RELEASED/EXPIRED when a source time-slot hold transitions from ACTIVE to a terminal state, including transitions performed by an older application instance. The new allocation path also reconciles stale terminal occupancy left by the deployment gap before that trigger existed.

@@ -10,8 +10,10 @@ import {
   createTimeSlotResource,
   createTimeSlotResourceGroup,
   createTimeSlotResourceHold,
+  getTimeSlotResourceAvailability,
   releaseTimeSlotHold
 } from "../src/modules/vybe-time-slots/vybe-time-slots.db.js";
+import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.service.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -390,6 +392,237 @@ describe.skipIf(!enabled)(
           where: { resourceId: hold.id, action: "vybe.time_slot_hold.released" }
         })
       ).toBe(1);
+    });
+
+    it("keeps an exclusive resource occupied across hold-to-booking conversion", async () => {
+      const fixture = await createExclusiveFixture();
+      const occurrence = await fixture.createOccurrence();
+      const hold = await createTimeSlotResourceHold({
+        occurrenceId: occurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `booking-exclusive-${crypto.randomUUID()}`
+      });
+      const reference = `free-exclusive-order-${crypto.randomUUID()}`;
+      const verifier = {
+        verify: async () => ({
+          kind: "FREE_ORDER_ACCEPTED" as const,
+          reference,
+          verifiedAt: new Date(),
+          quote: {
+            quoteReference: `quote-${reference}`,
+            amountMinor: 0,
+            currency: "NGN"
+          }
+        })
+      };
+      const input = {
+        sourceType: "EXCLUSIVE_RESOURCE" as const,
+        sourceHoldId: hold.id,
+        customerUserId: fixture.userId,
+        acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+      };
+      const results = await Promise.all([
+        confirmVybeBookingFromHold(input, verifier),
+        confirmVybeBookingFromHold(input, verifier)
+      ]);
+      expect(results[0].id).toBe(results[1].id);
+      expect(results[0]).toMatchObject({
+        sourceType: "EXCLUSIVE_RESOURCE",
+        timeSlotHoldId: hold.id,
+        resourceId: hold.resourceId,
+        status: "CONFIRMED"
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        })
+      ).toMatchObject({ status: "COMMITTED", bookingId: results[0].id });
+      expect(
+        await prisma.vybeTimeSlotHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "CONVERTED" });
+      const groupId = (
+        await prisma.vybeTimeSlotOccurrence.findUniqueOrThrow({
+          where: { id: occurrence.id },
+          select: { resourceGroupId: true }
+        })
+      ).resourceGroupId!;
+      const membership =
+        await prisma.vybeTimeSlotResourceGroupMember.findFirstOrThrow({
+          where: { resourceGroupId: groupId, resourceId: hold.resourceId! }
+        });
+      await expect(
+        prisma.vybeTimeSlotResource.update({
+          where: { id: hold.resourceId! },
+          data: { isActive: false }
+        })
+      ).rejects.toThrow();
+      await expect(
+        prisma.vybeTimeSlotResourceGroup.update({
+          where: { id: groupId },
+          data: { isActive: false }
+        })
+      ).rejects.toThrow();
+      await expect(
+        prisma.vybeTimeSlotResourceGroupMember.delete({
+          where: { id: membership.id }
+        })
+      ).rejects.toThrow();
+      expect(
+        await getTimeSlotResourceAvailability(occurrence.id)
+      ).toMatchObject({
+        eligibleResourceCount: 1,
+        availableResourceCount: 0
+      });
+
+      const overlappingOccurrence = await fixture.createOccurrence({
+        startsAt: "2027-06-15T18:30:00+01:00",
+        endsAt: "2027-06-15T19:30:00+01:00"
+      });
+      await expect(
+        createTimeSlotResourceHold({
+          occurrenceId: overlappingOccurrence.id,
+          userId: fixture.userId,
+          idempotencyKey: `overlap-after-booking-${crypto.randomUUID()}`
+        })
+      ).rejects.toMatchObject({
+        code: "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE"
+      });
+      await expect(
+        prisma.vybeTimeSlotHold.create({
+          data: {
+            occurrenceId: overlappingOccurrence.id,
+            userId: fixture.userId,
+            idempotencyKey: `legacy-app-over-committed-${crypto.randomUUID()}`,
+            resourceId: hold.resourceId!,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+            serviceStartsAt: overlappingOccurrence.serviceStartsAt,
+            serviceEndsAt: overlappingOccurrence.serviceEndsAt,
+            blockedStartsAt: overlappingOccurrence.blockedStartsAt,
+            blockedEndsAt: overlappingOccurrence.blockedEndsAt
+          }
+        })
+      ).rejects.toThrow();
+      expect(
+        await prisma.vybeTimeSlotHold.count({
+          where: { occurrenceId: overlappingOccurrence.id, status: "ACTIVE" }
+        })
+      ).toBe(0);
+    });
+
+    it("protects active legacy holds without an occupancy row and bridges them on conversion", async () => {
+      const fixture = await createExclusiveFixture();
+      const occurrence = await fixture.createOccurrence();
+      const legacyHold = await prisma.vybeTimeSlotHold.create({
+        data: {
+          occurrenceId: occurrence.id,
+          userId: fixture.userId,
+          idempotencyKey: `legacy-no-occupancy-${crypto.randomUUID()}`,
+          resourceId: fixture.resources[0]!,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+          serviceStartsAt: occurrence.serviceStartsAt,
+          serviceEndsAt: occurrence.serviceEndsAt,
+          blockedStartsAt: occurrence.blockedStartsAt,
+          blockedEndsAt: occurrence.blockedEndsAt
+        }
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUnique({
+          where: { sourceHoldId: legacyHold.id }
+        })
+      ).toBeNull();
+
+      const overlappingOccurrence = await fixture.createOccurrence();
+      await expect(
+        createTimeSlotResourceHold({
+          occurrenceId: overlappingOccurrence.id,
+          userId: fixture.userId,
+          idempotencyKey: `legacy-no-occupancy-contender-${crypto.randomUUID()}`
+        })
+      ).rejects.toMatchObject({ code: "VYBE_TIME_SLOT_RESOURCE_UNAVAILABLE" });
+
+      const reference = `legacy-hold-order-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "EXCLUSIVE_RESOURCE",
+          sourceHoldId: legacyHold.id,
+          customerUserId: fixture.userId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: legacyHold.id }
+        })
+      ).toMatchObject({ status: "COMMITTED", bookingId: booking.id });
+    });
+
+    it("releases occupancy when an older hold writer only changes the source status", async () => {
+      const fixture = await createExclusiveFixture();
+      const firstOccurrence = await fixture.createOccurrence();
+      const hold = await createTimeSlotResourceHold({
+        occurrenceId: firstOccurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `legacy-release-${crypto.randomUUID()}`
+      });
+      await prisma.vybeTimeSlotHold.update({
+        where: { id: hold.id },
+        data: { status: "RELEASED" }
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        })
+      ).toMatchObject({ status: "RELEASED" });
+
+      const overlappingOccurrence = await fixture.createOccurrence();
+      const replacement = await createTimeSlotResourceHold({
+        occurrenceId: overlappingOccurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `legacy-release-replacement-${crypto.randomUUID()}`
+      });
+      expect(replacement.resourceId).toBe(hold.resourceId);
+    });
+
+    it("expires exclusive occupancy when its source hold expires", async () => {
+      const fixture = await createExclusiveFixture();
+      const occurrence = await fixture.createOccurrence();
+      const hold = await createTimeSlotResourceHold({
+        occurrenceId: occurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `exclusive-occupancy-expiry-${crypto.randomUUID()}`
+      });
+      await prisma.vybeTimeSlotHold.update({
+        where: { id: hold.id },
+        data: { expiresAt: new Date(Date.now() - 1000) }
+      });
+      const nextOccurrence = await fixture.createOccurrence({
+        startsAt: "2027-06-15T20:00:00+01:00",
+        endsAt: "2027-06-15T21:00:00+01:00"
+      });
+      await createTimeSlotResourceHold({
+        occurrenceId: nextOccurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `exclusive-occupancy-after-expiry-${crypto.randomUUID()}`
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        })
+      ).toMatchObject({ status: "EXPIRED" });
     });
   }
 );

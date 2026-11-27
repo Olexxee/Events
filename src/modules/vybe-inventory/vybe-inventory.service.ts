@@ -11,3 +11,5 @@ export const adjustVybeInventoryAllocation = adjustInventoryAllocation;
 export const getVybeInventoryAvailability = getInventoryAvailability;
 export const createVybeInventoryHold = createInventoryHold;
 export const releaseVybeInventoryHold = releaseInventoryHold;
+
+export { assertOfferingCanTrade as assertVybeOfferingCanTrade } from "./vybe-inventory.db.js";

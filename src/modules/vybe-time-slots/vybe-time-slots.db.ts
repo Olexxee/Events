@@ -641,6 +641,13 @@ async function expireOccurrenceHolds(
     where: { id: { in: expired.map((hold) => hold.id) }, status: "ACTIVE" },
     data: { status: "EXPIRED" }
   });
+  await tx.vybeTimeSlotResourceOccupancy.updateMany({
+    where: {
+      sourceHoldId: { in: expired.map((hold) => hold.id) },
+      status: "HELD"
+    },
+    data: { status: "EXPIRED" }
+  });
   for (const hold of expired) {
     await recordTimeSlotHoldEvent(tx, {
       actorUserId: null,
@@ -658,7 +665,7 @@ async function expireOccurrenceHolds(
   }
 }
 
-async function assertOfferingAvailabilityAccess(
+export async function assertOfferingAvailabilityAccess(
   tx: Prisma.TransactionClient,
   offeringId: string
 ) {
@@ -1015,6 +1022,10 @@ export async function releaseTimeSlotCapacityHold(input: {
       where: { id: current.id },
       data: { status }
     });
+    await tx.vybeTimeSlotResourceOccupancy.updateMany({
+      where: { sourceHoldId: updated.id, status: "HELD" },
+      data: { status: status === "EXPIRED" ? "EXPIRED" : "RELEASED" }
+    });
     await recordTimeSlotHoldEvent(tx, {
       actorUserId: status === "EXPIRED" ? null : input.userId,
       actorType: status === "EXPIRED" ? "system" : "user",
@@ -1060,12 +1071,75 @@ function isExclusiveOverlapConflict(error: unknown): boolean {
   );
 }
 
+async function findOccupiedResourceIds(
+  tx: Prisma.TransactionClient,
+  resourceIds: string[],
+  blockedStartsAt: Date,
+  blockedEndsAt: Date,
+  now: Date
+): Promise<Set<string>> {
+  if (!resourceIds.length) return new Set();
+  const ids = Prisma.join(resourceIds.map((id) => Prisma.sql`${id}::uuid`));
+  const rows = await tx.$queryRaw<Array<{ resource_id: string }>>(Prisma.sql`
+    SELECT occupancy.resource_id
+      FROM vybe_time_slot_resource_occupancies occupancy
+     WHERE occupancy.resource_id IN (${ids})
+       AND occupancy.blocked_starts_at < ${blockedEndsAt}
+       AND occupancy.blocked_ends_at > ${blockedStartsAt}
+       AND (
+         occupancy.status = 'COMMITTED'
+         OR (
+           occupancy.status = 'HELD'
+           AND EXISTS (
+             SELECT 1
+               FROM vybe_time_slot_holds source_hold
+              WHERE source_hold.id = occupancy.source_hold_id
+                AND source_hold.status = 'ACTIVE'
+                AND source_hold.expires_at > ${now}
+           )
+         )
+       )
+    UNION
+    SELECT source_hold.resource_id
+      FROM vybe_time_slot_holds source_hold
+     WHERE source_hold.resource_id IN (${ids})
+       AND source_hold.status = 'ACTIVE'
+       AND source_hold.expires_at > ${now}
+       AND source_hold.blocked_starts_at < ${blockedEndsAt}
+       AND source_hold.blocked_ends_at > ${blockedStartsAt}
+       AND NOT EXISTS (
+         SELECT 1
+           FROM vybe_time_slot_resource_occupancies occupancy
+          WHERE occupancy.source_hold_id = source_hold.id
+       )
+  `);
+  return new Set(rows.map((row) => row.resource_id));
+}
+
 async function expireResourceHolds(
   tx: Prisma.TransactionClient,
   resourceIds: string[],
   now: Date
 ) {
   if (!resourceIds.length) return;
+  const resourceList = Prisma.join(
+    resourceIds.map((id) => Prisma.sql`${id}::uuid`)
+  );
+  // Reconcile occupancy rows left HELD by a prior application version that
+  // released or expired the source hold without knowing about this relation.
+  await tx.$executeRaw(Prisma.sql`
+    UPDATE vybe_time_slot_resource_occupancies occupancy
+       SET status = CASE source_hold.status::text
+         WHEN 'RELEASED' THEN 'RELEASED'::vybe_time_slot_resource_occupancy_status
+         ELSE 'EXPIRED'::vybe_time_slot_resource_occupancy_status
+       END,
+           updated_at = CURRENT_TIMESTAMP
+      FROM vybe_time_slot_holds source_hold
+     WHERE occupancy.source_hold_id = source_hold.id
+       AND occupancy.resource_id IN (${resourceList})
+       AND occupancy.status = 'HELD'
+       AND source_hold.status IN ('RELEASED', 'EXPIRED')
+  `);
   const expired = await tx.vybeTimeSlotHold.findMany({
     where: {
       resourceId: { in: resourceIds },
@@ -1077,6 +1151,13 @@ async function expireResourceHolds(
   if (!expired.length) return;
   await tx.vybeTimeSlotHold.updateMany({
     where: { id: { in: expired.map((hold) => hold.id) }, status: "ACTIVE" },
+    data: { status: "EXPIRED" }
+  });
+  await tx.vybeTimeSlotResourceOccupancy.updateMany({
+    where: {
+      sourceHoldId: { in: expired.map((hold) => hold.id) },
+      status: "HELD"
+    },
     data: { status: "EXPIRED" }
   });
   for (const hold of expired) {
@@ -1163,25 +1244,21 @@ export async function getTimeSlotResourceAvailability(occurrenceId: string) {
       },
       select: { resourceId: true }
     });
-    const resourceIds = members.map((member) => member.resourceId);
-    const held = resourceIds.length
-      ? await tx.vybeTimeSlotHold.findMany({
-          where: {
-            resourceId: { in: resourceIds },
-            status: "ACTIVE",
-            expiresAt: { gt: now },
-            blockedStartsAt: { lt: occurrence.blockedEndsAt },
-            blockedEndsAt: { gt: occurrence.blockedStartsAt }
-          },
-          select: { resourceId: true },
-          distinct: ["resourceId"]
-        })
-      : [];
+    const resourceIds = [
+      ...new Set(members.map((member) => member.resourceId))
+    ];
+    const occupied = await findOccupiedResourceIds(
+      tx,
+      resourceIds,
+      occurrence.blockedStartsAt,
+      occurrence.blockedEndsAt,
+      now
+    );
     return {
       occurrenceId,
       inventoryMode: "EXCLUSIVE" as const,
       eligibleResourceCount: resourceIds.length,
-      availableResourceCount: Math.max(0, resourceIds.length - held.length),
+      availableResourceCount: Math.max(0, resourceIds.length - occupied.size),
       asOf: now.toISOString()
     };
   });
@@ -1326,18 +1403,13 @@ export async function createTimeSlotResourceHold(input: {
           .filter((item) => item.is_active)
           .map((item) => item.id);
         await expireResourceHolds(tx, lockedIds, now);
-        const conflicts = await tx.vybeTimeSlotHold.findMany({
-          where: {
-            resourceId: { in: lockedIds },
-            status: "ACTIVE",
-            expiresAt: { gt: now },
-            blockedStartsAt: { lt: occurrence.blockedEndsAt },
-            blockedEndsAt: { gt: occurrence.blockedStartsAt }
-          },
-          select: { resourceId: true },
-          distinct: ["resourceId"]
-        });
-        const busy = new Set(conflicts.map((item) => item.resourceId));
+        const busy = await findOccupiedResourceIds(
+          tx,
+          lockedIds,
+          occurrence.blockedStartsAt,
+          occurrence.blockedEndsAt,
+          now
+        );
         const resourceId = lockedIds.find((id) => !busy.has(id));
         if (!resourceId)
           fail(
@@ -1376,6 +1448,15 @@ export async function createTimeSlotResourceHold(input: {
             }
             throw error;
           });
+        await tx.vybeTimeSlotResourceOccupancy.create({
+          data: {
+            resourceId,
+            occurrenceId: occurrence.id,
+            sourceHoldId: hold.id,
+            blockedStartsAt: hold.blockedStartsAt,
+            blockedEndsAt: hold.blockedEndsAt
+          }
+        });
         await recordTimeSlotHoldEvent(tx, {
           actorUserId: input.userId,
           action: "vybe.time_slot_hold.created",
@@ -1481,6 +1562,10 @@ export async function releaseTimeSlotResourceHold(input: {
     const updated = await tx.vybeTimeSlotHold.update({
       where: { id: current.id },
       data: { status }
+    });
+    await tx.vybeTimeSlotResourceOccupancy.updateMany({
+      where: { sourceHoldId: updated.id, status: "HELD" },
+      data: { status: status === "EXPIRED" ? "EXPIRED" : "RELEASED" }
     });
     await recordTimeSlotHoldEvent(tx, {
       actorUserId: status === "EXPIRED" ? null : input.userId,

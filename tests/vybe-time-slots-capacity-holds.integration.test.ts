@@ -10,6 +10,7 @@ import {
   getTimeSlotCapacityAvailability,
   releaseTimeSlotCapacityHold
 } from "../src/modules/vybe-time-slots/vybe-time-slots.db.js";
+import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.service.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -285,6 +286,107 @@ describe.skipIf(!enabled)(
         (await getTimeSlotCapacityAvailability(fixture.occurrenceId))
           .availableQuantity
       ).toBe(2);
+    });
+
+    it("converts capacity holds atomically and is idempotent under concurrent retries", async () => {
+      const fixture = await createCapacityFixture(5);
+      const hold = await createTimeSlotCapacityHold({
+        ...fixture,
+        quantity: 2,
+        idempotencyKey: `booking-capacity-${crypto.randomUUID()}`
+      });
+      const reference = `free-capacity-order-${crypto.randomUUID()}`;
+      const verifier = {
+        verify: async () => ({
+          kind: "FREE_ORDER_ACCEPTED" as const,
+          reference,
+          verifiedAt: new Date(),
+          quote: {
+            quoteReference: `quote-${reference}`,
+            amountMinor: 0,
+            currency: "NGN"
+          }
+        })
+      };
+      const input = {
+        sourceType: "CAPACITY_SESSION" as const,
+        sourceHoldId: hold.id,
+        customerUserId: fixture.userId,
+        acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+      };
+      const results = await Promise.all([
+        confirmVybeBookingFromHold(input, verifier),
+        confirmVybeBookingFromHold(input, verifier)
+      ]);
+      expect(results[0].id).toBe(results[1].id);
+      expect(results[0]).toMatchObject({
+        sourceType: "CAPACITY_SESSION",
+        timeSlotHoldId: hold.id,
+        quantity: 2,
+        status: "CONFIRMED"
+      });
+      expect(
+        await prisma.vybeTimeSlotHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "CONVERTED" });
+      expect(
+        await getTimeSlotCapacityAvailability(fixture.occurrenceId)
+      ).toMatchObject({
+        capacity: 5,
+        heldQuantity: 0,
+        committedQuantity: 2,
+        availableQuantity: 3
+      });
+      expect(
+        await prisma.vybeBooking.count({ where: { timeSlotHoldId: hold.id } })
+      ).toBe(1);
+    });
+
+    it("does not confirm a capacity hold after expiry wins the race", async () => {
+      const fixture = await createCapacityFixture(2);
+      const hold = await createTimeSlotCapacityHold({
+        ...fixture,
+        quantity: 1,
+        idempotencyKey: `booking-capacity-expiry-${crypto.randomUUID()}`
+      });
+      await prisma.vybeTimeSlotHold.update({
+        where: { id: hold.id },
+        data: { expiresAt: new Date(Date.now() - 1000) }
+      });
+      const verifier = {
+        verify: async () => ({
+          kind: "FREE_ORDER_ACCEPTED" as const,
+          reference: `free-expired-${crypto.randomUUID()}`,
+          verifiedAt: new Date(),
+          quote: {
+            quoteReference: `quote-expired-${crypto.randomUUID()}`,
+            amountMinor: 0,
+            currency: "NGN"
+          }
+        })
+      };
+      await expect(
+        confirmVybeBookingFromHold(
+          {
+            sourceType: "CAPACITY_SESSION",
+            sourceHoldId: hold.id,
+            customerUserId: fixture.userId,
+            acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+          },
+          verifier
+        )
+      ).rejects.toMatchObject({ code: "VYBE_BOOKING_HOLD_EXPIRED" });
+      expect(
+        await prisma.vybeTimeSlotHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "EXPIRED" });
+      expect(
+        await prisma.vybeTimeSlotCapacity.findUniqueOrThrow({
+          where: { occurrenceId: fixture.occurrenceId }
+        })
+      ).toMatchObject({ committedQuantity: 0 });
     });
   }
 );
