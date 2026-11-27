@@ -12,6 +12,7 @@ import {
   createTimeSlotResourceHold,
   releaseTimeSlotHold
 } from "../src/modules/vybe-time-slots/vybe-time-slots.db.js";
+import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.db.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -390,6 +391,101 @@ describe.skipIf(!enabled)(
           where: { resourceId: hold.id, action: "vybe.time_slot_hold.released" }
         })
       ).toBe(1);
+
+    it("keeps an exclusive resource occupied across hold-to-booking conversion", async () => {
+      const fixture = await createExclusiveFixture();
+      const occurrence = await fixture.createOccurrence();
+      const hold = await createTimeSlotResourceHold({
+        occurrenceId: occurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `booking-exclusive-${crypto.randomUUID()}`
+      });
+      const reference = `free-exclusive-order-${crypto.randomUUID()}`;
+      const verifier = {
+        verify: async () => ({
+          kind: "FREE_ORDER_ACCEPTED" as const,
+          reference,
+          verifiedAt: new Date(),
+          quote: {
+            quoteReference: `quote-${reference}`,
+            amountMinor: 0,
+            currency: "NGN"
+          }
+        })
+      };
+      const input = {
+        sourceType: "EXCLUSIVE_RESOURCE" as const,
+        sourceHoldId: hold.id,
+        customerUserId: fixture.userId,
+        acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+      };
+      const results = await Promise.all([
+        confirmVybeBookingFromHold(input, verifier),
+        confirmVybeBookingFromHold(input, verifier)
+      ]);
+      expect(results[0].id).toBe(results[1].id);
+      expect(results[0]).toMatchObject({
+        sourceType: "EXCLUSIVE_RESOURCE",
+        timeSlotHoldId: hold.id,
+        resourceId: hold.resourceId,
+        status: "CONFIRMED"
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        })
+      ).toMatchObject({ status: "COMMITTED", bookingId: results[0].id });
+      expect(
+        await prisma.vybeTimeSlotHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "CONVERTED" });
+
+      const overlappingOccurrence = await fixture.createOccurrence({
+        startsAt: "2027-06-15T18:30:00+01:00",
+        endsAt: "2027-06-15T19:30:00+01:00"
+      });
+      await expect(
+        createTimeSlotResourceHold({
+          occurrenceId: overlappingOccurrence.id,
+          userId: fixture.userId,
+          idempotencyKey: `overlap-after-booking-${crypto.randomUUID()}`
+        })
+      ).rejects.toMatchObject({ code: "VYBE_TIME_SLOT_RESOURCE_RACE" });
+      expect(
+        await prisma.vybeTimeSlotHold.count({
+          where: { occurrenceId: overlappingOccurrence.id, status: "ACTIVE" }
+        })
+      ).toBe(0);
+    });
+
+    it("expires exclusive occupancy when its source hold expires", async () => {
+      const fixture = await createExclusiveFixture();
+      const occurrence = await fixture.createOccurrence();
+      const hold = await createTimeSlotResourceHold({
+        occurrenceId: occurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `exclusive-occupancy-expiry-${crypto.randomUUID()}`
+      });
+      await prisma.vybeTimeSlotHold.update({
+        where: { id: hold.id },
+        data: { expiresAt: new Date(Date.now() - 1000) }
+      });
+      const nextOccurrence = await fixture.createOccurrence({
+        startsAt: "2027-06-15T20:00:00+01:00",
+        endsAt: "2027-06-15T21:00:00+01:00"
+      });
+      await createTimeSlotResourceHold({
+        occurrenceId: nextOccurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `exclusive-occupancy-after-expiry-${crypto.randomUUID()}`
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        })
+      ).toMatchObject({ status: "EXPIRED" });
+    });
     });
   }
 );
