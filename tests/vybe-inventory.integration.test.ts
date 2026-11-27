@@ -363,78 +363,33 @@ describe.skipIf(!enabled)(
       });
 
       it("accepts a paid booking only with positive server-verified confirmation evidence", async () => {
-      await createInventoryPool({
-        organizationId,
-        offeringId,
-        actorUserId: ownerId,
-        allocatedQuantity: 1,
-        reason: "Paid confirmation contract fixture",
-        evidenceReference: "provider-inventory-register:paid-confirmation"
-      });
-      const hold = await createInventoryHold({
-        offeringId,
-        userId: ownerId,
-        quantity: 1,
-        idempotencyKey: `paid-booking-${crypto.randomUUID()}`
-      });
-      const verifier = {
-        verify: async () => ({
-          kind: "PAYMENT_VERIFIED" as const,
-          reference: `verified-payment-${crypto.randomUUID()}`,
-          verifiedAt: new Date(),
-          quote: {
-            quoteReference: `paid-quote-${crypto.randomUUID()}`,
-            amountMinor: 750000,
-            currency: "NGN"
-          }
-        })
-      };
-      const booking = await confirmVybeBookingFromHold(
-        {
-          sourceType: "QUANTITY_POOL",
-          sourceHoldId: hold.id,
-          customerUserId: ownerId,
-          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
-        },
-        verifier
-      );
-      expect(booking.status).toBe("CONFIRMED");
-      expect(booking.priceQuoteSnapshot).toMatchObject({
-        amountMinor: 750000,
-        currency: "NGN",
-        confirmation: { kind: "PAYMENT_VERIFIED" }
-      });
-    });
-
-    it("rejects paid confirmation evidence for a zero-value quote", async () => {
-      await createInventoryPool({
-        organizationId,
-        offeringId,
-        actorUserId: ownerId,
-        allocatedQuantity: 1,
-        reason: "Invalid paid confirmation fixture",
-        evidenceReference: "provider-inventory-register:invalid-paid-confirmation"
-      });
-      const hold = await createInventoryHold({
-        offeringId,
-        userId: ownerId,
-        quantity: 1,
-        idempotencyKey: `invalid-paid-booking-${crypto.randomUUID()}`
-      });
-      const verifier = {
-        verify: async () => ({
-          kind: "PAYMENT_VERIFIED" as const,
-          reference: `invalid-payment-${crypto.randomUUID()}`,
-          verifiedAt: new Date(),
-          quote: {
-            quoteReference: `zero-paid-quote-${crypto.randomUUID()}`,
-            amountMinor: 0,
-            currency: "NGN"
-          }
-        })
-      };
-      await expect(
-        confirmVybeBookingFromHold(
+        await createInventoryPool({
+          organizationId,
+          offeringId,
+          actorUserId: ownerId,
+          allocatedQuantity: 1,
+          reason: "Paid confirmation contract fixture",
+          evidenceReference: "provider-inventory-register:paid-confirmation"
+        });
+        const hold = await createInventoryHold({
+          offeringId,
+          userId: ownerId,
+          quantity: 1,
+          idempotencyKey: `paid-booking-${crypto.randomUUID()}`
+        });
+        const verifier = {
+          verify: async () => ({
+            kind: "PAYMENT_VERIFIED" as const,
+            reference: `verified-payment-${crypto.randomUUID()}`,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `paid-quote-${crypto.randomUUID()}`,
+              amountMinor: 750000,
+              currency: "NGN"
+            }
+          })
+        };
+        const booking = await confirmVybeBookingFromHold(
           {
             sourceType: "QUANTITY_POOL",
             sourceHoldId: hold.id,
@@ -442,21 +397,69 @@ describe.skipIf(!enabled)(
             acceptedTermsSnapshot: { version: "vybe-terms-v1" }
           },
           verifier
-        )
-      ).rejects.toMatchObject({
-        code: "VYBE_BOOKING_CONFIRMATION_INVALID"
+        );
+        expect(booking.status).toBe("CONFIRMED");
+        expect(booking.priceQuoteSnapshot).toMatchObject({
+          amountMinor: 750000,
+          currency: "NGN",
+          confirmation: { kind: "PAYMENT_VERIFIED" }
+        });
       });
-      expect(
-        await prisma.vybeInventoryHold.findUniqueOrThrow({
-          where: { id: hold.id }
-        })
-      ).toMatchObject({ status: "ACTIVE" });
-      expect(
-        await prisma.vybeBooking.count({ where: { inventoryHoldId: hold.id } })
-      ).toBe(0);
-    });
 
-    it("expires a quantity hold instead of confirming it after its deadline", async () => {
+      it("rejects paid confirmation evidence for a zero-value quote", async () => {
+        await createInventoryPool({
+          organizationId,
+          offeringId,
+          actorUserId: ownerId,
+          allocatedQuantity: 1,
+          reason: "Invalid paid confirmation fixture",
+          evidenceReference:
+            "provider-inventory-register:invalid-paid-confirmation"
+        });
+        const hold = await createInventoryHold({
+          offeringId,
+          userId: ownerId,
+          quantity: 1,
+          idempotencyKey: `invalid-paid-booking-${crypto.randomUUID()}`
+        });
+        const verifier = {
+          verify: async () => ({
+            kind: "PAYMENT_VERIFIED" as const,
+            reference: `invalid-payment-${crypto.randomUUID()}`,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `zero-paid-quote-${crypto.randomUUID()}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        };
+        await expect(
+          confirmVybeBookingFromHold(
+            {
+              sourceType: "QUANTITY_POOL",
+              sourceHoldId: hold.id,
+              customerUserId: ownerId,
+              acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+            },
+            verifier
+          )
+        ).rejects.toMatchObject({
+          code: "VYBE_BOOKING_CONFIRMATION_INVALID"
+        });
+        expect(
+          await prisma.vybeInventoryHold.findUniqueOrThrow({
+            where: { id: hold.id }
+          })
+        ).toMatchObject({ status: "ACTIVE" });
+        expect(
+          await prisma.vybeBooking.count({
+            where: { inventoryHoldId: hold.id }
+          })
+        ).toBe(0);
+      });
+
+      it("expires a quantity hold instead of confirming it after its deadline", async () => {
         await createInventoryPool({
           organizationId,
           offeringId,
