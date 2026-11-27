@@ -681,25 +681,27 @@ describe.skipIf(!enabled)(
         }
       });
 
-      const notOwned = cancelMyVybeBooking({
-        bookingId: booking.id,
-        customerUserId: otherUser.id,
-        idempotencyKey: `not-owned-${crypto.randomUUID()}`,
-        reason: "Attempted access"
+      const [notOwned, unknown] = await Promise.allSettled([
+        cancelMyVybeBooking({
+          bookingId: booking.id,
+          customerUserId: otherUser.id,
+          idempotencyKey: `not-owned-${crypto.randomUUID()}`,
+          reason: "Attempted access"
+        }),
+        cancelMyVybeBooking({
+          bookingId: crypto.randomUUID(),
+          customerUserId: ownerId,
+          idempotencyKey: `unknown-booking-${crypto.randomUUID()}`,
+          reason: "Unknown booking"
+        })
+      ]);
+      expect(notOwned).toMatchObject({
+        status: "rejected",
+        reason: { code: "VYBE_BOOKING_NOT_FOUND", statusCode: 404 }
       });
-      const unknown = cancelMyVybeBooking({
-        bookingId: crypto.randomUUID(),
-        customerUserId: ownerId,
-        idempotencyKey: `unknown-booking-${crypto.randomUUID()}`,
-        reason: "Unknown booking"
-      });
-      await expect(notOwned).rejects.toMatchObject({
-        code: "VYBE_BOOKING_NOT_FOUND",
-        statusCode: 404
-      });
-      await expect(unknown).rejects.toMatchObject({
-        code: "VYBE_BOOKING_NOT_FOUND",
-        statusCode: 404
+      expect(unknown).toMatchObject({
+        status: "rejected",
+        reason: { code: "VYBE_BOOKING_NOT_FOUND", statusCode: 404 }
       });
       expect(
         await prisma.vybeInventoryPool.findUniqueOrThrow({
