@@ -284,3 +284,61 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+
+CREATE OR REPLACE FUNCTION vybe_validate_resource_occupancy_source()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  hold_resource UUID;
+  hold_occurrence UUID;
+  hold_start TIMESTAMPTZ;
+  hold_end TIMESTAMPTZ;
+  hold_status TEXT;
+  occurrence_mode "vybe_time_slot_inventory_mode";
+BEGIN
+  SELECT hold."resource_id", hold."occurrence_id",
+         hold."blocked_starts_at", hold."blocked_ends_at",
+         hold."status"::text, occurrence."inventory_mode"
+    INTO hold_resource, hold_occurrence, hold_start, hold_end,
+         hold_status, occurrence_mode
+    FROM "vybe_time_slot_holds" hold
+    JOIN "vybe_time_slot_occurrences" occurrence
+      ON occurrence."id" = hold."occurrence_id"
+   WHERE hold."id" = NEW."source_hold_id";
+
+  IF hold_resource IS NULL OR occurrence_mode <> 'EXCLUSIVE'
+     OR hold_resource <> NEW."resource_id"
+     OR hold_occurrence <> NEW."occurrence_id"
+     OR hold_start <> NEW."blocked_starts_at"
+     OR hold_end <> NEW."blocked_ends_at" THEN
+    RAISE EXCEPTION 'occupancy must exactly represent its exclusive source hold'
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF (NEW."status" = 'HELD' AND hold_status <> 'ACTIVE')
+     OR (NEW."status" = 'COMMITTED' AND hold_status <> 'CONVERTED')
+     OR (NEW."status" = 'EXPIRED' AND hold_status <> 'EXPIRED')
+     OR (NEW."status" = 'RELEASED' AND hold_status NOT IN ('RELEASED', 'CONVERTED')) THEN
+    RAISE EXCEPTION 'exclusive occupancy state must agree with its source hold state'
+      USING ERRCODE = '23514';
+  END IF;
+
+  IF NEW."status" = 'COMMITTED' AND NOT EXISTS (
+    SELECT 1
+      FROM "vybe_bookings" booking
+     WHERE booking."id" = NEW."booking_id"
+       AND booking."source_type" = 'EXCLUSIVE_RESOURCE'
+       AND booking."time_slot_hold_id" = NEW."source_hold_id"
+       AND booking."resource_id" = NEW."resource_id"
+       AND booking."blocked_starts_at" = NEW."blocked_starts_at"
+       AND booking."blocked_ends_at" = NEW."blocked_ends_at"
+  ) THEN
+    RAISE EXCEPTION 'committed occupancy must reference its matching booking'
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
