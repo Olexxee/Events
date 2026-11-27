@@ -127,3 +127,29 @@ $$;
 CREATE TRIGGER "vybe_bookings_snapshot_immutable"
 BEFORE UPDATE ON "vybe_bookings"
 FOR EACH ROW EXECUTE FUNCTION vybe_reject_booking_snapshot_mutation();
+
+
+-- Keep the occupancy exclusion domain correct even while older application
+-- instances still transition source holds without explicitly updating occupancy.
+CREATE OR REPLACE FUNCTION vybe_sync_exclusive_occupancy_terminal_hold()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD."status" = 'ACTIVE' AND NEW."status" IN ('RELEASED', 'EXPIRED') THEN
+    UPDATE "vybe_time_slot_resource_occupancies"
+       SET "status" = CASE NEW."status"::text
+         WHEN 'RELEASED' THEN 'RELEASED'::"vybe_time_slot_resource_occupancy_status"
+         ELSE 'EXPIRED'::"vybe_time_slot_resource_occupancy_status"
+       END,
+           "updated_at" = CURRENT_TIMESTAMP
+     WHERE "source_hold_id" = NEW."id"
+       AND "status" = 'HELD';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER "vybe_time_slot_hold_terminal_occupancy_sync"
+AFTER UPDATE OF "status" ON "vybe_time_slot_holds"
+FOR EACH ROW EXECUTE FUNCTION vybe_sync_exclusive_occupancy_terminal_hold();
