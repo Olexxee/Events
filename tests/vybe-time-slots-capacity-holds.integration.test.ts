@@ -286,8 +286,9 @@ describe.skipIf(!enabled)(
         (await getTimeSlotCapacityAvailability(fixture.occurrenceId))
           .availableQuantity
       ).toBe(2);
+    });
 
-      it("converts capacity holds atomically and is idempotent under concurrent retries", async () => {
+    it("converts capacity holds atomically and is idempotent under concurrent retries", async () => {
         const fixture = await createCapacityFixture(5);
         const hold = await createTimeSlotCapacityHold({
           ...fixture,
@@ -387,6 +388,5 @@ describe.skipIf(!enabled)(
           })
         ).toMatchObject({ committedQuantity: 0 });
       });
-    });
   }
 );
