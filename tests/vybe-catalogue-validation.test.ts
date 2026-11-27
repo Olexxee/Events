@@ -88,7 +88,8 @@ describe("Vybe catalogue validation", () => {
               allowed: true,
               cutoffMinutesBeforeService: 60,
               timezone: "Africa/Lagos",
-              displayText: "Customers may cancel up to 60 minutes before service."
+              displayText:
+                "Customers may cancel up to 60 minutes before service."
             }
           }
         }
