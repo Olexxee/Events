@@ -226,3 +226,5 @@ Approval of this document would authorize Slice A schema/migration implementatio
 - Quantity-pool bookings have no service interval or timezone. Their schedule fields are nullable and database checks require schedule fields only for time-slot-backed bookings.
 - The shared occupancy relation is populated on new exclusive holds, updated on expiry/release, and retained through booking confirmation. The legacy hold-table exclusion remains active pending a later controlled contract migration.
 - Slice B introduces only an internal confirmation-verifier port. It does not expose a route, implement a real Payments adapter, initiate collection/capture, or implement checkout.
+
+- A database trigger now synchronizes HELD occupancy to RELEASED/EXPIRED when a source time-slot hold transitions from ACTIVE to a terminal state, including transitions performed by an older application instance. The new allocation path also reconciles stale terminal occupancy left by the deployment gap before that trigger existed.
