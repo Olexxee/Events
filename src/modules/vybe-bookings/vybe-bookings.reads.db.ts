@@ -34,7 +34,7 @@ async function findBookingRecord(bookingId: string, customerUserId: string) {
 
 function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
+    ? (value as Record<string, unknown>)
     : {};
 }
 
@@ -50,8 +50,12 @@ function customerBookingDto(record: NonNullable<BookingReadRecord>) {
     publicReference: record.publicReference,
     status: record.status,
     offering: {
-      title: typeof content.title === "string" ? content.title : "Vybe experience",
-      description: typeof content.description === "string" ? content.description : null,
+      title:
+        typeof content.title === "string"
+          ? content.title
+          : "Vybe experience",
+      description:
+        typeof content.description === "string" ? content.description : null,
       category: typeof content.category === "string" ? content.category : null,
       version: record.offeringVersion
     },
@@ -111,7 +115,7 @@ export async function listMyVybeBookings(input: {
   const page = hasMore ? records.slice(0, input.limit) : records;
   return {
     bookings: page.map(customerBookingDto),
-    nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null
+    nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null
   };
 }
 
