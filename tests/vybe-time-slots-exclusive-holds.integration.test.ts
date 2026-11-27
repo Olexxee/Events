@@ -14,6 +14,7 @@ import {
   releaseTimeSlotHold
 } from "../src/modules/vybe-time-slots/vybe-time-slots.db.js";
 import { confirmVybeBookingFromHold } from "../src/modules/vybe-bookings/vybe-bookings.service.js";
+import { cancelMyVybeBooking } from "../src/modules/vybe-bookings/vybe-bookings.cancellations.db.js";
 
 const enabled = Boolean(process.env.DATABASE_URL);
 const prisma = getPrismaClient();
@@ -531,6 +532,64 @@ describe.skipIf(!enabled)(
           where: { occurrenceId: overlappingOccurrence.id, status: "ACTIVE" }
         })
       ).toBe(0);
+    });
+
+    it("releases the same committed exclusive-resource occupancy row on cancellation", async () => {
+      const fixture = await createExclusiveFixture();
+      const occurrence = await fixture.createOccurrence();
+      const hold = await createTimeSlotResourceHold({
+        occurrenceId: occurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `cancel-exclusive-${crypto.randomUUID()}`
+      });
+      const reference = `cancel-exclusive-${crypto.randomUUID()}`;
+      const booking = await confirmVybeBookingFromHold(
+        {
+          sourceType: "EXCLUSIVE_RESOURCE",
+          sourceHoldId: hold.id,
+          customerUserId: fixture.userId,
+          acceptedTermsSnapshot: { version: "vybe-terms-v1" }
+        },
+        {
+          verify: async () => ({
+            kind: "FREE_ORDER_ACCEPTED",
+            reference,
+            verifiedAt: new Date(),
+            quote: {
+              quoteReference: `quote-${reference}`,
+              amountMinor: 0,
+              currency: "NGN"
+            }
+          })
+        }
+      );
+      const occupancyBefore =
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        });
+
+      const cancelled = await cancelMyVybeBooking({
+        bookingId: booking.id,
+        customerUserId: fixture.userId,
+        idempotencyKey: `cancel-exclusive-request-${crypto.randomUUID()}`,
+        reason: "Plans changed"
+      });
+      const occupancyAfter =
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        });
+      expect(cancelled.cancellation.decision).toBe("ACCEPTED");
+      expect(cancelled.booking.status).toBe("CANCELLED");
+      expect(occupancyAfter).toMatchObject({
+        id: occupancyBefore.id,
+        status: "RELEASED",
+        bookingId: booking.id
+      });
+      expect(
+        await prisma.vybeTimeSlotHold.findUniqueOrThrow({
+          where: { id: hold.id }
+        })
+      ).toMatchObject({ status: "CONVERTED" });
     });
 
     it("protects active legacy holds without an occupancy row and bridges them on conversion", async () => {
