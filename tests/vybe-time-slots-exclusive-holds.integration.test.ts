@@ -468,7 +468,34 @@ describe.skipIf(!enabled)(
         ).toBe(0);
       });
 
-      it("expires exclusive occupancy when its source hold expires", async () => {
+      it("releases occupancy when an older hold writer only changes the source status", async () => {
+      const fixture = await createExclusiveFixture();
+      const firstOccurrence = await fixture.createOccurrence();
+      const hold = await createTimeSlotResourceHold({
+        occurrenceId: firstOccurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `legacy-release-${crypto.randomUUID()}`
+      });
+      await prisma.vybeTimeSlotHold.update({
+        where: { id: hold.id },
+        data: { status: "RELEASED" }
+      });
+      expect(
+        await prisma.vybeTimeSlotResourceOccupancy.findUniqueOrThrow({
+          where: { sourceHoldId: hold.id }
+        })
+      ).toMatchObject({ status: "RELEASED" });
+
+      const overlappingOccurrence = await fixture.createOccurrence();
+      const replacement = await createTimeSlotResourceHold({
+        occurrenceId: overlappingOccurrence.id,
+        userId: fixture.userId,
+        idempotencyKey: `legacy-release-replacement-${crypto.randomUUID()}`
+      });
+      expect(replacement.resourceId).toBe(hold.resourceId);
+    });
+
+    it("expires exclusive occupancy when its source hold expires", async () => {
         const fixture = await createExclusiveFixture();
         const occurrence = await fixture.createOccurrence();
         const hold = await createTimeSlotResourceHold({
