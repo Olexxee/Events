@@ -66,13 +66,20 @@ function validateConfirmation(
   };
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 function assertTermsSnapshot(value: Prisma.InputJsonObject): void {
+  const terms = asObject(value);
   if (
     !value ||
     typeof value !== "object" ||
     Array.isArray(value) ||
-    typeof value.version !== "string" ||
-    value.version.trim().length === 0
+    typeof terms.version !== "string" ||
+    terms.version.trim().length === 0
   ) {
     fail(
       "VYBE_BOOKING_TERMS_REQUIRED",
@@ -80,6 +87,104 @@ function assertTermsSnapshot(value: Prisma.InputJsonObject): void {
       422
     );
   }
+  if ("cancellationPolicy" in terms) {
+    fail(
+      "VYBE_BOOKING_POLICY_CLIENT_SUPPLIED",
+      "Cancellation policy must be derived from the immutable published offering version",
+      422
+    );
+  }
+}
+
+function buildAcceptedTermsSnapshot(
+  input: Prisma.InputJsonObject,
+  offeringSnapshot: Prisma.InputJsonObject,
+  serviceStartsAt: Date | null,
+  serviceTimezone: string | null,
+  acceptedAt: string
+): Prisma.InputJsonObject {
+  assertTermsSnapshot(input);
+  const content = asObject(asObject(offeringSnapshot).content);
+  const policy = asObject(content.cancellationPolicy);
+  const customerCancellation = asObject(policy.customerCancellation);
+  const policyVersion = policy.policyVersion;
+  const allowed = customerCancellation.allowed;
+  const cutoffMinutes = customerCancellation.cutoffMinutesBeforeService;
+  const timezone = customerCancellation.timezone;
+  const displayText = customerCancellation.displayText;
+
+  if (
+    typeof policyVersion !== "string" ||
+    policyVersion.trim().length === 0 ||
+    typeof allowed !== "boolean" ||
+    (cutoffMinutes !== null &&
+      (!Number.isSafeInteger(cutoffMinutes) ||
+        (cutoffMinutes as number) < 0 ||
+        (cutoffMinutes as number) > 525600)) ||
+    typeof timezone !== "string" ||
+    typeof displayText !== "string" ||
+    displayText.trim().length < 20 ||
+    !Number.isFinite(Date.parse(acceptedAt))
+  ) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_POLICY_REQUIRED",
+      "A valid structured cancellation policy is required on the published offering version",
+      422
+    );
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  } catch {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_POLICY_INVALID",
+      "The cancellation policy timezone must be a valid IANA timezone",
+      422
+    );
+  }
+
+  if (!allowed && cutoffMinutes !== null) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_POLICY_INVALID",
+      "A disallowed cancellation policy cannot have a cutoff",
+      422
+    );
+  }
+  if (serviceTimezone && serviceTimezone !== timezone) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_TIMEZONE_MISMATCH",
+      "The cancellation policy timezone must match the booked service timezone",
+      422
+    );
+  }
+  if (cutoffMinutes !== null && !serviceStartsAt) {
+    fail(
+      "VYBE_BOOKING_CANCELLATION_CUTOFF_UNRESOLVED",
+      "A relative cancellation cutoff requires a scheduled service start",
+      422
+    );
+  }
+
+  const cutoffAt =
+    cutoffMinutes === null
+      ? null
+      : new Date(
+          serviceStartsAt!.getTime() - (cutoffMinutes as number) * 60_000
+        ).toISOString();
+
+  return {
+    ...input,
+    cancellationPolicy: {
+      policyVersion,
+      customerCancellation: {
+        allowed,
+        cutoffAt,
+        timezone,
+        displayText
+      },
+      acceptedAt
+    }
+  };
 }
 
 function assertReplayMatches(
@@ -88,6 +193,9 @@ function assertReplayMatches(
     sourceType: VybeBookingSourceType;
     externalOrderItemReference: string | null;
     acceptedTermsSnapshot: Prisma.JsonValue;
+    offeringSnapshot: Prisma.JsonValue;
+    serviceStartsAt: Date | null;
+    timezone: string | null;
     priceQuoteSnapshot: Prisma.JsonValue;
   },
   input: ConfirmVybeBookingInput,
@@ -107,15 +215,32 @@ function assertReplayMatches(
     stored.schemaVersion === incoming.schemaVersion &&
     storedConfirmation?.kind === incomingConfirmation?.kind &&
     storedConfirmation?.reference === incomingConfirmation?.reference;
+
+  const storedTerms = asObject(booking.acceptedTermsSnapshot);
+  const storedPolicy = asObject(storedTerms.cancellationPolicy);
+  let expectedTerms: Prisma.InputJsonObject = input.acceptedTermsSnapshot;
+  if (Object.keys(storedPolicy).length > 0) {
+    try {
+      expectedTerms = buildAcceptedTermsSnapshot(
+        input.acceptedTermsSnapshot,
+        booking.offeringSnapshot as Prisma.InputJsonObject,
+        booking.serviceStartsAt,
+        booking.timezone,
+        typeof storedPolicy.acceptedAt === "string"
+          ? storedPolicy.acceptedAt
+          : ""
+      );
+    } catch {
+      expectedTerms = {};
+    }
+  }
+
   if (
     booking.customerUserId !== input.customerUserId ||
     booking.sourceType !== input.sourceType ||
     booking.externalOrderItemReference !==
       (input.externalOrderItemReference ?? null) ||
-    !isDeepStrictEqual(
-      booking.acceptedTermsSnapshot,
-      input.acceptedTermsSnapshot
-    ) ||
+    !isDeepStrictEqual(booking.acceptedTermsSnapshot, expectedTerms) ||
     !sameCommercialEvidence
   ) {
     fail(
