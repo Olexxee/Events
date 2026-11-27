@@ -1220,7 +1220,7 @@ export async function getTimeSlotResourceAvailability(occurrenceId: string) {
       },
       select: { resourceId: true }
     });
-    const resourceIds = members.map((member) => member.resourceId);
+    const resourceIds = [...new Set(members.map((member) => member.resourceId))];
     const occupied = await findOccupiedResourceIds(
       tx,
       resourceIds,
