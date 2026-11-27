@@ -4,8 +4,8 @@ import { Prisma } from "@prisma/client";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { enqueueOutboxMessage } from "../../shared/outbox/outbox.repository.js";
-import { assertOfferingCanTrade } from "../vybe-inventory/vybe-inventory.db.js";
-import { assertOfferingAvailabilityAccess } from "../vybe-time-slots/vybe-time-slots.db.js";
+import { assertVybeOfferingCanTrade } from "../vybe-inventory/vybe-inventory.service.js";
+import { assertVybeOfferingAvailabilityAccess } from "../vybe-time-slots/vybe-time-slots.service.js";
 import type {
   ConfirmVybeBookingInput,
   VybeBookingConfirmationVerifier,
@@ -309,7 +309,7 @@ export async function confirmVybeBookingFromHold(
       );
       if (!offeringLock.length)
         fail("VYBE_OFFERING_NOT_BOOKABLE", "The offering is no longer bookable", 409);
-      const offering = await assertOfferingCanTrade(tx, source.pool.offeringId);
+      const offering = await assertVybeOfferingCanTrade(tx, source.pool.offeringId);
       await tx.$queryRaw(Prisma.sql`SELECT id FROM vybe_inventory_pools WHERE id = ${source.poolId}::uuid FOR UPDATE`);
       await tx.$queryRaw(Prisma.sql`SELECT id FROM vybe_inventory_holds WHERE id = ${source.id}::uuid FOR UPDATE`);
       const hold = await tx.vybeInventoryHold.findUniqueOrThrow({
@@ -411,7 +411,7 @@ export async function confirmVybeBookingFromHold(
     if (!source) fail("VYBE_BOOKING_HOLD_NOT_FOUND", "Source hold was not found", 404);
     if (source.userId !== input.customerUserId)
       fail("VYBE_BOOKING_HOLD_FORBIDDEN", "Only the hold owner may confirm this booking", 403);
-    const offering = await assertOfferingAvailabilityAccess(
+    const offering = await assertVybeOfferingAvailabilityAccess(
       tx,
       source.occurrence.offeringId
     );
