@@ -28,7 +28,8 @@ function setRefreshCookie(req: Parameters<RequestHandler>[0], res: Parameters<Re
   res.cookie(REFRESH_COOKIE, token, refreshCookieOptions(req));
 }
 function clearRefreshCookie(req: Parameters<RequestHandler>[0], res: Parameters<RequestHandler>[1]) {
-  const { maxAge: _maxAge, ...options } = refreshCookieOptions(req);
+  const { maxAge, ...options } = refreshCookieOptions(req);
+  void maxAge;
   res.clearCookie(REFRESH_COOKIE, options);
 }
 function cookieValue(req: Parameters<RequestHandler>[0], name: string): string | undefined {
@@ -39,7 +40,8 @@ function cookieValue(req: Parameters<RequestHandler>[0], name: string): string |
   try { return decodeURIComponent(pair.slice(name.length + 1)); } catch { return undefined; }
 }
 function withoutRefreshToken<T extends { session: { refreshToken: string } }>(result: T) {
-  const { refreshToken: _refreshToken, ...session } = result.session;
+  const { refreshToken, ...session } = result.session;
+  void refreshToken;
   return { ...result, session };
 }
 
