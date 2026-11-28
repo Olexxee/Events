@@ -10,12 +10,18 @@ export async function sendIdentityEmail(
     throw new Error("RESEND_API_KEY is not configured");
   }
 
-  const frontendUrl = (process.env.FRONTEND_URL ?? "http://localhost:5173").replace(/\/$/, "");
+  const frontendUrl = (
+    process.env.FRONTEND_URL ?? "http://localhost:5173"
+  ).replace(/\/$/, "");
   const verification = kind === "verification";
   const path = verification ? "/verify-email" : "/reset-password";
   const url = `${frontendUrl}${path}?token=${encodeURIComponent(token)}`;
-  const subject = verification ? "Verify your Events account" : "Reset your Events password";
-  const heading = verification ? "Verify your email address" : "Reset your password";
+  const subject = verification
+    ? "Verify your Events account"
+    : "Reset your Events password";
+  const heading = verification
+    ? "Verify your email address"
+    : "Reset your password";
   const explanation = verification
     ? "Confirm this email address to finish securing your Events account."
     : "We received a request to reset the password for your Events account.";
@@ -40,6 +46,8 @@ export async function sendIdentityEmail(
 
   if (!response.ok) {
     const details = await response.text();
-    throw new Error(`Resend email delivery failed (${response.status}): ${details.slice(0, 500)}`);
+    throw new Error(
+      `Resend email delivery failed (${response.status}): ${details.slice(0, 500)}`
+    );
   }
 }
