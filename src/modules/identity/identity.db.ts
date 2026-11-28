@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import type { PlatformRole, Prisma } from "@prisma/client";
+import type { IdentityActionTokenType, PlatformRole, Prisma } from "@prisma/client";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -394,5 +394,128 @@ export async function findUserById(userId: string) {
       createdAt: true,
       profile: { select: { displayName: true, phone: true } }
     }
+  });
+}
+
+
+export async function findActiveUserForIdentityEmail(email: string) {
+  return getPrismaClient().user.findUnique({
+    where: { email },
+    select: { id: true, email: true, status: true, emailVerifiedAt: true }
+  });
+}
+
+export async function reserveIdentityEmailRequest(
+  email: string,
+  ipAddress: string,
+  limit: number
+): Promise<boolean> {
+  const prisma = getPrismaClient();
+  const emailHash = digestToken(email.trim().toLowerCase());
+  const ip = ipAddress.slice(0, 64) || "unknown";
+  const since = new Date(Date.now() - 60 * 60 * 1000);
+  const lockKey = `${emailHash}:${ip}`;
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+    const count = await tx.identityActionRequest.count({
+      where: { emailHash, ipAddress: ip, createdAt: { gte: since } }
+    });
+    if (count >= limit) return false;
+    await tx.identityActionRequest.create({
+      data: { emailHash, ipAddress: ip }
+    });
+    return true;
+  });
+}
+
+export async function issueIdentityActionToken(
+  userId: string,
+  type: IdentityActionTokenType,
+  ttlMinutes: number
+): Promise<string> {
+  const token = newToken();
+  const prisma = getPrismaClient();
+  const now = new Date();
+  await prisma.$transaction(async (tx) => {
+    await tx.identityActionToken.updateMany({
+      where: { userId, type, consumedAt: null },
+      data: { consumedAt: now }
+    });
+    await tx.identityActionToken.create({
+      data: {
+        userId,
+        type,
+        tokenHash: digestToken(token),
+        expiresAt: new Date(now.getTime() + ttlMinutes * 60 * 1000)
+      }
+    });
+  });
+  return token;
+}
+
+export async function consumeIdentityActionToken(
+  token: string,
+  type: IdentityActionTokenType,
+  passwordHash?: string
+): Promise<boolean> {
+  const prisma = getPrismaClient();
+  const now = new Date();
+  const tokenHash = digestToken(token);
+
+  return prisma.$transaction(async (tx) => {
+    const stored = await tx.identityActionToken.findUnique({
+      where: { tokenHash },
+      select: { id: true, userId: true, type: true, consumedAt: true, expiresAt: true }
+    });
+    if (
+      !stored ||
+      stored.type !== type ||
+      stored.consumedAt ||
+      stored.expiresAt <= now
+    ) return false;
+
+    const consumed = await tx.identityActionToken.updateMany({
+      where: { id: stored.id, type, consumedAt: null, expiresAt: { gt: now } },
+      data: { consumedAt: now }
+    });
+    if (consumed.count !== 1) return false;
+
+    if (type === "EMAIL_VERIFICATION") {
+      await tx.user.updateMany({
+        where: { id: stored.userId, status: "ACTIVE", emailVerifiedAt: null },
+        data: { emailVerifiedAt: now }
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: stored.userId,
+          actorType: "user",
+          action: "identity.email.verified",
+          resourceType: "user",
+          resourceId: stored.userId
+        }
+      });
+      return true;
+    }
+
+    if (!passwordHash) return false;
+    await tx.passwordCredential.update({
+      where: { userId: stored.userId },
+      data: { passwordHash, passwordChangedAt: now }
+    });
+    await tx.session.updateMany({
+      where: { userId: stored.userId, revokedAt: null },
+      data: { revokedAt: now, revokeReason: "password_reset" }
+    });
+    await tx.auditLog.create({
+      data: {
+        actorId: stored.userId,
+        actorType: "user",
+        action: "identity.password.reset",
+        resourceType: "user",
+        resourceId: stored.userId
+      }
+    });
+    return true;
   });
 }
