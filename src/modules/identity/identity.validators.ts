@@ -41,3 +41,25 @@ export const organizationSchema = z.object({
   params: z.object({}),
   query: z.object({})
 });
+
+
+export const identityEmailRequestSchema = z.object({
+  body: { email: emailSchema },
+  params: z.object({}),
+  query: z.object({})
+});
+
+export const identityTokenSchema = z.object({
+  body: { token: z.string().min(32).max(512) },
+  params: z.object({}),
+  query: z.object({})
+});
+
+export const passwordResetSchema = z.object({
+  body: {
+    token: z.string().min(32).max(512),
+    password: z.string().min(12).max(128)
+  },
+  params: z.object({}),
+  query: z.object({})
+});
