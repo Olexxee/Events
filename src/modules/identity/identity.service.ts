@@ -6,6 +6,10 @@ import {
   digestToken,
   findCredentialByEmail,
   findUserById,
+  findActiveUserForIdentityEmail,
+  reserveIdentityEmailRequest,
+  issueIdentityActionToken,
+  consumeIdentityActionToken,
   findSessionByAccessHash,
   listOrganizationsForUser,
   revokeSessionFamily,
@@ -15,6 +19,7 @@ import {
 } from "./identity.db.js";
 import { resolvePlatformPermissions } from "./identity.permissions.js";
 import { hashPassword, verifyPassword } from "./password.service.js";
+import { sendIdentityEmail } from "./identity.email.js";
 
 const DUMMY_PASSWORD_HASH = hashPassword("events-dummy-password-never-used");
 import type { SessionMetadata } from "./identity.types.js";
@@ -57,6 +62,21 @@ export async function register(input: {
       ...(input.displayName ? { displayName: input.displayName } : {}),
       metadata: input.metadata
     });
+
+    const verificationToken = await issueIdentityActionToken(
+      result.user.id,
+      "EMAIL_VERIFICATION",
+      Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES ?? 30)
+    );
+    try {
+      await sendIdentityEmail(
+        result.user.email,
+        "verification",
+        verificationToken
+      );
+    } catch (error) {
+      console.error("Identity verification email delivery failed", error);
+    }
 
     return {
       user: result.user,
@@ -186,4 +206,96 @@ export async function getCurrentUser(userId: string) {
     throw new AppError("UNAUTHENTICATED", "Authentication is required", 401);
   }
   return user;
+}
+
+const GENERIC_IDENTITY_EMAIL_RESPONSE = {
+  accepted: true,
+  message: "If the account is eligible, an email will be sent shortly."
+};
+
+export async function requestEmailVerification(
+  email: string,
+  ipAddress: string
+) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const allowed = await reserveIdentityEmailRequest(
+    normalizedEmail,
+    ipAddress,
+    Number(process.env.IDENTITY_EMAIL_RATE_LIMIT_PER_HOUR ?? 3)
+  );
+  if (!allowed) return GENERIC_IDENTITY_EMAIL_RESPONSE;
+
+  const user = await findActiveUserForIdentityEmail(normalizedEmail);
+  if (!user || user.status !== "ACTIVE" || user.emailVerifiedAt) {
+    return GENERIC_IDENTITY_EMAIL_RESPONSE;
+  }
+
+  const token = await issueIdentityActionToken(
+    user.id,
+    "EMAIL_VERIFICATION",
+    Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES ?? 30)
+  );
+  try {
+    await sendIdentityEmail(user.email, "verification", token);
+  } catch (error) {
+    console.error("Identity verification email delivery failed", error);
+  }
+  return GENERIC_IDENTITY_EMAIL_RESPONSE;
+}
+
+export async function verifyEmailAddress(token: string) {
+  const verified = await consumeIdentityActionToken(
+    token,
+    "EMAIL_VERIFICATION"
+  );
+  if (!verified) {
+    throw new AppError(
+      "INVALID_OR_EXPIRED_TOKEN",
+      "This verification link is invalid or has expired",
+      400
+    );
+  }
+  return { verified: true };
+}
+
+export async function requestPasswordReset(email: string, ipAddress: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const allowed = await reserveIdentityEmailRequest(
+    normalizedEmail,
+    ipAddress,
+    Number(process.env.IDENTITY_EMAIL_RATE_LIMIT_PER_HOUR ?? 3)
+  );
+  if (!allowed) return GENERIC_IDENTITY_EMAIL_RESPONSE;
+
+  const user = await findActiveUserForIdentityEmail(normalizedEmail);
+  if (!user || user.status !== "ACTIVE") return GENERIC_IDENTITY_EMAIL_RESPONSE;
+
+  const token = await issueIdentityActionToken(
+    user.id,
+    "PASSWORD_RESET",
+    Number(process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES ?? 30)
+  );
+  try {
+    await sendIdentityEmail(user.email, "password-reset", token);
+  } catch (error) {
+    console.error("Password reset email delivery failed", error);
+  }
+  return GENERIC_IDENTITY_EMAIL_RESPONSE;
+}
+
+export async function resetPassword(token: string, password: string) {
+  const passwordHash = await hashPassword(password);
+  const reset = await consumeIdentityActionToken(
+    token,
+    "PASSWORD_RESET",
+    passwordHash
+  );
+  if (!reset) {
+    throw new AppError(
+      "INVALID_OR_EXPIRED_TOKEN",
+      "This password reset link is invalid or has expired",
+      400
+    );
+  }
+  return { passwordReset: true };
 }
