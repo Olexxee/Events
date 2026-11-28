@@ -21,9 +21,24 @@ const environmentSchema = z.object({
   RESEND_API_KEY: z.string().min(1).optional(),
   EMAIL_FROM: z.string().min(3).default("Events <no-reply@example.com>"),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
-  EMAIL_VERIFICATION_TOKEN_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(30),
-  PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce.number().int().min(5).max(120).default(30),
-  IDENTITY_EMAIL_RATE_LIMIT_PER_HOUR: z.coerce.number().int().min(1).max(20).default(3),
+  EMAIL_VERIFICATION_TOKEN_TTL_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(5)
+    .max(1440)
+    .default(30),
+  PASSWORD_RESET_TOKEN_TTL_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(5)
+    .max(120)
+    .default(30),
+  IDENTITY_EMAIL_RATE_LIMIT_PER_HOUR: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .default(3),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info")
