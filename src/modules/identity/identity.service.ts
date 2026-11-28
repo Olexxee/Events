@@ -69,7 +69,11 @@ export async function register(input: {
       Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES ?? 30)
     );
     try {
-      await sendIdentityEmail(result.user.email, "verification", verificationToken);
+      await sendIdentityEmail(
+        result.user.email,
+        "verification",
+        verificationToken
+      );
     } catch (error) {
       console.error("Identity verification email delivery failed", error);
     }
@@ -210,7 +214,10 @@ const GENERIC_IDENTITY_EMAIL_RESPONSE = {
   message: "If the account is eligible, an email will be sent shortly."
 };
 
-export async function requestEmailVerification(email: string, ipAddress: string) {
+export async function requestEmailVerification(
+  email: string,
+  ipAddress: string
+) {
   const normalizedEmail = email.trim().toLowerCase();
   const allowed = await reserveIdentityEmailRequest(
     normalizedEmail,
@@ -238,7 +245,10 @@ export async function requestEmailVerification(email: string, ipAddress: string)
 }
 
 export async function verifyEmailAddress(token: string) {
-  const verified = await consumeIdentityActionToken(token, "EMAIL_VERIFICATION");
+  const verified = await consumeIdentityActionToken(
+    token,
+    "EMAIL_VERIFICATION"
+  );
   if (!verified) {
     throw new AppError(
       "INVALID_OR_EXPIRED_TOKEN",
