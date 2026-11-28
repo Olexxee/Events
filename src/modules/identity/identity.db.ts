@@ -1,5 +1,9 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import type { IdentityActionTokenType, PlatformRole, Prisma } from "@prisma/client";
+import type {
+  IdentityActionTokenType,
+  PlatformRole,
+  Prisma
+} from "@prisma/client";
 import { getPrismaClient } from "../../infrastructure/database/prisma.js";
 
 const ACCESS_TTL_MS = 15 * 60 * 1000;
@@ -487,7 +491,9 @@ export async function consumeIdentityActionToken(
       where: { id: stored.id, type, consumedAt: null, expiresAt: { gt: now } },
       data: { consumedAt: now }
     });
-    if (consumed.count !== 1) return false;
+    if (consumed.count !== 1) {
+      return false;
+    }
 
     if (type === "EMAIL_VERIFICATION") {
       await tx.user.updateMany({
