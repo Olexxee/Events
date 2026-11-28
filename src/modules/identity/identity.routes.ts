@@ -32,10 +32,26 @@ identityRouter.post(
   validateRequest(registerSchema),
   registerController
 );
-identityRouter.post("/auth/verify-email/request", validateRequest(identityEmailRequestSchema), requestEmailVerificationController);
-identityRouter.post("/auth/verify-email", validateRequest(identityTokenSchema), verifyEmailController);
-identityRouter.post("/auth/password/forgot", validateRequest(identityEmailRequestSchema), requestPasswordResetController);
-identityRouter.post("/auth/password/reset", validateRequest(passwordResetSchema), resetPasswordController);
+identityRouter.post(
+  "/auth/verify-email/request",
+  validateRequest(identityEmailRequestSchema),
+  requestEmailVerificationController
+);
+identityRouter.post(
+  "/auth/verify-email",
+  validateRequest(identityTokenSchema),
+  verifyEmailController
+);
+identityRouter.post(
+  "/auth/password/forgot",
+  validateRequest(identityEmailRequestSchema),
+  requestPasswordResetController
+);
+identityRouter.post(
+  "/auth/password/reset",
+  validateRequest(passwordResetSchema),
+  resetPasswordController
+);
 identityRouter.post(
   "/auth/login",
   validateRequest(loginSchema),
