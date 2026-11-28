@@ -42,7 +42,6 @@ export const organizationSchema = z.object({
   query: z.object({})
 });
 
-
 export const identityEmailRequestSchema = z.object({
   body: z.object({ email: emailSchema }),
   params: z.object({}),
