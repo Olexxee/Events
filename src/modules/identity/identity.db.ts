@@ -401,7 +401,6 @@ export async function findUserById(userId: string) {
   });
 }
 
-
 export async function findActiveUserForIdentityEmail(email: string) {
   return getPrismaClient().user.findUnique({
     where: { email },
