@@ -28,14 +28,15 @@ function setRefreshCookie(req: Parameters<RequestHandler>[0], res: Parameters<Re
   res.cookie(REFRESH_COOKIE, token, refreshCookieOptions(req));
 }
 function clearRefreshCookie(req: Parameters<RequestHandler>[0], res: Parameters<RequestHandler>[1]) {
-  const options = refreshCookieOptions(req);
-  res.clearCookie(REFRESH_COOKIE, { ...options, maxAge: undefined });
+  const { maxAge: _maxAge, ...options } = refreshCookieOptions(req);
+  res.clearCookie(REFRESH_COOKIE, options);
 }
 function cookieValue(req: Parameters<RequestHandler>[0], name: string): string | undefined {
   const header = req.get("cookie");
   if (!header) return undefined;
   const pair = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
-  return pair ? decodeURIComponent(pair.slice(name.length + 1)) : undefined;
+  if (!pair) return undefined;
+  try { return decodeURIComponent(pair.slice(name.length + 1)); } catch { return undefined; }
 }
 function withoutRefreshToken<T extends { session: { refreshToken: string } }>(result: T) {
   const { refreshToken: _refreshToken, ...session } = result.session;
