@@ -5,10 +5,14 @@ import {
   disconnectDatabase
 } from "./infrastructure/database/prisma.js";
 import { createLogger } from "./infrastructure/logging/logger.js";
+import { parseCorsOrigins } from "./shared/middleware/cors.js";
 
 const environment = loadEnvironment();
 const logger = createLogger(environment.LOG_LEVEL);
-const app = createApp({ apiPrefix: environment.API_PREFIX });
+const app = createApp({
+  apiPrefix: environment.API_PREFIX,
+  corsOrigins: parseCorsOrigins(environment.CORS_ORIGINS)
+});
 
 await connectDatabase();
 

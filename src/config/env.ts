@@ -17,6 +17,7 @@ const environmentSchema = z.object({
         value.startsWith("postgresql://") || value.startsWith("postgres://"),
       "DATABASE_URL must be a valid PostgreSQL connection URL"
     ),
+  CORS_ORIGINS: z.string().default("http://localhost:5173"),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info")

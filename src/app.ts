@@ -4,6 +4,7 @@ import { notFoundHandler } from "./shared/middleware/not-found.js";
 import { successResponse } from "./shared/responses/success-response.js";
 import { pingDatabase } from "./infrastructure/database/prisma.js";
 import { requestContext } from "./shared/middleware/request-context.js";
+import { corsMiddleware } from "./shared/middleware/cors.js";
 import { identityRouter } from "./modules/identity/identity.routes.js";
 import { organizersRouter } from "./modules/organizers/organizers.routes.js";
 import { eventsRouter } from "./modules/events/events.routes.js";
@@ -20,6 +21,7 @@ import { vybeBookingCancellationsRouter } from "./modules/vybe-bookings/vybe-boo
 export interface AppDependencies {
   databasePing?: () => Promise<void>;
   apiPrefix?: string;
+  corsOrigins?: string[];
 }
 
 export function createApp(dependencies: AppDependencies = {}): Express {
@@ -29,6 +31,9 @@ export function createApp(dependencies: AppDependencies = {}): Express {
 
   app.disable("x-powered-by");
   app.use(requestContext);
+  app.use(
+    corsMiddleware(dependencies.corsOrigins ?? ["http://localhost:5173"])
+  );
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/health", (_req, res) => successResponse(res, { status: "ok" }));

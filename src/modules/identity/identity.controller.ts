@@ -11,6 +11,60 @@ import {
   register
 } from "./identity.service.js";
 
+const REFRESH_COOKIE = "events_refresh";
+const REFRESH_COOKIE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+type HttpRequest = Parameters<RequestHandler>[0];
+type HttpResponse = Parameters<RequestHandler>[1];
+
+function refreshCookieOptions(req: HttpRequest) {
+  const secure =
+    process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test";
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: secure ? ("none" as const) : ("lax" as const),
+    path: `${req.baseUrl}/auth`,
+    maxAge: REFRESH_COOKIE_TTL_MS
+  };
+}
+
+function setRefreshCookie(req: HttpRequest, res: HttpResponse, token: string) {
+  res.cookie(REFRESH_COOKIE, token, refreshCookieOptions(req));
+}
+
+function clearRefreshCookie(req: HttpRequest, res: HttpResponse) {
+  const { maxAge, ...options } = refreshCookieOptions(req);
+  void maxAge;
+  res.clearCookie(REFRESH_COOKIE, options);
+}
+
+function cookieValue(req: HttpRequest, name: string): string | undefined {
+  const header = req.get("cookie");
+  if (!header) return undefined;
+
+  const pair = header
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+
+  if (!pair) return undefined;
+
+  try {
+    return decodeURIComponent(pair.slice(name.length + 1));
+  } catch {
+    return undefined;
+  }
+}
+
+function withoutRefreshToken<T extends { session: { refreshToken: string } }>(
+  result: T
+) {
+  const { refreshToken, ...session } = result.session;
+  void refreshToken;
+  return { ...result, session };
+}
+
 function requestMetadata(req: Parameters<RequestHandler>[0]) {
   const userAgent = req.get("user-agent");
   return {
@@ -25,6 +79,10 @@ export const registerController: RequestHandler = async (req, res, next) => {
       body: { email: string; password: string; displayName?: string };
     }>(res).body;
     const result = await register({ ...input, metadata: requestMetadata(req) });
+    if (req.get("origin")) {
+      setRefreshCookie(req, res, result.session.refreshToken);
+      return successResponse(res, withoutRefreshToken(result), 201);
+    }
     return successResponse(res, result, 201);
   } catch (error) {
     return next(error);
@@ -37,6 +95,10 @@ export const loginController: RequestHandler = async (req, res, next) => {
       body: { email: string; password: string };
     }>(res).body;
     const result = await login(input, requestMetadata(req));
+    if (req.get("origin")) {
+      setRefreshCookie(req, res, result.session.refreshToken);
+      return successResponse(res, withoutRefreshToken(result));
+    }
     return successResponse(res, result);
   } catch (error) {
     return next(error);
@@ -46,9 +108,25 @@ export const loginController: RequestHandler = async (req, res, next) => {
 export const refreshController: RequestHandler = async (req, res, next) => {
   try {
     const input = getValidatedRequest<{
-      body: { refreshToken: string };
+      body: { refreshToken?: string };
     }>(res).body;
-    const result = await refresh(input.refreshToken, requestMetadata(req));
+    const cookieToken = cookieValue(req, REFRESH_COOKIE);
+    const token = cookieToken ?? input.refreshToken;
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: "INVALID_SESSION",
+          message: "The session is no longer valid",
+          details: []
+        }
+      });
+    }
+    const result = await refresh(token, requestMetadata(req));
+    if (cookieToken) {
+      setRefreshCookie(req, res, result.session.refreshToken);
+      return successResponse(res, withoutRefreshToken(result));
+    }
     return successResponse(res, result);
   } catch (error) {
     return next(error);
@@ -72,6 +150,7 @@ export const logoutController: RequestHandler = async (req, res, next) => {
       return next(new Error("Authenticated session context is incomplete"));
     }
     await logout(sessionId, subjectId);
+    clearRefreshCookie(req, res);
     return successResponse(res, { loggedOut: true });
   } catch (error) {
     return next(error);
