@@ -230,7 +230,6 @@ export const listOrganizationsController: RequestHandler = async (
   }
 };
 
-
 export const requestEmailVerificationController: RequestHandler = async (
   req,
   res,
@@ -265,10 +264,7 @@ export const requestPasswordResetController: RequestHandler = async (
 ) => {
   try {
     const input = getValidatedRequest<{ body: { email: string } }>(res).body;
-    const result = await requestPasswordReset(
-      input.email,
-      req.ip ?? "unknown"
-    );
+    const result = await requestPasswordReset(input.email, req.ip ?? "unknown");
     return successResponse(res, result);
   } catch (error) {
     return next(error);
