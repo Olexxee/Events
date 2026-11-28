@@ -18,7 +18,8 @@ type HttpRequest = Parameters<RequestHandler>[0];
 type HttpResponse = Parameters<RequestHandler>[1];
 
 function refreshCookieOptions(req: HttpRequest) {
-  const secure = process.env.NODE_ENV === "production";
+  const secure =
+    process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test";
   return {
     httpOnly: true,
     secure,
