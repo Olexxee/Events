@@ -208,7 +208,6 @@ export async function getCurrentUser(userId: string) {
   return user;
 }
 
-
 const GENERIC_IDENTITY_EMAIL_RESPONSE = {
   accepted: true,
   message: "If the account is eligible, an email will be sent shortly."
