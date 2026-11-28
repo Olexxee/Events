@@ -31,7 +31,9 @@ export function createApp(dependencies: AppDependencies = {}): Express {
 
   app.disable("x-powered-by");
   app.use(requestContext);
-  app.use(corsMiddleware(dependencies.corsOrigins ?? ["http://localhost:5173"]));
+  app.use(
+    corsMiddleware(dependencies.corsOrigins ?? ["http://localhost:5173"])
+  );
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/health", (_req, res) => successResponse(res, { status: "ok" }));
