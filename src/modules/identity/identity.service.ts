@@ -240,7 +240,11 @@ export async function requestEmailVerification(email: string, ipAddress: string)
 export async function verifyEmailAddress(token: string) {
   const verified = await consumeIdentityActionToken(token, "EMAIL_VERIFICATION");
   if (!verified) {
-    throw new AppError("INVALID_OR_EXPIRED_TOKEN", "This verification link is invalid or has expired", 400);
+    throw new AppError(
+      "INVALID_OR_EXPIRED_TOKEN",
+      "This verification link is invalid or has expired",
+      400
+    );
   }
   return { verified: true };
 }
@@ -272,9 +276,17 @@ export async function requestPasswordReset(email: string, ipAddress: string) {
 
 export async function resetPassword(token: string, password: string) {
   const passwordHash = await hashPassword(password);
-  const reset = await consumeIdentityActionToken(token, "PASSWORD_RESET", passwordHash);
+  const reset = await consumeIdentityActionToken(
+    token,
+    "PASSWORD_RESET",
+    passwordHash
+  );
   if (!reset) {
-    throw new AppError("INVALID_OR_EXPIRED_TOKEN", "This password reset link is invalid or has expired", 400);
+    throw new AppError(
+      "INVALID_OR_EXPIRED_TOKEN",
+      "This password reset link is invalid or has expired",
+      400
+    );
   }
   return { passwordReset: true };
 }
