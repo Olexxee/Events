@@ -57,8 +57,11 @@ export const registerController: RequestHandler = async (req, res, next) => {
       body: { email: string; password: string; displayName?: string };
     }>(res).body;
     const result = await register({ ...input, metadata: requestMetadata(req) });
-    setRefreshCookie(req, res, result.session.refreshToken);
-    return successResponse(res, withoutRefreshToken(result), 201);
+    if (req.get("origin")) {
+      setRefreshCookie(req, res, result.session.refreshToken);
+      return successResponse(res, withoutRefreshToken(result), 201);
+    }
+    return successResponse(res, result, 201);
   } catch (error) {
     return next(error);
   }
@@ -70,8 +73,11 @@ export const loginController: RequestHandler = async (req, res, next) => {
       body: { email: string; password: string };
     }>(res).body;
     const result = await login(input, requestMetadata(req));
-    setRefreshCookie(req, res, result.session.refreshToken);
-    return successResponse(res, withoutRefreshToken(result));
+    if (req.get("origin")) {
+      setRefreshCookie(req, res, result.session.refreshToken);
+      return successResponse(res, withoutRefreshToken(result));
+    }
+    return successResponse(res, result);
   } catch (error) {
     return next(error);
   }
@@ -82,13 +88,17 @@ export const refreshController: RequestHandler = async (req, res, next) => {
     const input = getValidatedRequest<{
       body: { refreshToken?: string };
     }>(res).body;
-    const token = cookieValue(req, REFRESH_COOKIE) ?? input.refreshToken;
+    const cookieToken = cookieValue(req, REFRESH_COOKIE);
+    const token = cookieToken ?? input.refreshToken;
     if (!token) {
       return res.status(401).json({ success: false, error: { code: "INVALID_SESSION", message: "The session is no longer valid", details: [] } });
     }
     const result = await refresh(token, requestMetadata(req));
-    setRefreshCookie(req, res, result.session.refreshToken);
-    return successResponse(res, withoutRefreshToken(result));
+    if (cookieToken) {
+      setRefreshCookie(req, res, result.session.refreshToken);
+      return successResponse(res, withoutRefreshToken(result));
+    }
+    return successResponse(res, result);
   } catch (error) {
     return next(error);
   }
