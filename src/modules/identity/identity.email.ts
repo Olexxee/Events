@@ -27,8 +27,8 @@ export async function sendIdentityEmail(
     : "We received a request to reset the password for your Events account.";
   const action = verification ? "Verify email" : "Reset password";
   const expiry = verification
-    ? process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES ?? "30"
-    : process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES ?? "30";
+    ? (process.env.EMAIL_VERIFICATION_TOKEN_TTL_MINUTES ?? "30")
+    : (process.env.PASSWORD_RESET_TOKEN_TTL_MINUTES ?? "30");
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
