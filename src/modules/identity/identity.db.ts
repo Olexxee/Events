@@ -466,14 +466,22 @@ export async function consumeIdentityActionToken(
   return prisma.$transaction(async (tx) => {
     const stored = await tx.identityActionToken.findUnique({
       where: { tokenHash },
-      select: { id: true, userId: true, type: true, consumedAt: true, expiresAt: true }
+      select: {
+        id: true,
+        userId: true,
+        type: true,
+        consumedAt: true,
+        expiresAt: true
+      }
     });
     if (
       !stored ||
       stored.type !== type ||
       stored.consumedAt ||
       stored.expiresAt <= now
-    ) return false;
+    ) {
+      return false;
+    }
 
     const consumed = await tx.identityActionToken.updateMany({
       where: { id: stored.id, type, consumedAt: null, expiresAt: { gt: now } },
