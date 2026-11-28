@@ -231,10 +231,17 @@ export const listOrganizationsController: RequestHandler = async (
 };
 
 
-export const requestEmailVerificationController: RequestHandler = async (req, res, next) => {
+export const requestEmailVerificationController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
     const input = getValidatedRequest<{ body: { email: string } }>(res).body;
-    const result = await requestEmailVerification(input.email, req.ip ?? "unknown");
+    const result = await requestEmailVerification(
+      input.email,
+      req.ip ?? "unknown"
+    );
     return successResponse(res, result);
   } catch (error) {
     return next(error);
@@ -251,19 +258,32 @@ export const verifyEmailController: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const requestPasswordResetController: RequestHandler = async (req, res, next) => {
+export const requestPasswordResetController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
     const input = getValidatedRequest<{ body: { email: string } }>(res).body;
-    const result = await requestPasswordReset(input.email, req.ip ?? "unknown");
+    const result = await requestPasswordReset(
+      input.email,
+      req.ip ?? "unknown"
+    );
     return successResponse(res, result);
   } catch (error) {
     return next(error);
   }
 };
 
-export const resetPasswordController: RequestHandler = async (req, res, next) => {
+export const resetPasswordController: RequestHandler = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const input = getValidatedRequest<{ body: { token: string; password: string } }>(res).body;
+    const input = getValidatedRequest<{
+      body: { token: string; password: string };
+    }>(res).body;
     const result = await resetPassword(input.token, input.password);
     return successResponse(res, result);
   } catch (error) {
