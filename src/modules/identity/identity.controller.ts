@@ -8,7 +8,11 @@ import {
   login,
   logout,
   refresh,
-  register
+  register,
+  requestEmailVerification,
+  verifyEmailAddress,
+  requestPasswordReset,
+  resetPassword
 } from "./identity.service.js";
 
 const REFRESH_COOKIE = "events_refresh";
@@ -221,6 +225,47 @@ export const listOrganizationsController: RequestHandler = async (
     }
     const organizations = await listMyOrganizations(req.auth.subjectId);
     return successResponse(res, { organizations });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+
+export const requestEmailVerificationController: RequestHandler = async (req, res, next) => {
+  try {
+    const input = getValidatedRequest<{ body: { email: string } }>(res).body;
+    const result = await requestEmailVerification(input.email, req.ip ?? "unknown");
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const verifyEmailController: RequestHandler = async (req, res, next) => {
+  try {
+    const input = getValidatedRequest<{ body: { token: string } }>(res).body;
+    const result = await verifyEmailAddress(input.token);
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const requestPasswordResetController: RequestHandler = async (req, res, next) => {
+  try {
+    const input = getValidatedRequest<{ body: { email: string } }>(res).body;
+    const result = await requestPasswordReset(input.email, req.ip ?? "unknown");
+    return successResponse(res, result);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const resetPasswordController: RequestHandler = async (req, res, next) => {
+  try {
+    const input = getValidatedRequest<{ body: { token: string; password: string } }>(res).body;
+    const result = await resetPassword(input.token, input.password);
+    return successResponse(res, result);
   } catch (error) {
     return next(error);
   }
