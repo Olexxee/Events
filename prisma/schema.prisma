@@ -388,6 +388,7 @@ model User {
   passwordCredential                  PasswordCredential?
   profile                             UserProfile?
   sessions                            Session[]
+  identityActionTokens                IdentityActionToken[]
   memberships                         OrganizationMembership[]
   platformRoles                       PlatformRoleAssignment[]
   createdOrganizations                Organization[]                          @relation("OrganizationCreator")
@@ -1454,4 +1455,37 @@ model VybeTimeSlotHold {
   @@index([occurrenceId, status, expiresAt], map: "vybe_time_slot_holds_occurrence_status_expiry_idx")
   @@index([resourceId, status, blockedStartsAt], map: "vybe_time_slot_holds_resource_status_start_idx")
   @@map("vybe_time_slot_holds")
+}
+
+
+enum IdentityActionTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+
+  @@map("identity_action_token_type")
+}
+
+model IdentityActionToken {
+  id          String                  @id @default(uuid()) @db.Uuid
+  userId      String                  @map("user_id") @db.Uuid
+  tokenHash   String                  @unique @map("token_hash") @db.Char(64)
+  type        IdentityActionTokenType
+  expiresAt   DateTime                @map("expires_at") @db.Timestamptz(6)
+  consumedAt  DateTime?               @map("consumed_at") @db.Timestamptz(6)
+  createdAt   DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, consumedAt, expiresAt], map: "identity_action_tokens_user_type_state_idx")
+  @@index([expiresAt], map: "identity_action_tokens_expiry_idx")
+  @@map("identity_action_tokens")
+}
+
+model IdentityActionRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  emailHash   String   @map("email_hash") @db.Char(64)
+  ipAddress   String   @map("ip_address") @db.VarChar(64)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([emailHash, ipAddress, createdAt], map: "identity_action_requests_rate_idx")
+  @@map("identity_action_requests")
 }
