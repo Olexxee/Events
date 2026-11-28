@@ -14,7 +14,10 @@ import {
 const REFRESH_COOKIE = "events_refresh";
 const REFRESH_COOKIE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function refreshCookieOptions(req: Parameters<RequestHandler>[0]) {
+type HttpRequest = Parameters<RequestHandler>[0];
+type HttpResponse = Parameters<RequestHandler>[1];
+
+function refreshCookieOptions(req: HttpRequest) {
   const secure = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
@@ -24,22 +27,42 @@ function refreshCookieOptions(req: Parameters<RequestHandler>[0]) {
     maxAge: REFRESH_COOKIE_TTL_MS
   };
 }
-function setRefreshCookie(req: Parameters<RequestHandler>[0], res: Parameters<RequestHandler>[1], token: string) {
+
+function setRefreshCookie(
+  req: HttpRequest,
+  res: HttpResponse,
+  token: string
+) {
   res.cookie(REFRESH_COOKIE, token, refreshCookieOptions(req));
 }
-function clearRefreshCookie(req: Parameters<RequestHandler>[0], res: Parameters<RequestHandler>[1]) {
+
+function clearRefreshCookie(req: HttpRequest, res: HttpResponse) {
   const { maxAge, ...options } = refreshCookieOptions(req);
   void maxAge;
   res.clearCookie(REFRESH_COOKIE, options);
 }
-function cookieValue(req: Parameters<RequestHandler>[0], name: string): string | undefined {
+
+function cookieValue(req: HttpRequest, name: string): string | undefined {
   const header = req.get("cookie");
   if (!header) return undefined;
-  const pair = header.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
+
+  const pair = header
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+
   if (!pair) return undefined;
-  try { return decodeURIComponent(pair.slice(name.length + 1)); } catch { return undefined; }
+
+  try {
+    return decodeURIComponent(pair.slice(name.length + 1));
+  } catch {
+    return undefined;
+  }
 }
-function withoutRefreshToken<T extends { session: { refreshToken: string } }>(result: T) {
+
+function withoutRefreshToken<T extends { session: { refreshToken: string } }>(
+  result: T
+) {
   const { refreshToken, ...session } = result.session;
   void refreshToken;
   return { ...result, session };
@@ -93,7 +116,14 @@ export const refreshController: RequestHandler = async (req, res, next) => {
     const cookieToken = cookieValue(req, REFRESH_COOKIE);
     const token = cookieToken ?? input.refreshToken;
     if (!token) {
-      return res.status(401).json({ success: false, error: { code: "INVALID_SESSION", message: "The session is no longer valid", details: [] } });
+      return res.status(401).json({
+        success: false,
+        error: {
+          code: "INVALID_SESSION",
+          message: "The session is no longer valid",
+          details: []
+        }
+      });
     }
     const result = await refresh(token, requestMetadata(req));
     if (cookieToken) {
