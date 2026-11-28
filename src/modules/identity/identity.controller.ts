@@ -29,11 +29,7 @@ function refreshCookieOptions(req: HttpRequest) {
   };
 }
 
-function setRefreshCookie(
-  req: HttpRequest,
-  res: HttpResponse,
-  token: string
-) {
+function setRefreshCookie(req: HttpRequest, res: HttpResponse, token: string) {
   res.cookie(REFRESH_COOKIE, token, refreshCookieOptions(req));
 }
 
