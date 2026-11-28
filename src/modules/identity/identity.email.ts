@@ -47,7 +47,10 @@ export async function sendIdentityEmail(
   if (!response.ok) {
     const details = await response.text();
     throw new Error(
-      `Resend email delivery failed (${response.status}): ${details.slice(0, 500)}`
+      `Resend email delivery failed (${response.status}): ${details.slice(
+        0,
+        500
+      )}`
     );
   }
 }
