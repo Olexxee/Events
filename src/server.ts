@@ -9,7 +9,10 @@ import { parseCorsOrigins } from "./shared/middleware/cors.js";
 
 const environment = loadEnvironment();
 const logger = createLogger(environment.LOG_LEVEL);
-const app = createApp({ apiPrefix: environment.API_PREFIX, corsOrigins: parseCorsOrigins(environment.CORS_ORIGINS) });
+const app = createApp({
+  apiPrefix: environment.API_PREFIX,
+  corsOrigins: parseCorsOrigins(environment.CORS_ORIGINS)
+});
 
 await connectDatabase();
 
